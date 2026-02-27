@@ -1,0 +1,17 @@
+# Kong Ingress Controller (namespace kong) — optional, separate from apps/kong (Gateway in apim)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kong-ingress
+  namespace: flux-system
+spec:
+  suspend: true  # disabled — only kong active
+  interval: 5m
+  path: ./apps/kong-ingress
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: flux-system
+      namespace: flux-system

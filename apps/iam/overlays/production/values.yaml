@@ -1,0 +1,13 @@
+# IAM production: HA replicas, higher resources
+keycloak:
+  enabled: true
+
+keycloakx:
+  replicas: 2
+  resources:
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"

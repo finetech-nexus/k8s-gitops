@@ -1,0 +1,20 @@
+# Layer 1 — Platform: sources, ClusterIssuers, infra (Kafka, ZK, ES, Kibana)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform
+  namespace: flux-system
+spec:
+  suspend: true  # disabled (re-enable by setting to false)
+  interval: 5m0s
+  path: ./apps/overlays/dev/01-platform
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: flux-system
+      namespace: flux-system
+    - name: cert-manager
+      namespace: flux-system
+  timeout: 5m0s

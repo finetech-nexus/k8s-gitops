@@ -1,0 +1,123 @@
+# Staging: medium resources, 2 replicas, auth enabled, optional TLS.
+global:
+  kibanaEnabled: true
+
+mongodb:
+  enabled: false
+mongo-express:
+  enabled: false
+redis:
+  enabled: false
+mysql:
+  enabled: false
+redpanda-console:
+  enabled: false
+console:
+  enabled: false
+
+kafka:
+  enabled: true
+  fullnameOverride: kafka
+  persistence:
+    enabled: true
+    size: 10Gi
+  broker:
+    replicaCount: 2
+    heapOpts: "-Xms256M -Xmx512M"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "150m"
+      limits:
+        memory: "1Gi"
+        cpu: "750m"
+  extraConfig: |
+    auto.create.topics.enable=true
+    offsets.topic.replication.factor=2
+    transaction.state.log.replication.factor=2
+    min.insync.replicas=1
+  listeners:
+    client:
+      protocol: SASL_PLAINTEXT
+      advertisedListeners: SASL_PLAINTEXT://kafka:9092
+    interBroker:
+      protocol: SASL_PLAINTEXT
+      advertisedListeners: SASL_PLAINTEXT://kafka:9092
+  auth:
+    enabled: true
+    clientProtocol: sasl_plaintext
+    interBrokerProtocol: sasl_plaintext
+    existingSecret: kafka-auth
+  zookeeper:
+    enabled: true
+    fullnameOverride: zookeeper
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 4Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "75m"
+      limits:
+        memory: "384Mi"
+        cpu: "300m"
+  controller:
+    replicaCount: 0
+  provisioning:
+    enabled: true
+    numPartitions: 2
+    replicationFactor: 2
+    topics: []
+
+elasticsearch:
+  enabled: true
+  master:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 15Gi
+    resources:
+      requests:
+        memory: "384Mi"
+        cpu: "150m"
+      limits:
+        memory: "1Gi"
+        cpu: "600m"
+  data:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+  coordinating:
+    replicaCount: 1
+  ingest:
+    replicaCount: 0
+  security:
+    existingSecret: elasticsearch-auth
+    tls:
+      restEncryption: false  # set true when certs available
+  ingress:
+    enabled: false
+  kibana:
+    enabled: true
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "400m"
+    ingress:
+      enabled: false

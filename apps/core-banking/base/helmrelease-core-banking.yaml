@@ -1,0 +1,27 @@
+# Core banking from GHCR OCI: ghcr.io/finetech-nexus/core-banking-helm-chart/fin-engine
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: core-banking
+  namespace: core-banking
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: fin-engine
+      version: "1.4.1-SNAPSHOT"
+      sourceRef:
+        kind: HelmRepository
+        name: core-banking-helm-chart-oci
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: core-banking-values
+      valuesKey: values.yaml
+  # Optional: add valuesFrom Secret ref in overlay for secrets

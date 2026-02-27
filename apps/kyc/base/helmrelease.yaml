@@ -1,0 +1,25 @@
+# KYC from kyc-helm-charts (nexus-bank repo)
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyc
+  namespace: kyc
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./kyc-helm-charts
+      sourceRef:
+        kind: GitRepository
+        name: nexus-bank
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: kyc-values
+      valuesKey: values.yaml

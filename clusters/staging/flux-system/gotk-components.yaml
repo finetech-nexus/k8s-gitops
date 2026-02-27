@@ -1,0 +1,5 @@
+# Replace with: flux install --export > clusters/staging/flux-system/gotk-components.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-system

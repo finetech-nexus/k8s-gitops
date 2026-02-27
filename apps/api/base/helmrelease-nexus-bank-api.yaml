@@ -1,0 +1,25 @@
+# Nexus Bank API from nexus-bank-api-chart (nexus-bank repo)
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nexus-bank-api
+  namespace: api
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./nexus-bank-api-chart
+      sourceRef:
+        kind: GitRepository
+        name: nexus-bank
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: nexus-bank-api-values
+      valuesKey: values.yaml

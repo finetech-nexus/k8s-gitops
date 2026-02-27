@@ -17,6 +17,9 @@ spec:
         namespace: flux-system
   targetNamespace: kong
   values:
+    # Writable prefix path (container root is read-only; avoid /KONG_)
+    env:
+      prefix: /tmp/kong
     gateway:
       serviceMonitor:
         enabled: true      # ask Kong chart to create a ServiceMonitor

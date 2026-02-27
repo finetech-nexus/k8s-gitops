@@ -1,0 +1,8 @@
+# Staging: sources + cert-manager (ClusterIssuers) + infra + IAM
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../sources
+  - ../../cert-manager
+  - ../../infra/overlays/staging
+  - ../../iam/overlays/staging

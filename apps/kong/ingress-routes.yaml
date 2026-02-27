@@ -1,0 +1,34 @@
+# Host-based routing: *.dev.sandbox.nbank.fr → public app, *.internal.dev.sandbox.nbank.fr → internal app
+# Backend services (public-app, internal-app) must exist in apim namespace or update backendRef.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apim-routes
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  ingressClassName: kong
+  rules:
+    # Public app
+    - host: "*.dev.sandbox.nbank.fr"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: public-app
+                port:
+                  number: 80
+    # Internal app
+    - host: "*.internal.dev.sandbox.nbank.fr"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: internal-app
+                port:
+                  number: 80

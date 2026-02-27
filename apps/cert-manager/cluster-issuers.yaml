@@ -1,0 +1,33 @@
+# ClusterIssuers for the project. cert-manager must be installed on the cluster.
+# Replace spec.acme.email with your contact email for Let's Encrypt.
+# IAM Certificate (keycloak-tls) references issuerRef.name: nbank.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: nbank
+spec:
+  acme:
+    email: certs@nexus-bank.io  # Replace with your email
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: nbank-acme-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: nbank-staging
+spec:
+  acme:
+    email: certs@nexus-bank.io  # Replace with your email
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: nbank-staging-acme-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

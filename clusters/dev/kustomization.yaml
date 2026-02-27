@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - flux-system
+  - cert-manager.yaml
+  - platform.yaml
+  - kong.yaml
+  - kong-ingress.yaml
+  - monitoring.yaml
+  - core.yaml
+  - apis.yaml
+  - identity.yaml

@@ -1,0 +1,18 @@
+# Layer 2 — Identity: IAM (Keycloak, PostgreSQL)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: identity
+  namespace: flux-system
+spec:
+  suspend: true  # disabled (re-enable by setting to false)
+  interval: 5m0s
+  path: ./apps/overlays/dev/02-identity
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: platform
+      namespace: flux-system
+  timeout: 5m0s

@@ -1,0 +1,12 @@
+# Dev (OKE): sources + cert-manager + infra + IAM + api + core-banking + kyc + payment-hub
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../sources
+  - ../../cert-manager
+  - ../../infra/overlays/dev
+  - ../../iam/overlays/dev
+  - ../../api/overlays/dev
+  - ../../core-banking/overlays/dev
+  - ../../kyc/overlays/dev
+  - ../../payment-hub/overlays/dev

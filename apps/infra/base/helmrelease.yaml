@@ -1,0 +1,26 @@
+# Base HelmRelease: env-specific values come from overlay ConfigMap "infra-values"
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: infra
+  namespace: infra
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./infra-helm-charts
+      sourceRef:
+        kind: GitRepository
+        name: nexus-bank
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: infra-values
+      valuesKey: values.yaml
+  # Optional: add Secret refs for auth (kafka-auth, elasticsearch-auth) in overlays

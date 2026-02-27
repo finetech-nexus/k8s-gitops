@@ -1,0 +1,10 @@
+# Merged from nexus-bank-gitops + k8s-gitops (apim-cluster applies path: ./apps)
+# Dev/staging/production overlays: clusters/<env>/apps.yaml -> path: ./apps/overlays/<env>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - sources
+  - kong
+  - kong-ingress
+  - monitoring
+  # flux-system omitted: Kong HelmRepository already in apps/kong

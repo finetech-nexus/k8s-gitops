@@ -1,0 +1,25 @@
+# Payment Hub from payment-hub-helm-charts (nexus-bank repo)
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: payment-hub
+  namespace: payment-hub
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./payment-hub-helm-charts
+      sourceRef:
+        kind: GitRepository
+        name: nexus-bank
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: payment-hub-values
+      valuesKey: values.yaml

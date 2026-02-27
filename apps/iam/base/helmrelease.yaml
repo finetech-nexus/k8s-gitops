@@ -1,0 +1,25 @@
+# IAM (Keycloak + PostgreSQL) from iam-helm-charts; env values from overlay ConfigMap "iam-values"
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: iam
+  namespace: iam
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./iam-helm-charts
+      sourceRef:
+        kind: GitRepository
+        name: nexus-bank
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: iam-values
+      valuesKey: values.yaml

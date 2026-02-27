@@ -1,0 +1,13 @@
+# IAM staging: 2 replicas, medium resources
+keycloak:
+  enabled: true
+
+keycloakx:
+  replicas: 2
+  resources:
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
