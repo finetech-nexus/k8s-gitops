@@ -29,6 +29,19 @@ spec:
   secretRef:
     name: ghcr-auth
 ---
+# OCI: fineract-hook chart (fineract-hhok-charts repo)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: fineract-hook-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url:  ghcr.io/finetech-nexus/fineract-hook-chart/fineract-hook
+  secretRef:
+    name: ghcr-auth
+---
 # OCI: core-banking chart (core-banking-api-charts repo)
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
