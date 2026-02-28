@@ -1,4 +1,4 @@
-# Fineract Hook API — chart from same Git repo (flux-system). Chart must exist at path below in k8s-gitops.
+# Fineract Hook API — from GHCR OCI (fineract-hook-chart-oci). Chart name from Chart.yaml.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,10 +8,11 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: ./fineract-hook-chart
+      chart: fineract-hook
+      version: "0.1.0"
       sourceRef:
-        kind: GitRepository
-        name: flux-system
+        kind: HelmRepository
+        name: fineract-hook-chart-oci
         namespace: flux-system
       interval: 1m
   install:

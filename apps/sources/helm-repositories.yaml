@@ -41,3 +41,16 @@ spec:
   url: oci://ghcr.io/finetech-nexus/core-banking-api-chart
   secretRef:
     name: ghcr-auth
+---
+# OCI: fineract-hook chart. Create secret ghcr-auth (see README). Adjust url if published elsewhere.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: fineract-hook-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/fineract-hook-chart
+  secretRef:
+    name: ghcr-auth
