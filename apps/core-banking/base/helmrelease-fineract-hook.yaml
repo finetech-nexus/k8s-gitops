@@ -1,0 +1,25 @@
+# Fineract Hook API — chart from same Git repo (flux-system). Chart must exist at path below in k8s-gitops.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fineract-hook
+  namespace: core-banking
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./fineract-hook-chart
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: false
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: fineract-hook-values
+      valuesKey: values.yaml
