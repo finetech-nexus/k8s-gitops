@@ -16,7 +16,7 @@ spec:
   interval: 1h
   url: https://codecentric.github.io/helm-charts
 ---
-# OCI: fin-engine chart (core-banking-helm-charts repo)
+# OCI: fin-engine chart (core-banking-helm-charts repo). Create secret: see README.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -24,8 +24,10 @@ metadata:
   namespace: flux-system
 spec:
   type: oci
-  interval: 1h
+  interval: 5m
   url: oci://ghcr.io/finetech-nexus/core-banking-helm-chart
+  secretRef:
+    name: ghcr-auth
 ---
 # OCI: core-banking chart (core-banking-api-charts repo)
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -35,5 +37,7 @@ metadata:
   namespace: flux-system
 spec:
   type: oci
-  interval: 1h
+  interval: 5m
   url: oci://ghcr.io/finetech-nexus/core-banking-api-chart
+  secretRef:
+    name: ghcr-auth

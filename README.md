@@ -1,4 +1,11 @@
 # k8s-gitops
+
+flux reconcile source git flux-system -n flux-system
+flux reconcile kustomization core-banking -n flux-system
+flux get helmreleases -n core-banking
+
+for log kubectl logs -n flux-system deploy/kustomize-controller -f
+
 export KUBECONFIG=/path/to/your/kubeconfig 
 
 Flux GitOps repo for Nexus Bank (dev cluster: Kong + optional platform/core/apis).
@@ -32,6 +39,25 @@ kubectl annotate gitrepository flux-system -n flux-system \
 ```
 
 The `GitRepository` in `clusters/dev/flux-system/gotk-sync.yaml` is configured with `secretRef.name: flux-system` for private clone.
+
+## GHCR auth (OCI Helm charts)
+
+The OCI HelmRepositories (`core-banking-helm-chart-oci`, `core-banking-api-chart-oci`) use `secretRef.name: ghcr-auth`. Create the secret once:
+
+```bash
+kubectl create secret docker-registry ghcr-auth \
+  --namespace flux-system \
+  --docker-server=ghcr.io \
+  --docker-username=YOUR_GITHUB_USERNAME \
+  --docker-password=YOUR_GITHUB_PAT
+```
+
+Then reconcile sources so the HelmRepositories can pull:
+
+```bash
+flux reconcile source helm core-banking-helm-chart-oci -n flux-system
+flux reconcile source helm core-banking-api-chart-oci -n flux-system
+```
 
 ## After push
 
