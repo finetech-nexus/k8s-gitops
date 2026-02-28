@@ -17,6 +17,7 @@ spec:
       interval: 1m
   install:
     createNamespace: false  # namespace apim created by kustomization
+    timeout: 10m  # first install can be slow (images, rollout)
   upgrade:
     remediation:
       retries: 3
