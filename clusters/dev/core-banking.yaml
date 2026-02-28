@@ -1,11 +1,11 @@
-# Layer 3 — Core: core-banking, payment-hub
+# Layer 3 — Core-banking, payment-hub
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: core
+  name: core-banking
   namespace: flux-system
 spec:
-  suspend: true  # disabled (re-enable by setting to false)
+  suspend: false  # core-banking (and payment-hub) active
   interval: 5m0s
   path: ./apps/overlays/dev/03-core
   prune: true
@@ -13,6 +13,6 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: identity
+    - name: flux-system
       namespace: flux-system
   timeout: 10m0s

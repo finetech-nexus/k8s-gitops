@@ -13,6 +13,6 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: core
+    - name: core-banking
       namespace: flux-system
   timeout: 10m0s

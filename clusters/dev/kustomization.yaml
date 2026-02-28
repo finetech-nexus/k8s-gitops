@@ -7,6 +7,6 @@ resources:
   - kong.yaml
   - kong-ingress.yaml
   - monitoring.yaml
-  - core.yaml
+  - core-banking.yaml
   - apis.yaml
   - identity.yaml
