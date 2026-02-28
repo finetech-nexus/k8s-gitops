@@ -1,0 +1,18 @@
+# HelmRepositories (Bitnami, Codecentric, OCI for core-banking). Required for core-banking HelmRelease.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sources
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/sources
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: flux-system
+      namespace: flux-system
+  timeout: 2m0s
