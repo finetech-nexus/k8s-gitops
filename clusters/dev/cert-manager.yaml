@@ -5,7 +5,7 @@ metadata:
   name: cert-manager
   namespace: flux-system
 spec:
-  suspend: true  # disabled — only kong active
+  suspend: false
   interval: 5m0s
   path: ./apps/cert-manager-install
   prune: true
