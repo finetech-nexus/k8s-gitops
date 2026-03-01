@@ -112,7 +112,7 @@ fineract:
 
 webapp:
   enabled: true
-  image: "docker.io/nexusbank/web-app:latest"
+  image: "docker.io/nexusbank/web-app:dev"
   ingress:
     enabled: true
     hostname: "web-app.dev.sandbox.nbank.fr"
