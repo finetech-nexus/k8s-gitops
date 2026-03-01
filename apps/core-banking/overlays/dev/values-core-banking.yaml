@@ -176,7 +176,7 @@ mysql:
   image:
     registry: docker.io
     repository: bitnamilegacy/mariadb
-    tag: "11.1.0-debian-11-r0"
+    tag: "10.5.16-debian-11-r22"
     debug: true
   auth:
     username: "mifos"
