@@ -31,6 +31,7 @@ flux bootstrap git \
   --token-auth \
   --password="$GITHUB_TOKEN"
 ```
+flux get kustomizations -n flux-system
 
 This creates the `flux-system` secret and GitRepository; no extra steps.
 
@@ -71,9 +72,18 @@ flux reconcile source helm core-banking-api-chart-oci -n flux-system
 ## After push
 
 ```bash
+# Pull repo and reconcile the whole dev stack (root applies clusters/dev)
 flux reconcile source git flux-system -n flux-system
 flux reconcile kustomization flux-system -n flux-system
-flux reconcile kustomization kong -n flux-system
+```
+
+To force-reconcile every kustomization by name:
+
+```bash
+flux reconcile source git flux-system -n flux-system
+for k in flux-system cert-manager cert-manager-issuers platform kong kong-ingress monitoring core-banking apis identity; do
+  flux reconcile kustomization $k -n flux-system
+done
 ```
 
 ## APIM (Kong) — routing
