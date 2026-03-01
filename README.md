@@ -4,7 +4,16 @@ flux reconcile source git flux-system -n flux-system
 flux reconcile kustomization core-banking -n flux-system
 flux get helmreleases -n core-banking
 
-for log kubectl logs -n flux-system deploy/kustomize-controller -f
+for log kubectl logs -n flux-system deploy kustomize-controller -f
+
+
+kubectl create secret docker-registry ghcr-auth \
+  --namespace flux-system \
+  --docker-server=ghcr.io \
+  --docker-username=ammiladi \            
+  --docker-password=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
+
+  
 
 export KUBECONFIG=/path/to/your/kubeconfig 
 
@@ -133,6 +142,38 @@ Create A (or CNAME) records for `*.dev.sandbox.nbank.fr`, `*.internal.dev.sandbo
 - `konghq.com/strip-path: "true"` — strip the path prefix before forwarding.
 - `konghq.com/plugins: rate-limiting, key-auth` — attach Kong plugins (create Plugin CRs or use annotations per doc).
 - [Kong Ingress Controller annotations](https://docs.konghq.com/kubernetes-ingress-controller/latest/reference/annotations/)
+
+---
+
+## TLS management
+
+Certificates are issued by **cert-manager** using Let’s Encrypt (ACME). In dev, the cert-manager Kustomization is **suspended** by default; enable it when you need TLS.
+
+### ClusterIssuers (`apps/cert-manager/cluster-issuers.yaml`)
+
+| Issuer        | Use case          | HTTP-01 ingress class |
+|---------------|-------------------|------------------------|
+| **nbank**     | Production (nginx) | nginx                |
+| **nbank-staging** | Staging (nginx) | nginx                |
+| **nbank-dev**     | Dev (Let's Encrypt staging) | nginx        |
+
+- **App charts that use nginx Ingress** (e.g. fineract-hook, core-banking chart ingress): use `cert-manager.io/cluster-issuer: nbank` (prod), `nbank-staging` (staging), or **nbank-dev** (dev; uses Let's Encrypt staging to avoid prod rate limits).
+- **Kong-routed Ingresses**: TLS is not managed by cert-manager (issuers use nginx class). Use LB-level certs or terminate TLS elsewhere if needed.
+
+### Enabling TLS in dev
+
+1. **Enable cert-manager:** In `clusters/dev/cert-manager.yaml` set `suspend: false`, push, then:
+   ```bash
+   flux reconcile kustomization cert-manager -n flux-system
+   ```
+2. **Apply ClusterIssuers:** The **cert-manager-issuers** Kustomization (`clusters/dev/cert-manager-issuers.yaml`) applies `./apps/cert-manager` and depends on cert-manager install. Once cert-manager is enabled, ClusterIssuers are applied automatically.
+3. **DNS:** Ensure each host (e.g. `core-banking.dev.sandbox.nbank.fr`) resolves to the Kong LoadBalancer (or the ingress that will serve the ACME challenge). Let’s Encrypt will hit `http://<host>/.well-known/acme-challenge/...`.
+
+### Summary
+
+- **cert-manager** install: `clusters/dev/cert-manager.yaml` → path `./apps/cert-manager-install`.
+- **ClusterIssuers**: `apps/cert-manager/cluster-issuers.yaml` (nbank, nbank-staging, nbank-dev). Applied via cert-manager-issuers Kustomization.
+- ACME contact email is set to `certs@nbank.fr` in the ClusterIssuers (domain: nbank.fr). Change in `apps/cert-manager/cluster-issuers.yaml` if needed.
 
 ---
 

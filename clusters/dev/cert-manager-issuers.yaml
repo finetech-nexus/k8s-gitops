@@ -1,0 +1,20 @@
+# ClusterIssuers (nbank, nbank-staging, nbank-dev). Apply after cert-manager install.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-issuers
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: flux-system
+      namespace: flux-system
+    - name: cert-manager
+      namespace: flux-system
+  timeout: 2m0s

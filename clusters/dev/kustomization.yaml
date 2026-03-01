@@ -4,6 +4,7 @@ resources:
   - flux-system
   - sources.yaml
   - cert-manager.yaml
+  - cert-manager-issuers.yaml
   - platform.yaml
   - kong.yaml
   - kong-ingress.yaml
