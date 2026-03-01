@@ -1,10 +1,38 @@
 # k8s-gitops
 
+```bash
+export GITHUB_TOKEN=your_github_pat   # repo scope
+
+flux bootstrap git \
+  --url=https://github.com/finetech-nexus/k8s-gitops.git \
+  --branch=main \
+  --path=clusters/dev \
+  --token-auth \
+  --password="$GITHUB_TOKEN"
+```
+flux get kustomizations -n flux-system
+
 flux reconcile source git flux-system -n flux-system
+
+flux reconcile kustomization flux-system -n flux-system
+flux reconcile kustomization cert-manager -n flux-system
+flux reconcile kustomization cert-manager-issuers -n flux-system
+flux reconcile kustomization platform -n flux-system
+flux reconcile kustomization kong -n flux-system
+flux reconcile kustomization kong-ingress -n flux-system
+flux reconcile kustomization monitoring -n flux-system
 flux reconcile kustomization core-banking -n flux-system
+flux reconcile kustomization apis -n flux-system
+flux reconcile kustomization identity -n flux-system
+
 flux get helmreleases -n core-banking
 
 for log kubectl logs -n flux-system deploy kustomize-controller -f
+
+#for debug
+kubectl get kustomizations -n flux-system -w
+
+flux get helmreleases -n core-banking
 
 
 kubectl create secret docker-registry ghcr-auth \
@@ -21,17 +49,6 @@ Flux GitOps repo for Nexus Bank (dev cluster: Kong + optional platform/core/apis
 
 ## Bootstrap (private repo)
 
-```bash
-export GITHUB_TOKEN=your_github_pat   # repo scope
-
-flux bootstrap git \
-  --url=https://github.com/finetech-nexus/k8s-gitops.git \
-  --branch=main \
-  --path=clusters/dev \
-  --token-auth \
-  --password="$GITHUB_TOKEN"
-```
-flux get kustomizations -n flux-system
 
 This creates the `flux-system` secret and GitRepository; no extra steps.
 
@@ -184,6 +201,41 @@ Certificates are issued by **cert-manager** using Let’s Encrypt (ACME). In dev
 - **cert-manager** install: `clusters/dev/cert-manager.yaml` → path `./apps/cert-manager-install`.
 - **ClusterIssuers**: `apps/cert-manager/cluster-issuers.yaml` (nbank, nbank-staging, nbank-dev). Applied via cert-manager-issuers Kustomization.
 - ACME contact email is set to `certs@nbank.fr` in the ClusterIssuers (domain: nbank.fr). Change in `apps/cert-manager/cluster-issuers.yaml` if needed.
+
+---
+
+## Core-banking: why is no pod created?
+
+Run these to see where it stops:
+
+```bash
+# 1. Is the core-banking Kustomization applied?
+flux get kustomization core-banking -n flux-system
+
+# 2. Are HelmReleases present and ready?
+flux get helmreleases -n core-banking
+
+# 3. If a HelmRelease is not Ready, inspect it
+kubectl describe helmrelease core-banking -n core-banking
+kubectl describe helmrelease fineract-hook -n core-banking
+
+# 4. Helm controller logs (chart pull / install errors)
+kubectl logs -n flux-system deploy/helm-controller -f --tail=100
+
+# 5. Pods in namespace
+kubectl get pods -n core-banking
+kubectl get all -n core-banking
+```
+
+**Common causes:**
+
+| Cause | What to check / fix |
+|-------|----------------------|
+| **core-banking Kustomization not Ready** | It depends on **sources**. Run `flux get kustomization sources -n flux-system` and fix sources (e.g. duplicate HelmRepository) so it’s Ready; then reconcile core-banking. |
+| **HelmRelease not Ready** | `kubectl describe helmrelease core-banking -n core-banking` → look at **Status.Conditions** and **Message**. |
+| **OCI chart pull failed** | Create the `ghcr-auth` secret in flux-system (see GHCR auth above). Reconcile HelmRepository: `flux reconcile source helm core-banking-helm-chart-oci -n flux-system`. |
+| **Chart version missing** | HelmRelease uses `fin-engine` version `1.4.1-SNAPSHOT` from `core-banking-helm-chart-oci`. Ensure that version exists in the OCI repo. |
+| **Pods stuck Init / ImagePullBackOff** | Values reference image `docker.io/nexusbank/fineract-custom:1.13.1` and DB host `fineract-mysql`. Check image pull and that MySQL (fineract-mysql) is running if the chart expects it. |
 
 ---
 
