@@ -77,7 +77,22 @@ jobs:
           curl -sSL https://fluxcd.io/install.sh | bash
           flux version
 
-      - name: Reconcile Flux
+      - name: Reconcile Flux source and root
         run: |
           flux reconcile source git flux-system -n flux-system
           flux reconcile kustomization flux-system -n flux-system --timeout=5m
+
+      - name: Reconcile all Kustomizations
+        run: |
+          for name in sources cert-manager cert-manager-issuers platform kong kong-ingress monitoring core-banking apis iam; do
+            echo "Reconciling kustomization $name..."
+            flux reconcile kustomization "$name" -n flux-system --timeout=3m || true
+          done
+
+      - name: Reconcile all HelmReleases
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -A --no-headers -o custom-columns="NS:.metadata.namespace,NAME:.metadata.name" 2>/dev/null | while read -r namespace name; do
+            [ -z "$name" ] && continue
+            echo "Reconciling helmrelease $name in $namespace..."
+            flux reconcile helmrelease "$name" -n "$namespace" --timeout=3m || true
+          done
