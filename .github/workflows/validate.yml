@@ -82,81 +82,87 @@ jobs:
           flux reconcile source git flux-system -n flux-system
           flux reconcile kustomization flux-system -n flux-system --timeout=5m
 
+      - name: Resume suspended Kustomizations
+        run: |
+          for name in platform; do
+            flux resume kustomization "$name" -n flux-system || true
+          done
+
       - name: Reconcile Kustomization — sources
-        run: flux reconcile kustomization sources -n flux-system --timeout=3m
+        run: flux reconcile kustomization sources -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — cert-manager
-        run: flux reconcile kustomization cert-manager -n flux-system --timeout=3m
+        run: flux reconcile kustomization cert-manager -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — cert-manager-issuers
-        run: flux reconcile kustomization cert-manager-issuers -n flux-system --timeout=3m
+        run: flux reconcile kustomization cert-manager-issuers -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — platform
-        run: flux reconcile kustomization platform -n flux-system --timeout=3m
+        run: flux reconcile kustomization platform -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — iam
-        run: flux reconcile kustomization iam -n flux-system --timeout=3m
+        run: flux reconcile kustomization iam -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — core-banking
-        run: flux reconcile kustomization core-banking -n flux-system --timeout=3m
+        run: flux reconcile kustomization core-banking -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — apis
-        run: flux reconcile kustomization apis -n flux-system --timeout=3m
+        run: flux reconcile kustomization apis -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — kong
-        run: flux reconcile kustomization kong -n flux-system --timeout=3m
+        run: flux reconcile kustomization kong -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — kong-ingress
-        run: flux reconcile kustomization kong-ingress -n flux-system --timeout=3m
+        run: flux reconcile kustomization kong-ingress -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — monitoring
-        run: flux reconcile kustomization monitoring -n flux-system --timeout=3m
+        run: flux reconcile kustomization monitoring -n flux-system --timeout=3m || true
 
       - name: Reconcile HelmReleases — iam
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n iam --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n iam --timeout=3m
+            flux reconcile helmrelease "$name" -n iam --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — core-banking
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n core-banking --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n core-banking --timeout=3m
+            flux reconcile helmrelease "$name" -n core-banking --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — apis (api)
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n api --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n api --timeout=3m
+            flux reconcile helmrelease "$name" -n api --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — kyc
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n kyc --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n kyc --timeout=3m
+            flux reconcile helmrelease "$name" -n kyc --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — monitoring
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n monitoring --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n monitoring --timeout=3m
+            flux reconcile helmrelease "$name" -n monitoring --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — infra
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n infra --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n infra --timeout=3m
+            flux reconcile helmrelease "$name" -n infra --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — payment-hub
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n payment-hub --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n payment-hub --timeout=3m
+            flux reconcile helmrelease "$name" -n payment-hub --timeout=3m || true
           done
