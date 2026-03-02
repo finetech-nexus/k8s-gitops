@@ -3,7 +3,7 @@ fineract:
   db: fineract-mysql
   DFSPIDS: "nexus-bank"
   SPRING_PROFILES_ACTIVE: "bb"
-  image: "docker.io/nexusbank/fineract-custom:1.13.1"
+  image: "docker.io/nexusbank/fineract-custom:1.14.1"
   replicas: 1
 #  hostAliases:
 #    - ip: "172.18.0.3"
@@ -30,9 +30,9 @@ fineract:
               FINERACT_SERVER_PORT: 8443
               FINERACT_SECURITY_BASICAUTH_ENABLED: false
               FINERACT_SECURITY_OAUTH_ENABLED: true
-              FINERACT_SECURITY_OAUTH_ISSUER_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
-              FINERACT_SECURITY_OAUTH_JWK_SET_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/certs
-              FINERACT_SERVER_OAUTH_RESOURCE_URL: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
+             # FINERACT_SECURITY_OAUTH_ISSUER_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
+            #  FINERACT_SECURITY_OAUTH_JWK_SET_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/certs
+             # FINERACT_SERVER_OAUTH_RESOURCE_URL: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
   preStopScript: 'echo -e "******Fineract is stopping********";'
   ingress:
     enabled: true
