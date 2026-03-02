@@ -3,7 +3,7 @@ fineract:
   db: fineract-mysql
   DFSPIDS: "nexus-bank"
   SPRING_PROFILES_ACTIVE: "bb"
-  image: "docker.io/nexusbank/fineract-custom:1.14.1"
+  image: "docker.io/nexusbank/fineract:1.14.1"
   replicas: 1
 #  hostAliases:
 #    - ip: "172.18.0.3"
