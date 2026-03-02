@@ -11,4 +11,4 @@ resources:
   - monitoring.yaml
   - core-banking.yaml
   - apis.yaml
-  - identity.yaml
+  - iam.yaml

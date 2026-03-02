@@ -14,6 +14,28 @@ The webapp is **already exposed via NGINX Ingress** (see `apps/core-banking/over
 
 If you use Kong for this host, consider disabling the chart Ingress (`webapp.ingress.enabled: false`) to avoid two entry points for the same host.
 
+### Browser: `net::ERR_NAME_NOT_RESOLVED`
+
+The hostname (e.g. `web-app.dev.sandbox.nbank.fr`) must resolve in DNS. If you don’t have a real DNS record yet:
+
+1. **Get the ingress/load balancer IP** (NGINX Ingress or Kong, depending on what serves the host):
+   ```bash
+   kubectl get svc -n ingress-nginx   # or your NGINX Ingress namespace
+   # or
+   kubectl get svc -n apim            # if Kong proxy is the entry
+   ```
+   Use the `EXTERNAL-IP` (or `LoadBalancer` hostname) of the ingress/proxy service.
+
+2. **Add a local hosts entry** on your machine (so the browser can resolve the name):
+   ```bash
+   # macOS/Linux: edit /etc/hosts (needs sudo)
+   <EXTERNAL-IP>   web-app.dev.sandbox.nbank.fr
+   ```
+
+3. Reload the browser and open `https://web-app.dev.sandbox.nbank.fr` (or `http://` if TLS isn’t set up). For HTTPS with a custom host, the certificate may show a warning unless you use a public DNS name and a proper issuer (e.g. cert-manager).
+
+Alternatively, create a real DNS record (A or CNAME) for `web-app.dev.sandbox.nbank.fr` pointing at that same IP.
+
 ### Loading the config into Kong
 
 1. **DB-less + declarative config (recommended)**  

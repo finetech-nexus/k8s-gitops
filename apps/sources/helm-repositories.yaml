@@ -54,3 +54,16 @@ spec:
   url: oci://ghcr.io/finetech-nexus/fineract-hook-chart
   secretRef:
     name: ghcr-auth
+---
+# OCI: IAM (Keycloak + PostgreSQL). Adjust url if published elsewhere; create secret ghcr-auth if private.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: iam-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/iam-helm-chart
+  secretRef:
+    name: ghcr-auth
