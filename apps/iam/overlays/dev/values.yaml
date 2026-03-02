@@ -178,17 +178,17 @@ keycloakx:
 
 
   extraVolumeMounts: |
-      - name: keycloak-tls
-        mountPath: /tls
-        readOnly: true
+   #   - name: keycloak-tls
+   #     mountPath: /tls
+   #     readOnly: true
       - name: providers
         mountPath: /opt/keycloak/providers
       - name: keystore-truststore
         mountPath: /jks
   extraVolumes: |
-    - name: keycloak-tls
-      secret:
-        secretName: keycloak-tls
+   # - name: keycloak-tls
+   #   secret:
+   #     secretName: keycloak-tls
     - name: providers
       emptyDir: {}
     - name: keystore-truststore
@@ -383,7 +383,7 @@ keycloakx:
       nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept"
       nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
       #nginx.ingress.kubernetes.io/proxy-buffer-size: 128k
-      cert-manager.io/cluster-issuer: nbank-dev
+      # No cert-manager: create secret "keycloak-tls" manually in namespace iam (tls.crt, tls.key) for HTTPS.
       meta.helm.sh/release-namespace: iam
       nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     # Additional Ingress labels
