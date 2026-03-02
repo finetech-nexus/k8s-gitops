@@ -9,3 +9,12 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - values.yaml=values.yaml
+# keycloak-tls Secret from PEM files in secrets/ (stored base64 in the Secret)
+secretGenerator:
+  - name: keycloak-tls
+    type: kubernetes.io/tls
+    options:
+      disableNameSuffixHash: true
+    files:
+      - tls.crt=secrets/keycloak-tls.crt
+      - tls.key=secrets/keycloak-tls.key
