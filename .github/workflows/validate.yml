@@ -109,6 +109,9 @@ jobs:
       - name: Reconcile Kustomization — apis
         run: flux reconcile kustomization apis -n flux-system --timeout=3m || true
 
+      - name: Reconcile Kustomization — kyc
+        run: flux reconcile kustomization kyc -n flux-system --timeout=3m || true
+
       - name: Reconcile Kustomization — kong
         run: flux reconcile kustomization kong -n flux-system --timeout=3m || true
 

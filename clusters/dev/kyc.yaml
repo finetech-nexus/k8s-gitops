@@ -1,0 +1,18 @@
+# KYC (Ballerine / workflows, etc.)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kyc
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/kyc/overlays/dev
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: core-banking
+      namespace: flux-system
+  timeout: 5m0s
