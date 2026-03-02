@@ -58,10 +58,10 @@ jobs:
           done
           echo "All kustomize builds succeeded."
 
-  # Trigger Flux to pull latest commit and reconcile. Runs only on push to main when KUBE_CONFIG secret is set.
+  # Trigger Flux to pull latest commit and reconcile. Runs only on push to main. Requires KUBE_CONFIG secret to be set.
   reconcile:
     needs: kustomize
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
