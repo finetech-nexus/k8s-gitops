@@ -5,7 +5,7 @@ metadata:
   name: apis
   namespace: flux-system
 spec:
-  suspend: true  # disabled (re-enable by setting to false)
+  suspend: false  # apis layer: api (nexus-bank-api, core-banking-api) + kyc
   interval: 5m0s
   path: ./apps/overlays/dev/04-apis
   prune: true
