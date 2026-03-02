@@ -1,4 +1,4 @@
-# KYC from kyc-helm-charts (nexus-bank repo)
+# KYC from OCI (ghcr.io/finetech-nexus/kyc-helm-chart/kyc)
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,10 +8,11 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: ./kyc-helm-charts
+      chart: kyc
+      version: "0.0.1"
       sourceRef:
-        kind: GitRepository
-        name: nexus-bank
+        kind: HelmRepository
+        name: kyc-chart-oci
         namespace: flux-system
       interval: 1m
   install:

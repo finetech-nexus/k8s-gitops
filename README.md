@@ -14,6 +14,12 @@ Flux GitOps repository for the Nexus Bank Kubernetes clusters. Defines cluster c
   - `core-banking/`, `payment-hub/`, etc. — App charts and overlays
 - **`apps/overlays/<env>/`** — Environment overlays (e.g. `01-platform`, `02-identity`, `03-core`, `04-apis`) that reference the app charts with env-specific values.
 
+## CI/CD
+
+GitHub Actions (`.github/workflows/validate.yml`) runs on push to `main` and on pull requests that touch `apps/`, `clusters/`, or `docs/`. It runs `kustomize build` on the cluster config and on every app path that Flux uses (sources, cert-manager, kong, overlays for dev/staging/production), so broken YAML or invalid refs fail the check before merge.
+
+## Apply
+
 Apply the cluster config for an env (e.g. dev) with:
 
 ```bash

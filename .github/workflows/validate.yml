@@ -1,0 +1,56 @@
+# Validate GitOps manifests: kustomize build all paths that Flux uses.
+# Runs on push to main and on pull requests.
+name: Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'clusters/**'
+      - 'docs/**'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'clusters/**'
+      - 'docs/**'
+      - '.github/workflows/validate.yml'
+
+jobs:
+  kustomize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "v5.4.2"
+
+      - name: Build cluster config (clusters/dev)
+        run: kustomize build clusters/dev >/dev/null
+
+      - name: Build app paths
+        run: |
+          set -e
+          for path in \
+            apps/sources \
+            apps/cert-manager-install \
+            apps/cert-manager \
+            apps/kong \
+            apps/kong-ingress \
+            apps/monitoring \
+            apps/overlays/dev/01-platform \
+            apps/overlays/dev/02-identity \
+            apps/overlays/dev/03-core \
+            apps/overlays/dev/04-apis \
+            apps/overlays/staging \
+            apps/overlays/production \
+            ; do
+            echo "Building $path..."
+            kustomize build "$path" >/dev/null
+          done
+          echo "All kustomize builds succeeded."
