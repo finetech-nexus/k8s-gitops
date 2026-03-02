@@ -178,17 +178,17 @@ keycloakx:
 
 
   extraVolumeMounts: |
-   #   - name: keycloak-tls
-   #     mountPath: /tls
-   #     readOnly: true
+      - name: keycloak-tls
+        mountPath: /tls
+        readOnly: true
       - name: providers
         mountPath: /opt/keycloak/providers
       - name: keystore-truststore
         mountPath: /jks
   extraVolumes: |
-   # - name: keycloak-tls
-   #   secret:
-   #     secretName: keycloak-tls
+    - name: keycloak-tls
+      secret:
+        secretName: keycloak-tls
     - name: providers
       emptyDir: {}
     - name: keystore-truststore
