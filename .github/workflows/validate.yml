@@ -1,6 +1,7 @@
-# Validate GitOps manifests: kustomize build all paths that Flux uses.
-# Runs on push to main and on pull requests.
-name: Validate
+# Validate GitOps manifests and optionally trigger Flux reconcile on push to main.
+# - Validate: kustomize build all paths (always on push + PR).
+# - Reconcile: flux reconcile (only on push to main when KUBE_CONFIG is set).
+name: Validate and Reconcile
 
 on:
   push:
@@ -56,3 +57,27 @@ jobs:
             kustomize build "$path" >/dev/null
           done
           echo "All kustomize builds succeeded."
+
+  # Trigger Flux to pull latest commit and reconcile. Runs only on push to main when KUBE_CONFIG secret is set.
+  reconcile:
+    needs: kustomize
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Install Flux CLI
+        run: |
+          curl -sSL https://fluxcd.io/install.sh | bash
+          flux version
+
+      - name: Reconcile Flux
+        run: |
+          flux reconcile source git flux-system -n flux-system --with-source
+          flux reconcile kustomization flux-system -n flux-system --timeout=5m

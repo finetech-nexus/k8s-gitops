@@ -16,7 +16,10 @@ Flux GitOps repository for the Nexus Bank Kubernetes clusters. Defines cluster c
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/validate.yml`) runs on push to `main` and on pull requests that touch `apps/`, `clusters/`, or `docs/`. It runs `kustomize build` on the cluster config and on every app path that Flux uses (sources, cert-manager, kong, overlays for dev/staging/production), so broken YAML or invalid refs fail the check before merge.
+GitHub Actions (`.github/workflows/validate.yml`) runs on push to `main` and on pull requests that touch `apps/`, `clusters/`, or `docs/`.
+
+1. **Validate** (always): runs `kustomize build` on the cluster config and on every app path that Flux uses (sources, cert-manager, kong, overlays for dev/staging/production), so broken YAML or invalid refs fail the check before merge.
+2. **Reconcile** (on push to `main` only, optional): if the repo secret **`KUBE_CONFIG`** is set (kubeconfig for the cluster where Flux runs), the workflow runs `flux reconcile source git flux-system` and `flux reconcile kustomization flux-system` so the cluster picks up the new commit without waiting for Flux’s interval. To enable: in the GitHub repo → Settings → Secrets and variables → Actions, add a secret `KUBE_CONFIG` with the contents of your kubeconfig file (e.g. `cat ~/.kube/config`).
 
 ## Apply
 
