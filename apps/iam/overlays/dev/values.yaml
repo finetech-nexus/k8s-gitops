@@ -677,7 +677,7 @@ postgresql:
     persistence:
       enabled: true
       existingClaim: ""
-      storageClass: "local-path"
+      storageClass: "hcloud-volumes"
       accessModes:
         - ReadWriteOnce
       size: 2Gi
