@@ -1,0 +1,21 @@
+# Kong APIM — declarative config for core-banking webapp (optional).
+# The webapp is exposed via NGINX Ingress (values webapp.ingress.hostname). Kong upstream
+# uses that ingress host URL so we avoid cluster-internal DNS (no .svc.cluster.local).
+#
+# Upstream: same as webapp.ingress.hostname (e.g. web-app.dev.sandbox.nbank.fr). Kong must
+# be able to resolve and reach this host (e.g. same cluster, or internal LB/DNS).
+# Use port 80 for HTTP to ingress, or 443 + protocol https if Kong talks HTTPS to ingress.
+# Route hosts: set to the host(s) you want Kong to accept (can match or differ from upstream).
+# TLS: on Kong proxy or load balancer; not defined here.
+---
+_format_version: "3.0"
+services:
+  - name: core-banking-webapp
+    host: web-app.dev.sandbox.nbank.fr
+    port: 80
+    protocol: http
+    routes:
+      - name: core-banking-webapp-route
+        paths: ["/"]
+        strip_path: false
+        hosts: ["web-app.dev.sandbox.nbank.fr"]
