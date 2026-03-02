@@ -79,5 +79,5 @@ jobs:
 
       - name: Reconcile Flux
         run: |
-          flux reconcile source git flux-system -n flux-system --with-source
+          flux reconcile source git flux-system -n flux-system
           flux reconcile kustomization flux-system -n flux-system --timeout=5m
