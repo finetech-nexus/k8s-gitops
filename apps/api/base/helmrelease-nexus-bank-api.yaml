@@ -1,4 +1,4 @@
-# Nexus Bank API from nexus-bank-api-chart (nexus-bank repo)
+# Nexus Bank API from OCI: ghcr.io/finetech-nexus/nexus-bank-api-chart/nexus-bank-app
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,10 +8,11 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: ./nexus-bank-api-chart
+      chart: nexus-bank-app
+      version: "0.1.0"
       sourceRef:
-        kind: GitRepository
-        name: nexus-bank
+        kind: HelmRepository
+        name: nexus-bank-api-chart-oci
         namespace: flux-system
       interval: 1m
   install:

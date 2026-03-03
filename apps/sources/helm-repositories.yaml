@@ -80,3 +80,16 @@ spec:
   url: oci://ghcr.io/finetech-nexus/kyc-helm-chart
   secretRef:
     name: ghcr-auth
+---
+# OCI: nexus-bank-app chart (nexus-bank-api-chart repo)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: nexus-bank-api-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/nexus-bank-api-chart
+  secretRef:
+    name: ghcr-auth
