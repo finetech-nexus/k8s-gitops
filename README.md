@@ -14,6 +14,35 @@ Flux GitOps repository for the Nexus Bank Kubernetes clusters. Defines cluster c
   - `core-banking/`, `payment-hub/`, etc. — App charts and overlays
 - **`apps/overlays/<env>/`** — Environment overlays (e.g. `01-platform`, `02-identity`, `03-core`, `04-apis`) that reference the app charts with env-specific values.
 
+## Ingress URLs (dev)
+
+Ingress hosts defined in k8s-gitops, by namespace. Dev uses nginx + cert-manager (`nbank-dev`) unless noted.
+
+| Namespace      | URL(s) |
+|----------------|--------|
+| **api**        | https://cbanking-api.api.dev.sandbox.nbank.fr |
+| **app**        | https://app.api.dev.sandbox.nbank.fr, https://app-ws.api.dev.sandbox.nbank.fr |
+| **iam**        | https://iam.dev.sandbox.nbank.fr |
+| **kyc**        | https://backoffice.kyc.dev.sandbox.nbank.fr, https://workflowdashboard.kyc.dev.sandbox.nbank.fr, https://workflowsvc.kyc.dev.sandbox.nbank.fr, https://kyb.kyc.dev.sandbox.nbank.fr, https://headlessexample.kyc.dev.sandbox.nbank.fr |
+| **core-banking** | https://fynams.dev.sandbox.nbank.fr (Fineract), https://web-app.dev.sandbox.nbank.fr (webapp), https://hooks-api.dev.sandbox.nbank.fr (fineract-hook), https://core-banking.dev.sandbox.nbank.fr (Kong) |
+| **infra**      | https://redpanda-console.mifos.gazelle.test, https://mongoexpress.mifos.gazelle.test, https://elasticsearch.mifos.gazelle.test, https://kibana.mifos.gazelle.test |
+| **apim**       | Kong wildcards: `*.dev.sandbox.nbank.fr` (public-app), `*.internal.dev.sandbox.nbank.fr` (internal-app) |
+
+### Traffic path (dev): LB → Traefik → Kong → nginx (URL / service routing)
+
+Traffic from the internet flows through the following layers (all inside the cluster except the LB):
+
+```
+Internet → Hetzner LB (public IP) → Traefik (k3s) → Kong (APIM) → nginx Ingress → URL / service
+```
+
+- **LB** — Hetzner Cloud Load Balancer (e.g. `lb11`) in front of the cluster; forwards to Traefik on the k3s workers.
+- **Traefik** — k3s default ingress; receives traffic from the LB and forwards to Kong.
+- **Kong (APIM)** — API gateway; receives from Traefik and routes by host/path to nginx (or to apim services).
+- **nginx Ingress** — Receives from Kong and routes to the correct Kubernetes services (and URLs) for the hosts in the table above (web-app, cbanking-api, app, iam, kyc, etc.).
+
+**DNS:** Point `*.dev.sandbox.nbank.fr` (and the specific hosts in the table) to the **LB’s public IP**.
+
 ## CI/CD
 
 GitHub Actions (`.github/workflows/validate.yml`) runs on push to `main` and on pull requests that touch `apps/`, `clusters/`, or `docs/`.
