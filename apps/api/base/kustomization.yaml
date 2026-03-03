@@ -3,5 +3,4 @@ kind: Kustomization
 namespace: api
 resources:
   - namespace.yaml
-  - helmrelease-nexus-bank-api.yaml
   - helmrelease-core-banking-api.yaml

@@ -50,6 +50,7 @@ jobs:
             apps/overlays/dev/02-identity \
             apps/overlays/dev/03-core \
             apps/overlays/dev/04-apis \
+            apps/overlays/dev/05-app \
             apps/overlays/staging \
             apps/overlays/production \
             ; do
@@ -109,6 +110,9 @@ jobs:
       - name: Reconcile Kustomization — apis
         run: flux reconcile kustomization apis -n flux-system --timeout=3m || true
 
+      - name: Reconcile Kustomization — app
+        run: flux reconcile kustomization app -n flux-system --timeout=3m || true
+
       - name: Reconcile Kustomization — kyc
         run: flux reconcile kustomization kyc -n flux-system --timeout=3m || true
 
@@ -140,6 +144,13 @@ jobs:
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n api --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
             flux reconcile helmrelease "$name" -n api --timeout=3m || true
+          done
+
+      - name: Reconcile HelmReleases — app
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -n app --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+            [ -z "$name" ] && continue
+            flux reconcile helmrelease "$name" -n app --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — kyc

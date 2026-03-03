@@ -4,11 +4,6 @@ namespace: api
 resources:
   - ../../base
 configMapGenerator:
-  - name: nexus-bank-api-values
-    options:
-      disableNameSuffixHash: true
-    files:
-      - values.yaml=values-nexus-bank-api.yaml
   - name: core-banking-api-values
     options:
       disableNameSuffixHash: true
