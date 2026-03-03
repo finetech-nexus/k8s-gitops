@@ -8,4 +8,3 @@ resources:
   - traefik-to-kong-ingress.yaml
   - ingress-routes.yaml
   - ingress-core-banking.yaml
-  - public-app-service.yaml

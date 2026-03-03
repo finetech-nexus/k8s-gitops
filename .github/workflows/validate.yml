@@ -44,7 +44,6 @@ jobs:
             apps/cert-manager-install \
             apps/cert-manager \
             apps/kong \
-            apps/kong-ingress \
             apps/monitoring \
             apps/overlays/dev/01-platform \
             apps/overlays/dev/06-infra \
@@ -122,9 +121,6 @@ jobs:
 
       - name: Reconcile Kustomization — kong
         run: flux reconcile kustomization kong -n flux-system --timeout=3m || true
-
-      - name: Reconcile Kustomization — kong-ingress
-        run: flux reconcile kustomization kong-ingress -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — monitoring
         run: flux reconcile kustomization monitoring -n flux-system --timeout=3m || true

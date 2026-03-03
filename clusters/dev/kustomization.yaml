@@ -8,7 +8,6 @@ resources:
   - platform.yaml
   - infra.yaml
   - kong.yaml
-  - kong-ingress.yaml
   - monitoring.yaml
   - core-banking.yaml
   - apis.yaml

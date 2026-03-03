@@ -5,6 +5,5 @@ kind: Kustomization
 resources:
   - sources
   - kong
-  - kong-ingress
   - monitoring
   # flux-system omitted: Kong HelmRepository already in apps/kong
