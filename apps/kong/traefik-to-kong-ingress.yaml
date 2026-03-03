@@ -21,7 +21,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: fynams.dev.sandbox.nbank.fr
       http:
         paths:
@@ -31,7 +31,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: hooks-api.dev.sandbox.nbank.fr
       http:
         paths:
@@ -41,7 +41,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: cbanking-api.api.dev.sandbox.nbank.fr
       http:
         paths:
@@ -51,7 +51,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: app.api.dev.sandbox.nbank.fr
       http:
         paths:
@@ -61,7 +61,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: app-ws.api.dev.sandbox.nbank.fr
       http:
         paths:
@@ -71,7 +71,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: iam.dev.sandbox.nbank.fr
       http:
         paths:
@@ -81,7 +81,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: core-banking.dev.sandbox.nbank.fr
       http:
         paths:
@@ -91,7 +91,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     # KYC
     - host: backoffice.kyc.dev.sandbox.nbank.fr
       http:
@@ -102,7 +102,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: workflowdashboard.kyc.dev.sandbox.nbank.fr
       http:
         paths:
@@ -112,7 +112,7 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
     - host: workflowsvc.kyc.dev.sandbox.nbank.fr
       http:
         paths:
@@ -122,4 +122,4 @@ spec:
               service:
                 name: kong-kong-proxy
                 port:
-                  number: 8000
+                  number: 80
