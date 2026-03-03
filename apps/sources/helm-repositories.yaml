@@ -28,19 +28,7 @@ spec:
   url: oci://ghcr.io/finetech-nexus/core-banking-helm-chart
   secretRef:
     name: ghcr-auth
----
-# OCI: core-banking chart (core-banking-api-charts repo)
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: core-banking-api-chart-oci
-  namespace: flux-system
-spec:
-  type: oci
-  interval: 5m
-  url: oci://ghcr.io/finetech-nexus/core-banking-api-chart
-  secretRef:
-    name: ghcr-auth
+
 ---
 # OCI: fineract-hook chart. Create secret ghcr-auth (see README). Adjust url if published elsewhere.
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -91,5 +79,31 @@ spec:
   type: oci
   interval: 5m
   url: oci://ghcr.io/finetech-nexus/nexus-bank-api-chart
+  secretRef:
+    name: ghcr-auth
+---
+# OCI: core-banking chart (core-banking-api-charts repo)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: core-banking-api-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/core-banking-api-chart
+  secretRef:
+    name: ghcr-auth
+---
+# OCI: infra chart (infra-helm-charts repo)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: infra-helm-chart-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/infra-helm-chart
   secretRef:
     name: ghcr-auth

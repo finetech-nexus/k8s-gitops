@@ -1,7 +1,6 @@
-# Layer 1 — Platform: sources, ClusterIssuers, infra (Kafka, ZK, ES, Kibana)
+# Layer 1 — Platform: sources, ClusterIssuers (infra has its own Flux Kustomization: 06-infra)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../../sources
   - ../../../cert-manager
-  - ../../../infra/overlays/dev

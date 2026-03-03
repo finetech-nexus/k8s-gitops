@@ -6,6 +6,7 @@ resources:
   - cert-manager.yaml
   - cert-manager-issuers.yaml
   - platform.yaml
+  - infra.yaml
   - kong.yaml
   - kong-ingress.yaml
   - monitoring.yaml

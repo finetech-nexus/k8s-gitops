@@ -1,4 +1,4 @@
-# Base HelmRelease: env-specific values come from overlay ConfigMap "infra-values"
+# Base HelmRelease: from OCI (infra-helm-charts). Env-specific values from overlay ConfigMap "infra-values".
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -8,14 +8,15 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: ./infra-helm-charts
+      chart: infra
+      version: "0.1.0"
       sourceRef:
-        kind: GitRepository
-        name: nexus-bank
+        kind: HelmRepository
+        name: infra-helm-chart-oci
         namespace: flux-system
       interval: 1m
   install:
-    createNamespace: true
+    createNamespace: false
   upgrade:
     remediation:
       retries: 3

@@ -1,0 +1,5 @@
+# Layer 6 — Infra (Kafka, ZK, ES, Kibana, etc.)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../infra/overlays/dev
