@@ -133,7 +133,7 @@ kybapp:
     pullSecrets: ""
     tag: "dev"
   ingress:
-    enabled: true
+    enabled: false
     className: "nginx"
     pathtype: Prefix
     annotations:
@@ -145,13 +145,13 @@ kybapp:
       # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       nginx.ingress.kubernetes.io/limit-rps: "15"
     hosts:
-      - host: kyb.kyc.sandbox.nexus-bank.io
+      - host: kyb.kyc.dev.sandbox.nbank.fr
         paths:
           - path: /
     tls:
        - secretName: letsencrypt-staging
          hosts:
-          - kyb.kyc.sandbox.nexus-bank.io
+          - kyb.kyc.dev.sandbox.nbank.fr
 
 workflowsdashboard:
   enabled: true
