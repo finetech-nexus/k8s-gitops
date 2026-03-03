@@ -1,0 +1,25 @@
+# Kong route: web-app.dev.sandbox.nbank.fr → internal URL http://web-app.dev.sandbox.nbank.fr (nginx ingress)
+# Uses KongService + KongRoute CRDs when available (e.g. Kong Gateway Operator).
+# If your Kong install only has KIC (Ingress-based), use an Ingress with kong ingressClassName instead.
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongService
+metadata:
+  name: webapp-service
+  namespace: apim
+spec:
+  url: "http://web-app.dev.sandbox.nbank.fr"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongRoute
+metadata:
+  name: webapp-route
+  namespace: apim
+spec:
+  hosts:
+    - "web-app.dev.sandbox.nbank.fr"
+  paths:
+    - "/"
+  strip_path: false
+  service:
+    name: webapp-service
