@@ -4,7 +4,7 @@ metadata:
   name: monitoring
   namespace: flux-system
 spec:
-  suspend: true  # disabled — only kong active
+  suspend: false
   interval: 5m
   path: ./apps/monitoring
   prune: true

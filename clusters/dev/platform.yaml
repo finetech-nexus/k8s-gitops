@@ -5,7 +5,7 @@ metadata:
   name: platform
   namespace: flux-system
 spec:
-  suspend: true  # disabled (re-enable by setting to false)
+  suspend: false
   interval: 5m0s
   path: ./apps/overlays/dev/01-platform
   prune: true

@@ -1,1 +1,101 @@
-# Dev values for core-banking-api-chart (tune as needed)
+# Dev values for core-banking-api-chart. Hosts under api.dev.sandbox.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret cbanking-api-dev-tls.
+replicaCount: 1
+# hostAliases: uncomment and set IP if in-cluster resolution for IAM/Fineract is needed
+# hostAliases:
+#   - ip: "172.18.0.3"
+#     hostnames:
+#       - "iam.dev.sandbox.nbank.fr"
+#       - "fynams.dev.sandbox.nbank.fr"
+image:
+  repository: nexusbank/core-banking-api
+  tag: "latest"
+  pullPolicy: Always
+
+env:
+  KEYCLOAK_URL: "https://iam.dev.sandbox.nbank.fr/auth"
+  KEYCLOAK_REALM: "customer"
+  KEYCLOAK_CLIENT_ID: "selfService-app-oidc"
+  KEYCLOAK_CLIENT_SECRET: "A4NSNrehcwU8t0LAmfVly1qAgnJlEuqm"
+  SUBJECT_ISSUER: "keycloak-oidc"
+  KEYCLOAK_ADMIN_CLIENT_ID: "selfService-registration-app-oidc"
+  KEYCLOAK_ADMIN_CLIENT_SECRET: "bBqdDdctb02hQ1x9TDUtZ6xtdyfeij1j"
+  KEYCLOAK_INTERNAL_REALM: "internal"
+  KEYCLOAK_FINERACT_CLIENT_ID: "selfService-app-oidc"
+  KEYCLOAK_FINERACT_CLIENT_SECRET: "PW9Vn1dxI2VS8V6fsyyZvgnkoPtWbp10"
+  KEYCLOAK_FINERACT_USERNAME: "mifos"
+  KEYCLOAK_FINERACT_PASSWORD: "password"
+  FINERACT_BASE_URL: "https://fynams.dev.sandbox.nbank.fr"
+  FINERACT_BASE_PATH: "/fineract-provider/api/v1"
+  FINERACT_TENANT: "nexusbank"
+  DEFAULT_SAVING_PRODUCT: 4
+  SAVING_PRODUCTS:
+    TND: "4"
+    EURO: "3"
+    USD: "2"
+  OFFICE_ID: 5
+  SWIFT_BIC: "NEXUSTN"
+  BANK_CODE: "30000000"
+  COUNTRY_CODE: "TN"
+
+
+extraEnv: |
+  - name: NODE_EXTRA_CA_CERTS
+    value: /etc/certificate/ca.pem
+
+extraVolumes:
+  - name: certificate
+    configMap:
+      name: ca-config-map
+extraVolumeMounts:
+  - name: certificate
+    mountPath: /etc/certificate
+    readOnly: true
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
+    nginx.ingress.kubernetes.io/proxy-buffers: "416k"
+    cert-manager.io/cluster-issuer: nbank-dev
+  hosts:
+    - host: cbanking-api.api.dev.sandbox.nbank.fr
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - cbanking-api.api.dev.sandbox.nbank.fr
+      secretName: cbanking-api-dev-tls
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 10
