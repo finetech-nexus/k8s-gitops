@@ -41,7 +41,6 @@ resources:
     memory: 2G
 
 ingressController:
-  installCRDs: true
   #tag: "2.9"  # XXX: must match both Kong version above and Kubernetes cluster version:  https://docs.konghq.com/kubernetes-ingress-controller/latest/references/version-compatibility/
   #
   # XXX: required for HPA
