@@ -123,6 +123,9 @@ containerSecurityContext:
 #
 #     https://docs.konghq.com/latest/configuration
 #
+# Enforce TLS 1.2+ for proxy (avoids "tlsv1 alert protocol version" with modern clients e.g. LibreSSL)
+env:
+  ssl_protocols: "TLSv1.2 TLSv1.3"
 #env:
 #  some_var:
 #    value: some_value
