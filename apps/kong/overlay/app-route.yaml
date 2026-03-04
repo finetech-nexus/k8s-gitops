@@ -1,5 +1,5 @@
-# App API: Gateway API HTTPRoute (app.api.dev.sandbox.nbank.fr, app-ws.api.dev.sandbox.nbank.fr) -> Kong Gateway -> ExternalName Service.
-# Uses KongPlugin internal-only from corebanking-route.yaml. No KongService.
+# App API: HTTPRoute -> Kong -> ingress-nginx (by IP, Host header set in nginx-ingress-upstream.yaml).
+# Uses KongPlugin internal-only from corebanking-route.yaml.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -38,27 +38,3 @@ spec:
     - backendRefs:
         - name: app-ws-internal
           port: 443
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: app-api-internal
-  namespace: apim
-spec:
-  type: ExternalName
-  externalName: app.api.dev.sandbox.internal.nbank.fr
-  ports:
-    - port: 443
-      name: https
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: app-ws-internal
-  namespace: apim
-spec:
-  type: ExternalName
-  externalName: app-ws.api.dev.sandbox.internal.nbank.fr
-  ports:
-    - port: 443
-      name: https

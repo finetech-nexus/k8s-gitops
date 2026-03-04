@@ -1,5 +1,4 @@
-# IAM: Gateway API HTTPRoute (iam.dev.sandbox.nbank.fr) -> Kong Gateway -> ExternalName Service.
-# Uses KongPlugin internal-only. No KongService.
+# IAM: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in nginx-ingress-upstream.yaml). Uses KongPlugin internal-only.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -19,15 +18,3 @@ spec:
     - backendRefs:
         - name: iam-internal
           port: 443
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: iam-internal
-  namespace: apim
-spec:
-  type: ExternalName
-  externalName: iam.dev.sandbox.internal.nbank.fr
-  ports:
-    - port: 443
-      name: https
