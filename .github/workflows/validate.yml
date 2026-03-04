@@ -45,7 +45,6 @@ jobs:
             apps/cert-manager \
             apps/ingress-nginx \
             apps/kong \
-            apps/monitoring \
             apps/overlays/dev/01-platform \
             apps/overlays/dev/06-infra \
             apps/overlays/dev/02-identity \
@@ -126,9 +125,6 @@ jobs:
       - name: Reconcile Kustomization — kong
         run: flux reconcile kustomization kong -n flux-system --timeout=3m || true
 
-      - name: Reconcile Kustomization — monitoring
-        run: flux reconcile kustomization monitoring -n flux-system --timeout=3m || true
-
       - name: Reconcile HelmReleases — iam
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n iam --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
@@ -162,13 +158,6 @@ jobs:
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n kyc --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
             flux reconcile helmrelease "$name" -n kyc --timeout=3m || true
-          done
-
-      - name: Reconcile HelmReleases — monitoring
-        run: |
-          kubectl get helmreleases.helm.toolkit.fluxcd.io -n monitoring --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
-            [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n monitoring --timeout=3m || true
           done
 
       - name: Reconcile HelmReleases — infra

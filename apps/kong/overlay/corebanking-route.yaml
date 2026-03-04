@@ -1,0 +1,58 @@
+# Webapp: LB (web-app.dev.sandbox.nbank.fr) -> Kong Ingress -> KongService (nginx ingress) -> service.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-kong-ingress
+  namespace: apim
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/strip-path: "true"
+    konghq.com/service-name: webapp-internal-service
+    konghq.com/plugins: internal-only
+spec:
+  ingressClassName: kong
+  rules:
+    - host: web-app.dev.sandbox.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webapp-placeholder
+                port:
+                  number: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-placeholder
+  namespace: apim
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app.kubernetes.io/name: webapp-placeholder
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongService
+metadata:
+  name: webapp-internal-service
+  namespace: apim
+spec:
+  url: "http://web-app.dev.sandbox.internal.nbank.fr"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: internal-only
+  namespace: apim
+plugin: ip-restriction
+config:
+  allow:
+    - 0.0.0.0/0
+    - "::/0"

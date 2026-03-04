@@ -36,7 +36,6 @@ PATHS=(
   apps/cert-manager
   apps/ingress-nginx
   apps/kong
-  apps/monitoring
   apps/overlays/dev/01-platform
   apps/overlays/dev/06-infra
   apps/overlays/dev/02-identity
@@ -89,7 +88,6 @@ KUSTOMIZATIONS=(
   app
   kyc
   kong
-  monitoring
 )
 
 for name in "${KUSTOMIZATIONS[@]}"; do
@@ -97,7 +95,7 @@ for name in "${KUSTOMIZATIONS[@]}"; do
   flux reconcile kustomization "$name" -n flux-system --timeout=3m || true
 done
 
-for ns in iam core-banking api app kyc monitoring infra payment-hub; do
+for ns in iam core-banking api app kyc infra payment-hub; do
   echo "Reconcile HelmReleases — $ns"
   kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
     [ -z "$name" ] && continue
