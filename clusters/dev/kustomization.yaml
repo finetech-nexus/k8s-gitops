@@ -5,6 +5,7 @@ resources:
   - sources.yaml
   - cert-manager.yaml
   - cert-manager-issuers.yaml
+  - ingress-nginx.yaml
   - platform.yaml
   - infra.yaml
   - kong.yaml

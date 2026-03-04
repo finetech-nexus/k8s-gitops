@@ -43,6 +43,7 @@ jobs:
             apps/sources \
             apps/cert-manager-install \
             apps/cert-manager \
+            apps/ingress-nginx \
             apps/kong \
             apps/monitoring \
             apps/overlays/dev/01-platform \
@@ -97,6 +98,9 @@ jobs:
 
       - name: Reconcile Kustomization — cert-manager-issuers
         run: flux reconcile kustomization cert-manager-issuers -n flux-system --timeout=3m || true
+
+      - name: Reconcile Kustomization — ingress-nginx
+        run: flux reconcile kustomization ingress-nginx -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — platform
         run: flux reconcile kustomization platform -n flux-system --timeout=3m || true
