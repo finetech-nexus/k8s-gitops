@@ -1,5 +1,6 @@
-# App API: LB (app.api.dev.sandbox.nbank.fr, app-ws.api.dev.sandbox.nbank.fr) -> Kong -> nginx ingress -> service.
+# App API: LB (app.api.dev.sandbox.nbank.fr, app-ws.api.dev.sandbox.nbank.fr) -> Kong -> ExternalName Service -> internal host.
 # Uses KongPlugin internal-only from corebanking-route.yaml (allow *).
+# No KongService: backends are ExternalName Services.
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -9,7 +10,6 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: kong
     konghq.com/strip-path: "true"
-    konghq.com/service-name: app-api-internal-service
     konghq.com/plugins: internal-only
 spec:
   ingressClassName: kong
@@ -21,9 +21,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: app-api-placeholder
+                name: app-api-internal
                 port:
-                  number: 80
+                  number: 443
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -33,7 +33,6 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: kong
     konghq.com/strip-path: "true"
-    konghq.com/service-name: app-ws-internal-service
     konghq.com/plugins: internal-only
 spec:
   ingressClassName: kong
@@ -45,50 +44,30 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: app-ws-placeholder
+                name: app-ws-internal
                 port:
-                  number: 80
+                  number: 443
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: app-api-placeholder
+  name: app-api-internal
   namespace: apim
 spec:
-  type: ClusterIP
+  type: ExternalName
+  externalName: app.api.dev.sandbox.internal.nbank.fr
   ports:
-    - port: 80
-      targetPort: 80
-      name: http
-  selector:
-    app.kubernetes.io/name: app-api-placeholder
+    - port: 443
+      name: https
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: app-ws-placeholder
+  name: app-ws-internal
   namespace: apim
 spec:
-  type: ClusterIP
+  type: ExternalName
+  externalName: app-ws.api.dev.sandbox.internal.nbank.fr
   ports:
-    - port: 80
-      targetPort: 80
-      name: http
-  selector:
-    app.kubernetes.io/name: app-ws-placeholder
----
-apiVersion: configuration.konghq.com/v1
-kind: KongService
-metadata:
-  name: app-api-internal-service
-  namespace: apim
-spec:
-  url: "http://app.api.dev.sandbox.internal.nbank.fr"
----
-apiVersion: configuration.konghq.com/v1
-kind: KongService
-metadata:
-  name: app-ws-internal-service
-  namespace: apim
-spec:
-  url: "http://app-ws.api.dev.sandbox.internal.nbank.fr"
+    - port: 443
+      name: https
