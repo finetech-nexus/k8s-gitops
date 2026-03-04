@@ -94,7 +94,7 @@ headlessexample:
     pullSecrets: ""
     tag: "dev"
   ingress:
-    enabled: true
+    enabled: false  # avoid "no object matching key kyc/headlessexample" when app disabled
     className: "nginx"
     pathtype: Prefix
     annotations:

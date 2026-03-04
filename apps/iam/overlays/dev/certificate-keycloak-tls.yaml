@@ -1,0 +1,15 @@
+# Certificate so ingress-nginx gets a valid TLS cert for iam.dev.sandbox.internal.nbank.fr.
+# Populates secret keycloak-tls (used by Keycloak and by Ingress). Requires cert-manager + ClusterIssuer nbank-dev.
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-tls
+  namespace: iam
+spec:
+  secretName: keycloak-tls
+  issuerRef:
+    name: nbank-dev
+    kind: ClusterIssuer
+  dnsNames:
+    - iam.dev.sandbox.internal.nbank.fr
