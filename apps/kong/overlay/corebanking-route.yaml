@@ -1,28 +1,24 @@
-# Webapp: LB (web-app.dev.sandbox.nbank.fr) -> Kong Ingress -> ExternalName Service -> internal host.
-# No KongService: backend is ExternalName Service. Uses KongPlugin internal-only (allow *).
+# Webapp: Gateway API HTTPRoute (web-app.dev.sandbox.nbank.fr) -> Kong Gateway -> ExternalName Service.
+# Uses KongPlugin internal-only (allow *). No KongService.
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: webapp-kong-ingress
+  name: webapp-route
   namespace: apim
   annotations:
-    kubernetes.io/ingress.class: kong
     konghq.com/strip-path: "true"
     konghq.com/plugins: internal-only
 spec:
-  ingressClassName: kong
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - web-app.dev.sandbox.nbank.fr
   rules:
-    - host: web-app.dev.sandbox.nbank.fr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: webapp-internal
-                port:
-                  number: 443
+    - backendRefs:
+        - name: webapp-internal
+          port: 443
 ---
 apiVersion: v1
 kind: Service

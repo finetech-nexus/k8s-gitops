@@ -1,0 +1,28 @@
+# Gateway API: GatewayClass + Gateway for Kong (unmanaged).
+# HTTPRoutes in app-route, corebanking-route, iam-route reference this Gateway.
+# See https://docs.konghq.com/kubernetes-ingress-controller/latest/gateway-api/
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+  description: Kong API Gateway (unmanaged)
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+  namespace: apim
+spec:
+  gatewayClassName: kong
+  listeners:
+    - name: proxy
+      port: 80
+      protocol: HTTP
+    - name: proxy-ssl
+      port: 443
+      protocol: HTTPS

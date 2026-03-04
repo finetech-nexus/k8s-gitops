@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - helm-repository.yaml
   - helm-release.yaml
+  - overlay/gateway-api.yaml
   - overlay/corebanking-route.yaml
   - overlay/iam-route.yaml
   - overlay/app-route.yaml
