@@ -1,19 +1,19 @@
-# Dev values for nexus-bank-api (nexus-bank-app chart). Hosts under api.dev.sandbox.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret nexus-bank-api-dev-tls.
+# Dev values for nexus-bank-api (nexus-bank-app chart). Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret nexus-bank-api-dev-tls.
 replicaCount: 1
 # hostAliases: uncomment and set IP if in-cluster resolution is needed
 # hostAliases:
 #   - ip: "172.18.0.3"
 #     hostnames:
-#       - "iam.dev.sandbox.nbank.fr"
-#       - "cbanking-api.api.dev.sandbox.nbank.fr"
-#       - "workflowsvc.kyc.dev.sandbox.nbank.fr"
+#       - "iam.dev.sandbox.internal.nbank.fr"
+#       - "cbanking-api.api.dev.sandbox.internal.nbank.fr"
+#       - "workflowsvc.kyc.dev.sandbox.internal.nbank.fr"
 image:
   repository: nexusbank/nexus-bank-api
   tag: "latest"
   pullPolicy: Always
 
 env:
-  KEYCLOAK_URL: "https://iam.dev.sandbox.nbank.fr/auth"
+  KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
   KEYCLOAK_REALM: "global"
   KEYCLOAK_CLIENT_ID: "nexusbank-app-oidc"
   KEYCLOAK_CLIENT_SECRET: "qOD7kOn1pL3YEGbMksooJyqSper1xpIQ"
@@ -43,7 +43,7 @@ extraEnv: |
         {
           "id":"tn",
           "name":"Tunisia",
-          "apiUrl":"https://cbanking-api.api.dev.sandbox.nbank.fr/api",
+          "apiUrl":"https://cbanking-api.api.dev.sandbox.internal.nbank.fr/api",
           "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
         }
       ]
@@ -52,7 +52,7 @@ extraEnv: |
   - name: BALLERINE_API_KEY
     value: webhook-shared-secret-secret
   - name: BALLERINE_ENDPOINT
-    value: https://workflowsvc.kyc.dev.sandbox.nbank.fr
+    value: https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr
   - name: STRIPE_SECRET_KEY
     value: sk_test_51SwJKzE0sjkbbrOPBlBY07xkIGHKL0vm4Opg4BEDPVNgAyq6nzLfK713upqTIvpPvQJPNgmWz7Ahj4iHbwzxzhI200jiUVtgPX
   - name: STRIPE_WEBHOOK_SECRET
@@ -103,18 +103,18 @@ ingress:
 
 
   hosts:
-    - host: app.api.dev.sandbox.nbank.fr
+    - host: app.api.dev.sandbox.internal.nbank.fr
       paths:
         - path: /
           pathType: ImplementationSpecific
-    - host: app-ws.api.dev.sandbox.nbank.fr
+    - host: app-ws.api.dev.sandbox.internal.nbank.fr
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - hosts:
-        - app.api.dev.sandbox.nbank.fr
-        - app-ws.api.dev.sandbox.nbank.fr
+        - app.api.dev.sandbox.internal.nbank.fr
+        - app-ws.api.dev.sandbox.internal.nbank.fr
       secretName: nexus-bank-api-dev-tls
 
 resources: {}

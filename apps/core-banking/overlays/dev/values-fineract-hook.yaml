@@ -10,7 +10,7 @@ image:
   pullPolicy: Always
 
 env:
-  KEYCLOAK_URL: "https://iam.dev.sandbox.nbank.fr/auth"
+  KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
   KEYCLOAK_REALM: "global"
 
 
@@ -56,13 +56,13 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"          # disable HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
-    - host: hooks-api.dev.sandbox.nbank.fr
+    - host: hooks-api.dev.sandbox.internal.nbank.fr
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - hosts:
-        - hooks-api.dev.sandbox.nbank.fr
+        - hooks-api.dev.sandbox.internal.nbank.fr
       secretName: hooks-api-dev-tls
 
 resources: {}

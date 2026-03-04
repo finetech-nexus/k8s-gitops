@@ -1,4 +1,4 @@
-# Kong APIM — API gateway. TLS via cert-manager (nbank-dev); URLs *.dev.sandbox.nbank.fr; no AWS.
+# Kong APIM — API gateway. TLS via cert-manager (nbank-dev); URLs *.dev.sandbox.internal.nbank.fr; no AWS.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

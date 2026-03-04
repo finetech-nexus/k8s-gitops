@@ -283,7 +283,7 @@ portal:
     enabled: true
     #ingressClassName: nginx
     tls: kong-portal-tls
-    hostname: kong-portal.dev.sandbox.nbank.fr
+    hostname: kong-portal.dev.sandbox.internal.nbank.fr
     annotations:
       cert-manager.io/cluster-issuer: nbank-dev
       kubernetes.io/ingress.class: nginx  # deprecated, and cannot also be set if ingressClassName is set
@@ -319,7 +319,7 @@ portalapi:
     enabled: true
     #ingressClassName: nginx
     tls: kong-portal-api-tls
-    hostname: kong-portal-api.dev.sandbox.nbank.fr
+    hostname: kong-portal-api.dev.sandbox.internal.nbank.fr
     annotations:
       cert-manager.io/cluster-issuer: nbank-dev
       kubernetes.io/ingress.class: nginx  # deprecated, and cannot also be set if ingressClassName is set
@@ -334,7 +334,7 @@ portalapi:
     path: /
     pathType: Prefix  # default: ImplementationSpecific
 
-# Only proxy TLS; hostname apim.dev.sandbox.nbank.fr (no Enterprise/Manager/Portal)
+# Only proxy TLS; hostname apim.dev.sandbox.internal.nbank.fr (no Enterprise/Manager/Portal)
 certificates:
   enabled: true
   clusterIssuer: nbank-dev
@@ -342,10 +342,10 @@ certificates:
   proxy:
     enabled: true
     clusterIssuer: nbank-dev
-    commonName: apim.dev.sandbox.nbank.fr
+    commonName: apim.dev.sandbox.internal.nbank.fr
     dnsNames:
-      - "apim.dev.sandbox.nbank.fr"
-      - "*.dev.sandbox.nbank.fr"
+      - "apim.dev.sandbox.internal.nbank.fr"
+      - "*.dev.sandbox.internal.nbank.fr"
 
   admin:
     enabled: false
@@ -354,5 +354,5 @@ certificates:
   cluster:
     enabled: true
     clusterIssuer: nbank-dev
-    commonName: kong-cluster.dev.sandbox.nbank.fr
+    commonName: kong-cluster.dev.sandbox.internal.nbank.fr
     dnsNames: []

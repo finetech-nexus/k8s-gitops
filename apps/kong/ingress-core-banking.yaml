@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: kong
   rules:
-    - host: "core-banking.dev.sandbox.nbank.fr"
+    - host: "core-banking.dev.sandbox.internal.nbank.fr"
       http:
         paths:
           - path: /

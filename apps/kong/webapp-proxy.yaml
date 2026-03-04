@@ -1,4 +1,4 @@
-# Proxy so Kong (KIC) has a Service backend; forwards to http://web-app.dev.sandbox.nbank.fr
+# Proxy so Kong (KIC) has a Service backend; forwards to http://web-app.dev.sandbox.internal.nbank.fr
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -14,7 +14,7 @@ data:
       server {
         listen 80;
         location / {
-          set $upstream http://web-app.dev.sandbox.nbank.fr;
+          set $upstream http://web-app.dev.sandbox.internal.nbank.fr;
           proxy_pass $upstream;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;

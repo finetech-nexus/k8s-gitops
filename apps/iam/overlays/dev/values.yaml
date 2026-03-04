@@ -131,9 +131,9 @@ keycloakx:
     - name: KEYCLOAK_ADMIN_PASSWORD
       value: admin
     - name: KEYCLOAK_FRONTEND_URL
-      value: https://iam.dev.sandbox.nbank.fr/auth
+      value: https://iam.dev.sandbox.internal.nbank.fr/auth
     - name: KC_HOSTNAME
-      value: iam.dev.sandbox.nbank.fr
+      value: iam.dev.sandbox.internal.nbank.fr
     - name: KC_HOSTNAME_STRICT_HTTPS
       value: "true"
     - name: KC_HTTPS_ENABLED
@@ -392,7 +392,7 @@ keycloakx:
     rules:
       -
         # Ingress host — dev sandbox
-        host: 'iam.dev.sandbox.nbank.fr'
+        host: 'iam.dev.sandbox.internal.nbank.fr'
         # Paths for the host
         paths:
           - path: '{{ tpl .Values.http.relativePath $ | trimSuffix "/" }}/'
@@ -400,7 +400,7 @@ keycloakx:
     # TLS configuration
     tls:
       - hosts:
-          - iam.dev.sandbox.nbank.fr
+          - iam.dev.sandbox.internal.nbank.fr
         secretName: "keycloak-tls"
 
     # ingress for console only (/auth/admin)

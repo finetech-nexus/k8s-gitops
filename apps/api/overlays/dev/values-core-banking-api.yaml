@@ -1,18 +1,18 @@
-# Dev values for core-banking-api-chart. Hosts under api.dev.sandbox.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret cbanking-api-dev-tls.
+# Dev values for core-banking-api-chart. Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret cbanking-api-dev-tls.
 replicaCount: 1
 # hostAliases: uncomment and set IP if in-cluster resolution for IAM/Fineract is needed
 # hostAliases:
 #   - ip: "172.18.0.3"
 #     hostnames:
-#       - "iam.dev.sandbox.nbank.fr"
-#       - "fynams.dev.sandbox.nbank.fr"
+#       - "iam.dev.sandbox.internal.nbank.fr"
+#       - "fynams.dev.sandbox.internal.nbank.fr"
 image:
   repository: nexusbank/core-banking-api
   tag: "latest"
   pullPolicy: Always
 
 env:
-  KEYCLOAK_URL: "https://iam.dev.sandbox.nbank.fr/auth"
+  KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
   KEYCLOAK_REALM: "customer"
   KEYCLOAK_CLIENT_ID: "selfService-app-oidc"
   KEYCLOAK_CLIENT_SECRET: "A4NSNrehcwU8t0LAmfVly1qAgnJlEuqm"
@@ -24,7 +24,7 @@ env:
   KEYCLOAK_FINERACT_CLIENT_SECRET: "PW9Vn1dxI2VS8V6fsyyZvgnkoPtWbp10"
   KEYCLOAK_FINERACT_USERNAME: "mifos"
   KEYCLOAK_FINERACT_PASSWORD: "password"
-  FINERACT_BASE_URL: "https://fynams.dev.sandbox.nbank.fr"
+  FINERACT_BASE_URL: "https://fynams.dev.sandbox.internal.nbank.fr"
   FINERACT_BASE_PATH: "/fineract-provider/api/v1"
   FINERACT_TENANT: "nexusbank"
   DEFAULT_SAVING_PRODUCT: 4
@@ -66,13 +66,13 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffers: "416k"
     cert-manager.io/cluster-issuer: nbank-dev
   hosts:
-    - host: cbanking-api.api.dev.sandbox.nbank.fr
+    - host: cbanking-api.api.dev.sandbox.internal.nbank.fr
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - hosts:
-        - cbanking-api.api.dev.sandbox.nbank.fr
+        - cbanking-api.api.dev.sandbox.internal.nbank.fr
       secretName: cbanking-api-dev-tls
 
 resources: {}

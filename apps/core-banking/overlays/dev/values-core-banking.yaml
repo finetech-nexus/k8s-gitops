@@ -30,20 +30,20 @@ fineract:
               FINERACT_SERVER_PORT: 8443
               FINERACT_SECURITY_BASICAUTH_ENABLED: false
               FINERACT_SECURITY_OAUTH_ENABLED: true
-             # FINERACT_SECURITY_OAUTH_ISSUER_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
-            #  FINERACT_SECURITY_OAUTH_JWK_SET_URI: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/certs
-             # FINERACT_SERVER_OAUTH_RESOURCE_URL: https://iam.dev.sandbox.nbank.fr/auth/realms/internal
+             # FINERACT_SECURITY_OAUTH_ISSUER_URI: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
+            #  FINERACT_SECURITY_OAUTH_JWK_SET_URI: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs
+             # FINERACT_SERVER_OAUTH_RESOURCE_URL: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
   preStopScript: 'echo -e "******Fineract is stopping********";'
   ingress:
     enabled: true
-    hostname: "fynams.dev.sandbox.nbank.fr"
+    hostname: "fynams.dev.sandbox.internal.nbank.fr"
     path: "/"
-    wildcardhostname: "fynams.dev.sandbox.nbank.fr"
+    wildcardhostname: "fynams.dev.sandbox.internal.nbank.fr"
     ingressClassName: nginx
     annotations:
       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
       nginx.ingress.kubernetes.io/enable-cors: "true"
-      nginx.ingress.kubernetes.io/cors-allow-origin: "https://web-app.dev.sandbox.nbank.fr"
+      nginx.ingress.kubernetes.io/cors-allow-origin: "https://web-app.dev.sandbox.internal.nbank.fr"
       nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS, PUT, DELETE"
       nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept, Origin, fineract-platform-tenantid"
       nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
@@ -57,7 +57,7 @@ fineract:
   deployment:
     extraEnvs:
       - name: FINERACT_SECURITY_OAUTH_ALLOWED_ISSUERS
-        value: https://iam.dev.sandbox.nbank.fr/auth/realms/internal,https://iam.nexus-bank.io/auth/realms/customer
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal,https://iam.nexus-bank.io/auth/realms/customer
       - name: JAVA_TOOL_OPTIONS
         value: >
           -Xms1024m -Xmx2048m
@@ -115,7 +115,7 @@ webapp:
   image: "docker.io/nexusbank/web-app:dev"
   ingress:
     enabled: true
-    hostname: "web-app.dev.sandbox.nbank.fr"
+    hostname: "web-app.dev.sandbox.internal.nbank.fr"
     path: "/"
     annotations:
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
@@ -130,9 +130,9 @@ webapp:
   deployment:
     extraEnvs:
       - name: FINERACT_API_URLS
-        value: 'https://fynams.dev.sandbox.nbank.fr'
+        value: 'https://fynams.dev.sandbox.internal.nbank.fr'
       - name: FINERACT_API_URL
-        value: 'https://fynams.dev.sandbox.nbank.fr'
+        value: 'https://fynams.dev.sandbox.internal.nbank.fr'
       - name: FINERACT_API_PROVIDER
         value: '/fineract-provider/api'
       - name: FINERACT_API_ACTUATOR
@@ -150,17 +150,17 @@ webapp:
       - name: FINERACT_PLUGIN_OIDC_ENABLED
         value: 'false'
       - name: MIFOS_OAUTH_SERVER_URL
-        value: https://fynams.dev.sandbox.nbank.fr/fineract-provider/api/v1
+        value: https://fynams.dev.sandbox.internal.nbank.fr/fineract-provider/api/v1
       - name: MIFOS_OAUTH_AUTHORIZE_URL
-        value: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/auth
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/auth
       - name: MIFOS_OAUTH_TOKEN_URL
-        value: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/token
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token
       - name: MIFOS_OAUTH_SERVER_LOGOUT_URL
-        value: https://iam.dev.sandbox.nbank.fr/auth/realms/internal/protocol/openid-connect/logout
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/logout
       - name: MIFOS_OAUTH_CLIENT_ID
         value: web-app
       - name: MIFOS_OAUTH_REDIRECT_URI
-        value: https://web-app.dev.sandbox.nbank.fr/callback
+        value: https://web-app.dev.sandbox.internal.nbank.fr/callback
       - name: MIFOS_OAUTH_SCOPE
         value: openid
         #Enable or Disable HTTP Cache
@@ -200,7 +200,7 @@ mysql:
         memory: "2Gi"
         cpu: "1000m"
 
-wildcardhostname: "*.dev.sandbox.nbank.fr"
+wildcardhostname: "*.dev.sandbox.internal.nbank.fr"
 
 tls: "core-banking-tls"
 
