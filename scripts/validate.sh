@@ -111,13 +111,14 @@ echo "==> Reconciling Flux..."
 if $PRUNE; then
   echo "Prune enabled: resources no longer in Git will be deleted."
 fi
-echo "Reconciling source git flux-system..."
-if ! flux reconcile source git flux-system -n flux-system 2>/dev/null; then
+if ! kubectl get gitrepository flux-system -n flux-system &>/dev/null; then
   echo "GitRepository flux-system not found. Re-create with:"
   echo "  kubectl apply -f clusters/dev/flux-system/gotk-sync.yaml"
   echo "  See docs/flux-recreate-source.md for details."
   exit 0
 fi
+echo "Reconciling source git flux-system (timeout 15s)..."
+flux reconcile source git flux-system -n flux-system --timeout=15s || true
 echo "Reconciling kustomization flux-system (may take 1–2 min)..."
 flux reconcile kustomization flux-system -n flux-system --timeout=2m $($PRUNE && echo --force) || true
 
