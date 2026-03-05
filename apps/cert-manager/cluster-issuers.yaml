@@ -44,14 +44,14 @@ metadata:
   name: nbank-dev
 spec:
   acme:
-    email: amiladi@nbank.fr
+    email: miladi.medamine@gmail.com
     server: https://acme-staging-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       name: nbank-dev-acme-account-key
     solvers:
       - dns01:
           cloudflare:
-            email: amiladi@nbank.fr
+            email: miladi.medamine@gmail.com
             apiTokenSecretRef:
-              name: cloudflare-api-token
-              key: api-token
+              name: cert-manager-dns01-internal
+              key: ZTse59xlLEGs37RpPL1g_eeYjAiEI2cHWJptDJRo
