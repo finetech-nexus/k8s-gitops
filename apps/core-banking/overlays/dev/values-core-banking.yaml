@@ -201,9 +201,11 @@ mysql:
         cpu: "1000m"
 
 wildcardhostname: "*.dev.sandbox.internal.nbank.fr"
-
 tls: "core-banking-tls"
-
+# Chart creates the Certificate; issuerRef points at ClusterIssuers in cluster-issuers.yaml (no separate Issuer needed).
+certificate:
+  enabled: true
+  issuerRef: nbank-dev  # from apps/cert-manager/cluster-issuers.yaml (DNS-01). Or nbank-dev-selfsigned if no ACME.
 post_installation_job:
   enabled: false
   tenants: "nexusbank,nexusbankfr"

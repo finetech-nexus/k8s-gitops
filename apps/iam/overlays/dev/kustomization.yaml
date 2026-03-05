@@ -3,20 +3,18 @@ kind: Kustomization
 namespace: iam
 resources:
   - ../../base
-  - certificate-keycloak-tls.yaml
 configMapGenerator:
   - name: iam-values
     options:
       disableNameSuffixHash: true
     files:
       - values.yaml=values.yaml
-# keycloak-tls is now created by cert-manager (Certificate in certificate-keycloak-tls.yaml) so it contains SAN iam.dev.sandbox.internal.nbank.fr.
-# If you need to use PEM files instead, remove certificate-keycloak-tls.yaml from resources and uncomment:
-# secretGenerator:
-#   - name: keycloak-tls
-#     type: kubernetes.io/tls
-#     options:
-#       disableNameSuffixHash: true
-#     files:
-#       - tls.crt=secrets/keycloak-tls.crt
-#       - tls.key=secrets/keycloak-tls.key
+# keycloak-tls Secret from PEM files in secrets/ (stored base64 in the Secret)
+secretGenerator:
+  - name: keycloak-tls
+    type: kubernetes.io/tls
+    options:
+      disableNameSuffixHash: true
+    files:
+      - tls.crt=secrets/keycloak-tls.crt
+      - tls.key=secrets/keycloak-tls.key
