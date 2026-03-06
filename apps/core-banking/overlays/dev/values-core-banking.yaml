@@ -88,18 +88,6 @@ fineract:
         value: "1"
       - name: FINERACT_EXTERNAL_EVENTS_KAFKA_TOPIC_AUTO_CREATE
         value: "true"
-      - name: SPRING_APPLICATION_JSON
-        value: >
-          {
-            "logging": {
-              "level": {
-                "org.apache.kafka": "DEBUG",
-                "org.apache.fineract.infrastructure.event.external.kafka": "DEBUG"
-              }
-            }
-          }
-
-
     extraVolumes:
       - name: truststore
         secret:
@@ -203,7 +191,6 @@ mysql:
 wildcardhostname: "*.dev.sandbox.internal.nbank.fr"
 webapp_tls: "webapp-tls"
 fineract_tls: "fineract-tls"
-# Chart creates the Certificate; issuerRef points at ClusterIssuers in cluster-issuers.yaml (no separate Issuer needed).
 certificate:
   enabled: true
   issuerRef: nbank-dev  # from apps/cert-manager/cluster-issuers.yaml (DNS-01). Or nbank-dev-selfsigned if no ACME.
