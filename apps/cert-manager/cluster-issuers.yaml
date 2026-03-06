@@ -53,5 +53,5 @@ spec:
           cloudflare:
             email: miladi.medamine@gmail.com
             apiTokenSecretRef:
-              name: cert-manager-dns01-internal
-              key: ZTse59xlLEGs37RpPL1g_eeYjAiEI2cHWJptDJRo
+              name: cloudflare-api-token
+              key: api-token
