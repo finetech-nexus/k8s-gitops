@@ -55,3 +55,12 @@ spec:
             apiTokenSecretRef:
               name: cloudflare-api-token
               key: api-token
+---
+# CA issuer: signs certificates using your internal CA. Secret internal-ca-keypair must exist in cert-manager namespace with tls.crt (CA cert) and tls.key (CA key).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: internal-ca
+spec:
+  ca:
+    secretName: internal-ca-keypair

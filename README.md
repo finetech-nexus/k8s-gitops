@@ -23,6 +23,18 @@ kubectl create secret generic cloudflare-api-token -n cert-manager \
 
 Use a Cloudflare API token with **Zone:DNS:Edit** for the relevant zone(s). See `apps/cert-manager/cluster-issuers.yaml` for details.
 
+### cert-manager — Internal CA (ClusterIssuer internal-ca)
+
+For the **internal-ca** ClusterIssuer, create a secret with your CA certificate and key (e.g. `certificate.crt` and `_.nbank.fr_private_key.key` in the project root):
+
+```bash
+kubectl create secret tls internal-ca-keypair -n cert-manager \
+  --cert=certificate.crt \
+  --key=_.nbank.fr_private_key.key
+```
+
+Run from the directory that contains the cert and key, or use full paths.
+
 ### Flux — GHCR (OCI Helm charts)
 
 For pulling Helm charts from `ghcr.io/finetech-nexus/*`. See **apps/sources/README.md**.
