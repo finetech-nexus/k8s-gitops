@@ -189,8 +189,8 @@ mysql:
         cpu: "1000m"
 
 wildcardhostname: "*.dev.sandbox.internal.nbank.fr"
-webapp_tls: "webapp-tls"
-fineract_tls: "fineract-tls"
+webapptls: "webapp-tls"
+fineracttls: "fineract-tls"
 certificate:
   enabled: true
   issuerRef: nbank-dev  # from apps/cert-manager/cluster-issuers.yaml (DNS-01). Or nbank-dev-selfsigned if no ACME.
