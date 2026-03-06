@@ -201,7 +201,9 @@ mysql:
         cpu: "1000m"
 
 wildcardhostname: "*.dev.sandbox.internal.nbank.fr"
-tls: "core-banking-tls"
+tls:
+  webapp-tls: "webapp-tls"
+  fineract-tls: "fineract-tls"
 # Chart creates the Certificate; issuerRef points at ClusterIssuers in cluster-issuers.yaml (no separate Issuer needed).
 certificate:
   enabled: true
