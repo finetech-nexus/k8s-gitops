@@ -38,29 +38,11 @@ spec:
               name: cloudflare-api-token
               key: api-token
 ---
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: nbank-dev
-spec:
-  acme:
-    email: miladi.medamine@gmail.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: nbank-dev-acme-account-key
-    solvers:
-      - dns01:
-          cloudflare:
-            email: miladi.medamine@gmail.com
-            apiTokenSecretRef:
-              name: cloudflare-api-token
-              key: api-token
----
 # CA issuer: signs certificates using your internal CA. Secret internal-ca-keypair must exist in cert-manager namespace with tls.crt (CA cert) and tls.key (CA key).
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: internal-ca
+  name: nbank-dev
 spec:
   ca:
     secretName: internal-ca-keypair
