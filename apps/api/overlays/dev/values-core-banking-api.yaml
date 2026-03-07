@@ -14,8 +14,8 @@ image:
 env:
   KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
   KEYCLOAK_REALM: "customer"
-  KEYCLOAK_CLIENT_ID: "selfService-app-oidc"
-  KEYCLOAK_CLIENT_SECRET: "A4NSNrehcwU8t0LAmfVly1qAgnJlEuqm"
+  KEYCLOAK_CLIENT_ID: "cbanking-api-oidc"
+  KEYCLOAK_CLIENT_SECRET: "Mh26ufWhUWLGabGsC84zNzmw26xLTp5U"
   SUBJECT_ISSUER: "keycloak-oidc"
   KEYCLOAK_ADMIN_CLIENT_ID: "selfService-registration-app-oidc"
   KEYCLOAK_ADMIN_CLIENT_SECRET: "bBqdDdctb02hQ1x9TDUtZ6xtdyfeij1j"

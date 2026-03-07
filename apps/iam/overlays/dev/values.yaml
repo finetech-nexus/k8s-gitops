@@ -1,4 +1,3 @@
-# IAM (Keycloak + PostgreSQL) — dev overlay. Hosts and issuers are for dev sandbox.
 keycloakx:
   # Optionally override the fully qualified name
   fullnameOverride: "keycloak"
@@ -18,14 +17,9 @@ keycloakx:
     digest: ""
     # The Keycloak image pull policy
     pullPolicy: IfNotPresent
-
   # Image pull secrets for the Pod
   imagePullSecrets: []
   # - name: myRegistrKeySecretName
-
-  # In-cluster DNS for iam.dev.sandbox.internal.nbank.fr: CoreDNS rewrite (apps/coredns-custom).
-
-
   # Indicates whether information about services should be injected into Pod's environment variables, matching the syntax of Docker links
   enableServiceLinks: true
 
@@ -58,14 +52,6 @@ keycloakx:
   rbac:
     create: false
     rules: []
-    # RBAC rules for KUBE_PING
-    #  - apiGroups:
-    #      - ""
-    #    resources:
-    #      - pods
-    #    verbs:
-    #      - get
-    #      - list
 
   # SecurityContext for the entire Pod. Every container running in the Pod will inherit this SecurityContext. This might be relevant when other components of the environment inject additional containers into running Pods (service meshes are the most prominent example for this)
   podSecurityContext:
@@ -87,12 +73,6 @@ keycloakx:
       volumeMounts:
         - name: providers
           mountPath: /opt/keycloak/providers
-
-
-  # When using service meshes which rely on a sidecar, it may be necessary to skip init containers altogether,
-  # since the sidecar doesn't start until the init containers are done, and the sidecar may be required
-  # for network access.
-  # For example, Istio in strict mTLS mode prevents the dbchecker init container from ever completing
   skipInitContainers: false
 
   # Additional sidecar containers, e. g. for a database proxy, such as Google's cloudsql-proxy
@@ -169,9 +149,6 @@ keycloakx:
       value: "/jks/truststore.jks"
     - name: KC_HTTPS_TRUST_STORE_PASSWORD
       value: "${jks_truststorePassword}"
-
-
-
   extraVolumeMounts: |
       - name: keycloak-tls
         mountPath: /tls
@@ -189,8 +166,6 @@ keycloakx:
     - name: keystore-truststore
       secret:
         secretName: keystore-truststore
-  
-
 
   # Additional environment variables for Keycloak mapped from Secret or ConfigMap
   extraEnvFrom: ""
@@ -277,8 +252,6 @@ keycloakx:
     #   cpu: "500m"
   #   memory: "1024Mi"
 
-
-
   # Add volume claim templates to the StatefulSet, e. g. for dynamic provisioning
   volumeClaimTemplates: ""
     # - metadata:
@@ -299,13 +272,10 @@ keycloakx:
   podDisruptionBudget: {}
   #  maxUnavailable: 1
   #  minAvailable: 1
-
   # Annotations for the StatefulSet
   statefulsetAnnotations: {}
-
   # Additional labels for the StatefulSet
   statefulsetLabels: {}
-
   # Configuration for secrets that should be created
   secrets: {}
     # mysecret:
@@ -314,7 +284,6 @@ keycloakx:
     #   labels: {}
     #   stringData: {}
   #   data: {}
-
   service:
     # Annotations for HTTP service
     annotations: {}
