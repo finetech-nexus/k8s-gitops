@@ -24,10 +24,41 @@ kubectl rollout restart deployment -n kube-system coredns
 kubectl rollout restart daemonset -n kube-system coredns
 ```
 
-**Add more hostnames:** Edit `configmap.yaml` and add lines to `internal-hosts.override`:
+**Verify (host still unknown?):**
+
+1. **ConfigMap present and applied**
+   ```bash
+   kubectl get configmap coredns-custom -n kube-system -o yaml
+   ```
+   If missing: apply the kustomization (e.g. `kubectl apply -k apps/coredns-custom` or `flux reconcile kustomization coredns-custom -n flux-system`).
+
+2. **Restart CoreDNS** (required after any ConfigMap change)
+   ```bash
+   kubectl rollout restart deployment -n kube-system coredns
+   # or: kubectl rollout restart daemonset -n kube-system coredns
+   kubectl rollout status deployment/coredns -n kube-system
+   ```
+
+3. **k3s only:** `coredns-custom` is only loaded by **k3s**. If the cluster is vanilla Kubernetes or another distro, this ConfigMap is ignored; use another method (e.g. hostAliases or patch the main CoreDNS ConfigMap).
+
+4. **Test resolution from a pod**
+   ```bash
+   kubectl run dns-test --rm -i --restart=Never --image=busybox:1.36 -- nslookup iam.dev.sandbox.internal.nbank.fr
+   ```
+   You should see an IP (the keycloak service). If it fails, CoreDNS is not applying the rewrite (wrong distro, not restarted, or ConfigMap not mounted).
+
+5. **From the failing pod** (e.g. Keycloak): check which host it’s resolving and that it uses cluster DNS (no custom `/etc/resolv.conf` overriding nameservers).
+   ```bash
+   kubectl exec -n iam keycloak-0 -c keycloak -- cat /etc/resolv.conf
+   kubectl exec -n iam keycloak-0 -c keycloak -- nslookup iam.dev.sandbox.internal.nbank.fr
+   ```
+
+Optional: run the script `./verify-in-cluster-dns.sh` from the repo root (with `kubectl` and cluster access).
+
+**Add more hostnames:** Edit `configmap.yaml` and add lines to `internal-hosts.override`. Use the safe syntax for CoreDNS 1.14.x (no `exact` / `answer auto`):
 
 ```
-rewrite name exact <hostname> <service>.<namespace>.svc.cluster.local answer auto
+rewrite name <hostname> <service>.<namespace>.svc.cluster.local
 ```
 
 Use the actual Service DNS name for the app (e.g. from `kubectl get svc -n <namespace>`).

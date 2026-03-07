@@ -8,19 +8,15 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 data:
+  # Safe syntax for CoreDNS 1.14.x: rewrite name <from> <to> (no exact/answer auto)
   internal-hosts.override: |
-    # IAM (Keycloak)
-    rewrite name exact iam.dev.sandbox.internal.nbank.fr keycloak.iam.svc.cluster.local answer auto
-    # Core-banking (Fineract, web-app)
-    rewrite name exact fynams.dev.sandbox.internal.nbank.fr fineract-server.core-banking.svc.cluster.local answer auto
-    rewrite name exact web-app.dev.sandbox.internal.nbank.fr webapp.core-banking.svc.cluster.local answer auto
-    # API (core-banking-api, nexus-bank-app)
-    rewrite name exact cbanking-api.api.dev.sandbox.internal.nbank.fr core-banking-api-core-banking.api.svc.cluster.local answer auto
-    rewrite name exact app.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local answer auto
-    rewrite name exact app-ws.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local answer auto
-    # Fineract hooks
-    rewrite name exact hooks-api.dev.sandbox.internal.nbank.fr fineract-hook-api.core-banking.svc.cluster.local answer auto
-    # KYC (nameOverrides: workflowservice, workflowsdashboard, backoffice)
-    rewrite name exact workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowservice.kyc.svc.cluster.local answer auto
-    rewrite name exact workflowdashboard.kyc.dev.sandbox.internal.nbank.fr workflowsdashboard.kyc.svc.cluster.local answer auto
-    rewrite name exact backoffice.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.svc.cluster.local answer auto
+    rewrite name iam.dev.sandbox.internal.nbank.fr keycloak.iam.svc.cluster.local
+    rewrite name fynams.dev.sandbox.internal.nbank.fr fineract-server.core-banking.svc.cluster.local
+    rewrite name web-app.dev.sandbox.internal.nbank.fr webapp.core-banking.svc.cluster.local
+    rewrite name cbanking-api.api.dev.sandbox.internal.nbank.fr core-banking-api-core-banking.api.svc.cluster.local
+    rewrite name app.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local
+    rewrite name app-ws.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local
+    rewrite name hooks-api.dev.sandbox.internal.nbank.fr fineract-hook-api.core-banking.svc.cluster.local
+    rewrite name workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowservice.kyc.svc.cluster.local
+    rewrite name workflowdashboard.kyc.dev.sandbox.internal.nbank.fr workflowsdashboard.kyc.svc.cluster.local
+    rewrite name backoffice.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.svc.cluster.local
