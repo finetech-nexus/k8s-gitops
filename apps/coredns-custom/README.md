@@ -14,7 +14,7 @@ Adds in-cluster DNS so `*.dev.sandbox.internal.nbank.fr` hostnames resolve to th
   - **Kong:** `apps/kong/overlay/nginx-ingress-upstream.yaml` — `konghq.com/host-header` for each service
 - **Role of this ConfigMap:** It only tells CoreDNS “when someone asks for this hostname, resolve to this service.” So the same URL that appears in env vars and Ingress also resolves inside the cluster.
 
-**Mechanism (k3s):** We use a **`*.server`** block (not `*.override`) so the zone `dev.sandbox.internal.nbank.fr` is handled first. The `.:53` block often runs the `kubernetes` plugin before custom overrides, which can return NXDOMAIN for unknown names. A dedicated server block for our zone runs rewrite then forwards to the cluster DNS (10.43.0.10). If your cluster DNS IP differs, edit the `forward .` line in `internal.server`. We use the `rewrite` plugin so that e.g. `iam.dev.sandbox.internal.nbank.fr` resolves to `keycloak.iam.svc.cluster.local` (with `answer auto` so the response keeps the original hostname).
+**Mechanism (k3s):** We use a **`*.server`** block so the zone `dev.sandbox.internal.nbank.fr` is handled first. The **hosts** plugin maps all those hostnames to a single **ingress IP** (ingress-nginx Service ClusterIP), so in-cluster traffic to e.g. `iam.dev.sandbox.internal.nbank.fr` goes through the ingress (same path as external clients, TLS and routing). Set the IP in `configmap.yaml` to your ingress-nginx ClusterIP: `kubectl get svc -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].spec.clusterIP}'` We use the `rewrite` plugin so that e.g. `iam.dev.sandbox.internal.nbank.fr` resolves to `keycloak.iam.svc.cluster.local` (with `answer auto` so the response keeps the original hostname).
 
 **Apply:** The dev cluster applies this via `clusters/dev/coredns-custom.yaml`. After first apply (or after changing the ConfigMap), restart CoreDNS so it reloads:
 
@@ -55,10 +55,4 @@ kubectl rollout restart daemonset -n kube-system coredns
 
 Optional: run the script `./verify-in-cluster-dns.sh` from the repo root (with `kubectl` and cluster access).
 
-**Add more hostnames:** Edit `configmap.yaml` and add a line inside the `internal.server` block (same format):
-
-```
-rewrite name <hostname> <service>.<namespace>.svc.cluster.local
-```
-
-Use the actual Service DNS name from `kubectl get svc -n <namespace>`. The `forward . 10.43.0.10` line must match your cluster DNS IP (see `Server:` in `nslookup` from any pod).
+**Add more hostnames:** Edit `configmap.yaml` and add the new hostname to the single `hosts { }` line (same IP, space-separated list). **Change the IP** if needed: it must be your ingress-nginx Service ClusterIP so traffic goes through ingress.

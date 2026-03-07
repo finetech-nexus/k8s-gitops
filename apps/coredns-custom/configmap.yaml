@@ -1,5 +1,6 @@
-# k3s CoreDNS custom config. *.server = dedicated zone (handled first); *.override = merged into .:53 (often too late).
-# Makes *.dev.sandbox.internal.nbank.fr resolve in-cluster (avoids UnknownHostException).
+# k3s CoreDNS custom config. *.server = dedicated zone so our names are handled first.
+# All *.dev.sandbox.internal.nbank.fr hostnames resolve to the ingress IP; traffic goes through ingress (TLS, routing).
+# Replace the IP below with ingress-nginx ClusterIP: kubectl get svc -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].spec.clusterIP}'
 # See: https://docs.k3s.io/installation/network-options#custom-coredns
 apiVersion: v1
 kind: ConfigMap
@@ -7,20 +8,11 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 data:
-  # Dedicated server block for our zone so rewrite runs before any other plugin (avoids NXDOMAIN).
-  # Cluster DNS IP from pod: Server in nslookup output (e.g. 10.43.0.10). Forward resolves the rewritten name.
   internal.server: |
     dev.sandbox.internal.nbank.fr:53 {
-      rewrite name iam.dev.sandbox.internal.nbank.fr keycloak.iam.svc.cluster.local
-      rewrite name fynams.dev.sandbox.internal.nbank.fr fineract-server.core-banking.svc.cluster.local
-      rewrite name web-app.dev.sandbox.internal.nbank.fr webapp.core-banking.svc.cluster.local
-      rewrite name cbanking-api.api.dev.sandbox.internal.nbank.fr core-banking-api-core-banking.api.svc.cluster.local
-      rewrite name app.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local
-      rewrite name app-ws.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local
-      rewrite name hooks-api.dev.sandbox.internal.nbank.fr fineract-hook-api.core-banking.svc.cluster.local
-      rewrite name workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowservice.kyc.svc.cluster.local
-      rewrite name workflowdashboard.kyc.dev.sandbox.internal.nbank.fr workflowsdashboard.kyc.svc.cluster.local
-      rewrite name backoffice.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.svc.cluster.local
-      forward . 10.43.0.10
+      hosts {
+        10.43.0.1 iam.dev.sandbox.internal.nbank.fr fynams.dev.sandbox.internal.nbank.fr web-app.dev.sandbox.internal.nbank.fr cbanking-api.api.dev.sandbox.internal.nbank.fr app.api.dev.sandbox.internal.nbank.fr app-ws.api.dev.sandbox.internal.nbank.fr hooks-api.dev.sandbox.internal.nbank.fr workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowdashboard.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.dev.sandbox.internal.nbank.fr
+        fallthrough
+      }
       cache
     }
