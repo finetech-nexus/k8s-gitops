@@ -23,11 +23,7 @@ keycloakx:
   imagePullSecrets: []
   # - name: myRegistrKeySecretName
 
-  # Mapping between IPs and hostnames that will be injected as entries in the Pod's hosts files
- # hostAliases:
- # - ip: "172.18.0.3"
- #   hostnames:
- #     - "iam.nexus-bank.io"
+  # In-cluster DNS for iam.dev.sandbox.internal.nbank.fr: CoreDNS rewrite (apps/coredns-custom).
 
 
   # Indicates whether information about services should be injected into Pod's environment variables, matching the syntax of Docker links

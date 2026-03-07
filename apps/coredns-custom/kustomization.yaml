@@ -1,0 +1,7 @@
+# CoreDNS custom config for dev: in-cluster resolution of *.dev.sandbox.internal.nbank.fr
+# (k3s merges coredns-custom *.override into the .:53 block)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+resources:
+  - configmap.yaml

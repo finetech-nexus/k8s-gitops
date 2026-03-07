@@ -1,0 +1,12 @@
+# k3s CoreDNS custom config: *.override keys are merged into the .:53 server block.
+# Makes iam.dev.sandbox.internal.nbank.fr resolve in-cluster (avoids UnknownHostException).
+# See: https://docs.k3s.io/installation/network-options#custom-coredns
+# Add more rewrite lines here for other *.dev.sandbox.internal.nbank.fr hostnames as needed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  internal-hosts.override: |
+    rewrite name exact iam.dev.sandbox.internal.nbank.fr keycloak.iam.svc.cluster.local answer auto

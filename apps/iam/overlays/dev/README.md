@@ -30,3 +30,11 @@ kubectl rollout status statefulset keycloak -n iam
 kubectl exec -n iam keycloak-0 -c keycloak -- ls -la /tls
 # Should show tls.crt and tls.key
 ```
+
+## In-cluster DNS for `iam.dev.sandbox.internal.nbank.fr`
+
+**Option B is implemented:** the dev cluster applies `apps/coredns-custom`, which adds a CoreDNS rewrite so **all pods** resolve `iam.dev.sandbox.internal.nbank.fr` to `keycloak.iam.svc.cluster.local`. No hostAliases are needed on IAM (or other apps).
+
+- ConfigMap: `kube-system/coredns-custom` (key `internal-hosts.override`).
+- Flux applies it via `clusters/dev/coredns-custom.yaml`. After apply, restart CoreDNS pods once so they pick up the config: `kubectl rollout restart deployment -n kube-system coredns` (or the daemonset name your cluster uses).
+- To add more internal hostnames, edit `apps/coredns-custom/configmap.yaml` and add more `rewrite name exact <hostname> <service>.<ns>.svc.cluster.local answer auto` lines.
