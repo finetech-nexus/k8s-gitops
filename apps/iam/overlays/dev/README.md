@@ -31,6 +31,26 @@ kubectl exec -n iam keycloak-0 -c keycloak -- ls -la /tls
 # Should show tls.crt and tls.key
 ```
 
+## PKIX / truststore (unable to find valid certification path)
+
+If Keycloak logs **`ValidatorException: PKIX path building failed`** or **`unable to find valid certification path to requested target`**, Java does not trust the TLS certificate of the server it is connecting to (e.g. `https://iam.dev.sandbox.internal.nbank.fr` or another internal HTTPS service). In dev, certs are signed by the **internal CA** (ClusterIssuer nbank-dev); that CA must be in Keycloak’s truststore.
+
+Keycloak uses the truststore at `/jks/truststore.jks` (secret `keystore-truststore`). To (re)create it from the internal CA and update the secret:
+
+```bash
+# From the k8s-gitops repo root. Requires: keytool (JDK), kubectl, cluster access.
+./scripts/create-iam-truststore-from-internal-ca.sh
+```
+
+Then restart Keycloak so it loads the new truststore:
+
+```bash
+kubectl rollout restart statefulset keycloak -n iam
+kubectl rollout status statefulset keycloak -n iam
+```
+
+The script reads the CA cert from the cert-manager secret `internal-ca-keypair`, builds a JKS truststore, and applies the Secret `keystore-truststore` in namespace `iam`. The truststore password must match the value used in `values.yaml` (`KC_SPI_TRUSTSTORE_FILE_PASSWORD`, default `password`).
+
 ## In-cluster DNS for `iam.dev.sandbox.internal.nbank.fr`
 
 **Option B is implemented:** the dev cluster applies `apps/coredns-custom`, which adds a CoreDNS rewrite so **all pods** resolve `iam.dev.sandbox.internal.nbank.fr` to `keycloak.iam.svc.cluster.local`. No hostAliases are needed on IAM (or other apps).
