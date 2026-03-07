@@ -14,7 +14,7 @@ Adds in-cluster DNS so `*.dev.sandbox.internal.nbank.fr` hostnames resolve to th
   - **Kong:** `apps/kong/overlay/nginx-ingress-upstream.yaml` — `konghq.com/host-header` for each service
 - **Role of this ConfigMap:** It only tells CoreDNS “when someone asks for this hostname, resolve to this service.” So the same URL that appears in env vars and Ingress also resolves inside the cluster.
 
-**Mechanism (k3s):** k3s merges the ConfigMap `coredns-custom` in `kube-system`: keys matching `*.override` are imported into the CoreDNS `.:53` block. We use the `rewrite` plugin so that e.g. `iam.dev.sandbox.internal.nbank.fr` resolves to `keycloak.iam.svc.cluster.local` (with `answer auto` so the response keeps the original hostname).
+**Mechanism (k3s):** We use a **`*.server`** block (not `*.override`) so the zone `dev.sandbox.internal.nbank.fr` is handled first. The `.:53` block often runs the `kubernetes` plugin before custom overrides, which can return NXDOMAIN for unknown names. A dedicated server block for our zone runs rewrite then forwards to the cluster DNS (10.43.0.10). If your cluster DNS IP differs, edit the `forward .` line in `internal.server`. We use the `rewrite` plugin so that e.g. `iam.dev.sandbox.internal.nbank.fr` resolves to `keycloak.iam.svc.cluster.local` (with `answer auto` so the response keeps the original hostname).
 
 **Apply:** The dev cluster applies this via `clusters/dev/coredns-custom.yaml`. After first apply (or after changing the ConfigMap), restart CoreDNS so it reloads:
 
@@ -55,10 +55,10 @@ kubectl rollout restart daemonset -n kube-system coredns
 
 Optional: run the script `./verify-in-cluster-dns.sh` from the repo root (with `kubectl` and cluster access).
 
-**Add more hostnames:** Edit `configmap.yaml` and add lines to `internal-hosts.override`. Use the safe syntax for CoreDNS 1.14.x (no `exact` / `answer auto`):
+**Add more hostnames:** Edit `configmap.yaml` and add a line inside the `internal.server` block (same format):
 
 ```
 rewrite name <hostname> <service>.<namespace>.svc.cluster.local
 ```
 
-Use the actual Service DNS name for the app (e.g. from `kubectl get svc -n <namespace>`).
+Use the actual Service DNS name from `kubectl get svc -n <namespace>`. The `forward . 10.43.0.10` line must match your cluster DNS IP (see `Server:` in `nslookup` from any pod).
