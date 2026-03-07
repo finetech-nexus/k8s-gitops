@@ -1,7 +1,7 @@
 # k3s CoreDNS custom config: *.override keys are merged into the .:53 server block.
-# Makes iam.dev.sandbox.internal.nbank.fr resolve in-cluster (avoids UnknownHostException).
+# Makes *.dev.sandbox.internal.nbank.fr resolve in-cluster (avoids UnknownHostException).
 # See: https://docs.k3s.io/installation/network-options#custom-coredns
-# Add more rewrite lines here for other *.dev.sandbox.internal.nbank.fr hostnames as needed.
+# Hostnames are defined in each app's values (Ingress, KEYCLOAK_URL, etc.); this file only maps them to cluster services.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -9,4 +9,18 @@ metadata:
   namespace: kube-system
 data:
   internal-hosts.override: |
+    # IAM (Keycloak)
     rewrite name exact iam.dev.sandbox.internal.nbank.fr keycloak.iam.svc.cluster.local answer auto
+    # Core-banking (Fineract, web-app)
+    rewrite name exact fynams.dev.sandbox.internal.nbank.fr fineract-server.core-banking.svc.cluster.local answer auto
+    rewrite name exact web-app.dev.sandbox.internal.nbank.fr webapp.core-banking.svc.cluster.local answer auto
+    # API (core-banking-api, nexus-bank-app)
+    rewrite name exact cbanking-api.api.dev.sandbox.internal.nbank.fr core-banking-api-core-banking.api.svc.cluster.local answer auto
+    rewrite name exact app.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local answer auto
+    rewrite name exact app-ws.api.dev.sandbox.internal.nbank.fr nexus-bank-app.app.svc.cluster.local answer auto
+    # Fineract hooks
+    rewrite name exact hooks-api.dev.sandbox.internal.nbank.fr fineract-hook-api.core-banking.svc.cluster.local answer auto
+    # KYC (nameOverrides: workflowservice, workflowsdashboard, backoffice)
+    rewrite name exact workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowservice.kyc.svc.cluster.local answer auto
+    rewrite name exact workflowdashboard.kyc.dev.sandbox.internal.nbank.fr workflowsdashboard.kyc.svc.cluster.local answer auto
+    rewrite name exact backoffice.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.svc.cluster.local answer auto
