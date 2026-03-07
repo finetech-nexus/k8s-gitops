@@ -382,8 +382,7 @@ keycloakx:
       nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"
       nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept"
       nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
-      #nginx.ingress.kubernetes.io/proxy-buffer-size: 128k
-      # No cert-manager: create secret "keycloak-tls" manually in namespace iam (tls.crt, tls.key) for HTTPS.
+      cert-manager.io/cluster-issuer: nbank-dev
       meta.helm.sh/release-namespace: iam
       nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     # Additional Ingress labels
@@ -707,3 +706,8 @@ postgresql:
 
   ## Only enable if using as a subchart with Keycloak
   fullnameOverride: "keycloak-postgresql"
+
+# TLS for Keycloak is provided by Ingress (cert-manager.io/cluster-issuer: nbank-dev).
+# Do not create the chart Certificate so the Ingress-driven Certificate owns keycloak-tls.
+certificate:
+  enabled: false
