@@ -123,7 +123,14 @@ jobs:
         run: flux reconcile kustomization kyc -n flux-system --timeout=3m || true
 
       - name: Reconcile Kustomization — kong
-        run: flux reconcile kustomization kong -n flux-system --timeout=3m || true
+        run: flux reconcile kustomization kong -n flux-system --timeout=5m || true
+
+      - name: Reconcile HelmReleases — apim (Kong)
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -n apim --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+            [ -z "$name" ] && continue
+            flux reconcile helmrelease "$name" -n apim --timeout=5m || true
+          done
 
       - name: Reconcile HelmReleases — iam
         run: |
