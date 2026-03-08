@@ -16,9 +16,9 @@ env:
   KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
   KEYCLOAK_REALM: "global"
   KEYCLOAK_CLIENT_ID: "nexusbank-app-oidc"
-  KEYCLOAK_CLIENT_SECRET: "qOD7kOn1pL3YEGbMksooJyqSper1xpIQ"
+  KEYCLOAK_CLIENT_SECRET: "XQDSqX7ePxvy0wwNw3LvPmuP1d1d3OIz"
   KEYCLOAK_ADMIN_CLIENT_ID: "nexusbank-registration-app-oidc"
-  KEYCLOAK_ADMIN_CLIENT_SECRET: "JzUQkw7mGF9Uf8KLwRAHpI91JhiW7RlI"
+  KEYCLOAK_ADMIN_CLIENT_SECRET: "cZdzGmXkkgGOxOMoUgQozP0xPdSEV8Rh"
 
 
 
@@ -48,7 +48,7 @@ extraEnv: |
         }
       ]
   - name: KYC_PROXY_URL
-    value: https://dorene-occludent-shandi.ngrok-free.dev
+    value: https://app.api.dev.sandbox.internal.nbank.fr
   - name: BALLERINE_API_KEY
     value: webhook-shared-secret-secret
   - name: BALLERINE_ENDPOINT
