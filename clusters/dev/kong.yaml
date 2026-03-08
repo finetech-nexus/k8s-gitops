@@ -5,6 +5,7 @@ metadata:
   name: kong
   namespace: flux-system
 spec:
+  suspend: false
   interval: 5m0s
   path: ./apps/kong
   prune: true
