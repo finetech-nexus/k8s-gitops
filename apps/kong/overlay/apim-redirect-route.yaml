@@ -1,6 +1,18 @@
+# KongPlugin must exist before the HTTPRoute that references it (konghq.com/plugins).
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: apim-redirect-to-app-api
+  namespace: apim
+plugin: redirect
+config:
+  status_code: 301
+  uri: https://app.api.dev.sandbox.nbank.fr
+  keep_incoming_path: true
+---
 # When request hits Kong with Host apim.nbank.fr, respond with 301 redirect to app.api.dev.sandbox.nbank.fr (same path).
 # BackendRef is required by Gateway API but never reached because the redirect plugin responds first.
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -18,14 +30,3 @@ spec:
     - backendRefs:
         - name: app-api-internal
           port: 443
----
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: apim-redirect-to-app-api
-  namespace: apim
-plugin: redirect
-config:
-  status_code: 301
-  uri: https://app.api.dev.sandbox.nbank.fr
-  keep_incoming_path: true
