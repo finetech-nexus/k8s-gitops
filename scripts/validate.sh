@@ -139,6 +139,7 @@ KUSTOMIZATIONS=(
   app
   kyc
   kong
+  kong-routes
 )
 
 for name in "${KUSTOMIZATIONS[@]}"; do
@@ -146,7 +147,7 @@ for name in "${KUSTOMIZATIONS[@]}"; do
   flux reconcile kustomization "$name" -n flux-system --timeout=3m $($PRUNE && echo --force) || true
 done
 
-for ns in iam core-banking api app kyc infra payment-hub; do
+for ns in apim iam core-banking api app kyc infra payment-hub; do
   echo "Reconcile HelmReleases — $ns"
   kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
     [ -z "$name" ] && continue
