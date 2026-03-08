@@ -322,7 +322,7 @@ portalapi:
       - http2
 
   ingress:
-    enabled: true
+    enabled: false
     #ingressClassName: nginx
     tls: kong-portal-api-tls
     hostname: kong-portal-api.dev.sandbox.internal.nbank.fr
