@@ -107,6 +107,10 @@ ingress:
       paths:
         - path: /
           pathType: ImplementationSpecific
+    - host: apim.nbank.fr
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
     - host: app-ws.api.dev.sandbox.internal.nbank.fr
       paths:
         - path: /
@@ -114,6 +118,7 @@ ingress:
   tls:
     - hosts:
         - app.api.dev.sandbox.internal.nbank.fr
+        - apim.nbank.fr
         - app-ws.api.dev.sandbox.internal.nbank.fr
       secretName: nexus-bank-api-dev-tls
 

@@ -1,5 +1,5 @@
 # App API: HTTPRoute -> Kong -> ingress-nginx (by IP, Host header set in nginx-ingress-upstream.yaml).
-# Uses KongPlugin internal-only from corebanking-route.yaml.
+# Hostnames apim.nbank.fr and app.api.dev.sandbox.nbank.fr both proxy to app-api-internal (Kong sets Host: app.api.dev.sandbox.internal.nbank.fr).
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -14,6 +14,7 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
+    - apim.nbank.fr
     - app.api.dev.sandbox.nbank.fr
   rules:
     - backendRefs:

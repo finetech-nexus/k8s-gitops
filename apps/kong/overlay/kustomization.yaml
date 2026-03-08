@@ -9,4 +9,3 @@ resources:
   - corebanking-route.yaml
   - iam-route.yaml
   - app-route.yaml
-  - apim-redirect-route.yaml
