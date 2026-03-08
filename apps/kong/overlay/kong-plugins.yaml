@@ -11,14 +11,3 @@ config:
   allow:
     - 0.0.0.0/0
     - "::/0"
----
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: apim-redirect-to-app-api
-  namespace: apim
-plugin: redirect
-config:
-  status_code: 301
-  location: https://app.api.dev.sandbox.nbank.fr
-  keep_incoming_path: true

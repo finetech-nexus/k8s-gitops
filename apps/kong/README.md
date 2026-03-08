@@ -6,7 +6,7 @@ Kong API Gateway. TLS via cert-manager (nbank-dev). Routes in `overlay/` are app
 
 | External hostname | Route / action | Backend (internal Host / service) |
 |-------------------|----------------|------------------------------------|
-| apim.nbank.fr | 301 redirect | → https://app.api.dev.sandbox.nbank.fr |
+| apim.nbank.fr | apim-proxy-route (proxy) | app.api.dev.sandbox.internal.nbank.fr |
 | app.api.dev.sandbox.nbank.fr | app-api-route | app.api.dev.sandbox.internal.nbank.fr |
 | app-ws.api.dev.sandbox.nbank.fr | app-ws-route | app-ws.api.dev.sandbox.internal.nbank.fr |
 | web-app.dev.sandbox.nbank.fr | webapp-route | web-app.dev.sandbox.internal.nbank.fr |
@@ -16,8 +16,7 @@ Kong API Gateway. TLS via cert-manager (nbank-dev). Routes in `overlay/` are app
 
 Plugins are defined in **overlay/kong-plugins.yaml** (applied first by the overlay):
 
-- **internal-only** — ip-restriction (allow all); used by webapp, iam, app-api, app-ws routes.
-- **apim-redirect-to-app-api** — redirect 301 to app.api.dev.sandbox.nbank.fr; used by apim-redirect-route.
+- **internal-only** — ip-restriction (allow all); used by webapp, iam, app-api, app-ws, apim-proxy routes.
 
 ### If `kubectl get kongplugin -A` shows no resources
 
