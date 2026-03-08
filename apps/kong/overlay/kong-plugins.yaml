@@ -20,5 +20,5 @@ metadata:
 plugin: redirect
 config:
   status_code: 301
-  uri: https://app.api.dev.sandbox.nbank.fr
+  location: https://app.api.dev.sandbox.nbank.fr
   keep_incoming_path: true
