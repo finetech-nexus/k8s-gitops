@@ -44,7 +44,8 @@ jobs:
             apps/cert-manager-install \
             apps/cert-manager \
             apps/ingress-nginx \
-            apps/kong \
+            apps/kong/install \
+            apps/kong/overlay \
             apps/overlays/dev/01-platform \
             apps/overlays/dev/06-infra \
             apps/overlays/dev/02-identity \
@@ -124,6 +125,9 @@ jobs:
 
       - name: Reconcile Kustomization — kong
         run: flux reconcile kustomization kong -n flux-system --timeout=5m || true
+
+      - name: Reconcile Kustomization — kong-routes
+        run: flux reconcile kustomization kong-routes -n flux-system --timeout=3m || true
 
       - name: Reconcile HelmReleases — apim (Kong)
         run: |

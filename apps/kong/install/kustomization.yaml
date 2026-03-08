@@ -1,0 +1,23 @@
+# Kong install only: namespace, Helm repo, HelmRelease + values. CRDs are installed by the chart.
+# Routes/plugins are applied by kong-routes Kustomization after this is ready.
+# Keep install/values.yaml in sync with base/values.yaml when changing Kong config.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - helm-repository.yaml
+  - helm-release.yaml
+configMapGenerator:
+  - name: kong-values
+    files:
+      - values.yaml
+    options:
+      disableNameSuffixHash: true
+patches:
+  - patch: |-
+      - op: add
+        path: /metadata/namespace
+        value: apim
+    target:
+      kind: ConfigMap
+      name: kong-values

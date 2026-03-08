@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kong
+  namespace: apim
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: kong
+      version: "~3.0"
+      sourceRef:
+        kind: HelmRepository
+        name: kong
+        namespace: flux-system
+  install:
+    createNamespace: false  # namespace apim created by namespace.yaml
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: kong-values
+      valuesKey: values.yaml

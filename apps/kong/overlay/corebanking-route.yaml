@@ -1,5 +1,17 @@
-# Webapp: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in nginx-ingress-upstream.yaml). Uses KongPlugin internal-only.
+# KongPlugin must exist before HTTPRoutes that reference it (konghq.com/plugins: internal-only).
 ---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: internal-only
+  namespace: apim
+plugin: ip-restriction
+config:
+  allow:
+    - 0.0.0.0/0
+    - "::/0"
+---
+# Webapp: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in nginx-ingress-upstream.yaml).
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -18,14 +30,3 @@ spec:
     - backendRefs:
         - name: webapp-internal
           port: 443
----
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: internal-only
-  namespace: apim
-plugin: ip-restriction
-config:
-  allow:
-    - 0.0.0.0/0
-    - "::/0"
