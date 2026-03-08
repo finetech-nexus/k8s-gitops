@@ -342,7 +342,7 @@ portalapi:
 
 # Only proxy TLS; hostname apim.dev.sandbox.internal.nbank.fr (no Enterprise/Manager/Portal)
 certificates:
-  enabled: true
+  enabled: false
   clusterIssuer: nbank-dev
 
   proxy:
