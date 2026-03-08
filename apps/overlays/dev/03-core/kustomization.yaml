@@ -1,6 +1,6 @@
-# Layer 3 — Core services: core-banking, payment-hub
+# Layer 3 — Core services: core-banking (payment-hub disabled)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../../core-banking/overlays/dev
-  - ../../../payment-hub/overlays/dev
+  # - ../../../payment-hub/overlays/dev  # disabled

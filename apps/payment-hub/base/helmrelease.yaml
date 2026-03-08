@@ -1,4 +1,4 @@
-# Payment Hub from payment-hub-helm-charts (nexus-bank repo)
+# Payment Hub from payment-hub-helm-charts (ph-helm-chart-oci GitRepository)
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -11,7 +11,7 @@ spec:
       chart: ./payment-hub-helm-charts
       sourceRef:
         kind: GitRepository
-        name: nexus-bank
+        name: ph-helm-chart-oci
         namespace: flux-system
       interval: 1m
   install:
