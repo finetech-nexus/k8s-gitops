@@ -73,8 +73,9 @@ podDisruptionBudget:
   enabled: true
   minAvailable: 50%
 
+# Disabled: PodSecurityPolicy (policy/v1beta1) was removed in Kubernetes 1.25+.
 podSecurityPolicy:
-  enabled: true
+  enabled: false
   labels: {}
   annotations: {}
   spec:
