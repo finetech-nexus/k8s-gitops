@@ -141,14 +141,14 @@ keycloakx:
       value: "password"
     - name: KC_FEATURES
       value: "preview,token-exchange,admin-fine-grained-authz:v1"
-    - name: KC_HTTPS_KEY_STORE_FILE
-      value: "/jks/keystore.jks"
-    - name: KC_HTTPS_KEY_STORE_PASSWORD
-      value: "${jks_keystorePassword}"
-    - name: KC_HTTPS_TRUST_STORE_FILE
-      value: "/jks/truststore.jks"
-    - name: KC_HTTPS_TRUST_STORE_PASSWORD
-      value: "${jks_truststorePassword}"
+ # - name: KC_HTTPS_KEY_STORE_FILE
+  #    value: "/jks/keystore.jks"
+  #    - name: KC_HTTPS_KEY_STORE_PASSWORD
+  #      value: "${jks_keystorePassword}"
+  #    - name: KC_HTTPS_TRUST_STORE_FILE
+  #      value: "/jks/truststore.jks"
+  #    - name: KC_HTTPS_TRUST_STORE_PASSWORD
+  #      value: "${jks_truststorePassword}"
   extraVolumeMounts: |
       - name: keycloak-tls
         mountPath: /tls
