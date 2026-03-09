@@ -1,11 +1,22 @@
 # Kong routes and plugins. Applied by kong-routes Kustomization after kong install (CRDs ready).
-# KongPlugins first so they exist before HTTPRoutes that reference them.
+# KongPlugins first, then Services + Endpoints (Kong -> ingress-nginx), then HTTPRoutes.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - kong-plugins.yaml
   - gateway-api.yaml
-  - nginx-ingress-upstream.yaml
-  - corebanking-route.yaml
+  - app-service.yaml
+  - app-endpoints.yaml
+  - webapp-service.yaml
+  - webapp-endpoints.yaml
+  - iam-service.yaml
+  - iam-endpoints.yaml
+  - fynams-service.yaml
+  - fynams-endpoints.yaml
+  - kyc-service.yaml
+  - kyc-endpoints.yaml
+  - webapp-route.yaml
+  - fynams-route.yaml
+  - kyc-route.yaml
   - iam-route.yaml
   - app-route.yaml

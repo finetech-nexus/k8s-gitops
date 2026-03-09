@@ -6,8 +6,19 @@ resources:
   - helm-repository.yaml
   - helm-release.yaml
   - overlay/gateway-api.yaml
-  - overlay/nginx-ingress-upstream.yaml
-  - overlay/corebanking-route.yaml
+  - overlay/app-service.yaml
+  - overlay/app-endpoints.yaml
+  - overlay/webapp-service.yaml
+  - overlay/webapp-endpoints.yaml
+  - overlay/iam-service.yaml
+  - overlay/iam-endpoints.yaml
+  - overlay/fynams-service.yaml
+  - overlay/fynams-endpoints.yaml
+  - overlay/kyc-service.yaml
+  - overlay/kyc-endpoints.yaml
+  - overlay/webapp-route.yaml
+  - overlay/fynams-route.yaml
+  - overlay/kyc-route.yaml
   - overlay/iam-route.yaml
   - overlay/app-route.yaml
 configMapGenerator:

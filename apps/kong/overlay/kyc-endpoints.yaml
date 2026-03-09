@@ -1,0 +1,37 @@
+# Kong -> ingress-nginx: KYC backend endpoints. Update IP if ingress-nginx LoadBalancer changes.
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: backoffice-kyc-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: workflowdashboard-kyc-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: workflowsvc-kyc-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

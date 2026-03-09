@@ -1,0 +1,62 @@
+# KYC: HTTPRoutes -> Kong -> ingress-nginx. Each route has external and internal hostnames.
+# KongPlugin internal-only is in overlay/kong-plugins.yaml.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backoffice-kyc-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - backoffice.kyc.dev.sandbox.nbank.fr
+    - backoffice.kyc.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: backoffice-kyc-internal
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: workflowdashboard-kyc-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - workflowdashboard.kyc.dev.sandbox.nbank.fr
+    - workflowdashboard.kyc.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: workflowdashboard-kyc-internal
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: workflowsvc-kyc-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - workflowsvc.kyc.dev.sandbox.nbank.fr
+    - workflowsvc.kyc.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: workflowsvc-kyc-internal
+          port: 443

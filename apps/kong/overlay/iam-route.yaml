@@ -1,4 +1,4 @@
-# IAM: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in nginx-ingress-upstream.yaml).
+# IAM: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in iam-service.yaml).
 # Hostnames: iam.dev.sandbox.nbank.fr and iam.dev.sandbox.internal.nbank.fr. Uses KongPlugin internal-only.
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -14,7 +14,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - iam.dev.sandbox.nbank.fr
     - iam.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:

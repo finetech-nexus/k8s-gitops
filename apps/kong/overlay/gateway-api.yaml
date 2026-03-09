@@ -1,5 +1,5 @@
 # Gateway API: GatewayClass + Gateway for Kong (unmanaged).
-# HTTPRoutes in app-route, corebanking-route, iam-route reference this Gateway.
+# HTTPRoutes in app-route, webapp-route, fynams-route, kyc-route, iam-route reference this Gateway.
 # See https://docs.konghq.com/kubernetes-ingress-controller/latest/gateway-api/
 ---
 apiVersion: gateway.networking.k8s.io/v1
