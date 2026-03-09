@@ -10,7 +10,6 @@ resources:
   - overlay/corebanking-route.yaml
   - overlay/iam-route.yaml
   - overlay/app-route.yaml
-  - overlay/apim-redirect-route.yaml
 configMapGenerator:
   - name: kong-values
     files:
