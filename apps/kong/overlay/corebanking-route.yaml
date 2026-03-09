@@ -1,4 +1,5 @@
 # Webapp: HTTPRoute -> Kong -> ingress-nginx (by IP, Host in nginx-ingress-upstream.yaml).
+# Hostnames: external (web-app.dev.sandbox.nbank.fr) and internal (web-app.dev.sandbox.internal.nbank.fr).
 # KongPlugin internal-only is in overlay/kong-plugins.yaml.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -14,6 +15,7 @@ spec:
       namespace: apim
   hostnames:
     - web-app.dev.sandbox.nbank.fr
+    - web-app.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:
         - name: webapp-internal

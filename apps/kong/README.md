@@ -8,7 +8,6 @@ Kong API Gateway. TLS via cert-manager (nbank-dev). Routes in `overlay/` are app
 |-------------------|----------------|------------------------------------|
 | apim.nbank.fr | app-api-route (proxy) | app.api.dev.sandbox.internal.nbank.fr |
 | app.api.dev.sandbox.nbank.fr | app-api-route (proxy) | app.api.dev.sandbox.internal.nbank.fr |
-| app-ws.api.dev.sandbox.nbank.fr | app-ws-route | app-ws.api.dev.sandbox.internal.nbank.fr |
 | web-app.dev.sandbox.nbank.fr | webapp-route | web-app.dev.sandbox.internal.nbank.fr |
 | iam.dev.sandbox.nbank.fr | iam-route | iam.dev.sandbox.internal.nbank.fr |
 
@@ -16,7 +15,7 @@ Kong API Gateway. TLS via cert-manager (nbank-dev). Routes in `overlay/` are app
 
 Plugins are defined in **overlay/kong-plugins.yaml** (applied first by the overlay):
 
-- **internal-only** — ip-restriction (allow all); used by webapp, iam, app-api, app-ws routes.
+- **internal-only** — ip-restriction (allow all); used by webapp, iam, app-api routes.
 
 **apim.nbank.fr:** Same route as app API (`app-api-route`). For https://apim.nbank.fr/api-docs to work, **DNS for apim.nbank.fr must point to Kong's LoadBalancer IP** (not ingress-nginx). Then Kong receives the request and proxies to ingress-nginx with Host `app.api.dev.sandbox.internal.nbank.fr`. If apim.nbank.fr points to ingress-nginx you get 404 because nginx has no Ingress for that host.
 

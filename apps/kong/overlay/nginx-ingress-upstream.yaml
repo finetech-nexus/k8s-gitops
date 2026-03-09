@@ -33,34 +33,6 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: app-ws-internal
-  namespace: apim
-  annotations:
-    konghq.com/host-header: app-ws.api.dev.sandbox.internal.nbank.fr
-    konghq.com/protocol: "https"
-    konghq.com/tls-verify: "false"
-spec:
-  type: ClusterIP
-  ports:
-    - port: 443
-      targetPort: 443
-      name: https
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: app-ws-internal
-  namespace: apim
-subsets:
-  - addresses:
-      - ip: 95.217.169.62
-    ports:
-      - port: 443
-        name: https
----
-apiVersion: v1
-kind: Service
-metadata:
   name: webapp-internal
   namespace: apim
   annotations:
