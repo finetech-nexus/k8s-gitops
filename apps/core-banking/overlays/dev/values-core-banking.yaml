@@ -194,5 +194,5 @@ certificate:
   enabled: true
   issuerRef: nbank-dev  # from apps/cert-manager/cluster-issuers.yaml (DNS-01). Or nbank-dev-selfsigned if no ACME.
 post_installation_job:
-  enabled: false
+  enabled: true
   tenants: "nexusbank,nexusbankfr"
