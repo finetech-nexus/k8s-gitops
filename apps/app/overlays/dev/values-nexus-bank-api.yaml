@@ -1,4 +1,7 @@
-# Dev values for nexus-bank-api (nexus-bank-app chart). Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret nexus-bank-api-dev-tls.
+# Dev values for nexus-bank-api (nexus-bank-app chart). Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager via Ingress (nexus-bank-api-dev-tls); chart Certificate disabled.
+certificate:
+  enabled: false
+
 replicaCount: 1
 # hostAliases: uncomment and set IP if in-cluster resolution is needed
 # hostAliases:
