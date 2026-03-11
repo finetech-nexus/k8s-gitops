@@ -15,7 +15,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - web-app.dev.sandbox.nbank.fr
     - web-app.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:

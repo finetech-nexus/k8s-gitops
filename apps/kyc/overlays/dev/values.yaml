@@ -235,7 +235,7 @@ workflowService:
       #ingress.annotations.service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "<your aws acm arn>"
       nginx.ingress.kubernetes.io/limit-rps: "15"
       nginx.ingress.kubernetes.io/enable-cors: "true" 
-      nginx.ingress.kubernetes.io/cors-allow-origin: "https://backoffice.kyc.dev.sandbox.internal.nbank.fr"
+      nginx.ingress.kubernetes.io/cors-allow-origin: "https://backoffice.kyc.dev.sandbox.internal.nbank.fr,https://workflowdashboard.kyc.dev.sandbox.internal.nbank.fr"
       nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, DELETE, PATCH, OPTIONS"
       nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
       nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Requested-With, mode"

@@ -15,7 +15,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - fynams.dev.sandbox.nbank.fr
     - fynams.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:

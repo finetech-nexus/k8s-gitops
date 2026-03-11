@@ -14,7 +14,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - backoffice.kyc.dev.sandbox.nbank.fr
     - backoffice.kyc.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:
@@ -34,7 +33,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - workflowdashboard.kyc.dev.sandbox.nbank.fr
     - workflowdashboard.kyc.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:
@@ -54,7 +52,6 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
-    - workflowsvc.kyc.dev.sandbox.nbank.fr
     - workflowsvc.kyc.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:
