@@ -136,8 +136,11 @@ webapp:
         value: 'true'
       - name: FINERACT_PLUGIN_OIDC_ENABLED
         value: 'false'
-      - name: MIFOS_OAUTH_SERVER_URL
+      # IdP issuer URL for OAuth2 discovery (Keycloak). Discovery loads from here; userdetails use MIFOS_OAUTH_SERVER_URL (Fineract).
+      - name: MIFOS_OAUTH_ISSUER_URL
         value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
+      - name: MIFOS_OAUTH_SERVER_URL
+        value: https://fynams.dev.sandbox.internal.nbank.fr/fineract-provider/api/v1
       - name: MIFOS_OAUTH_AUTHORIZE_URL
         value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/auth
       - name: MIFOS_OAUTH_TOKEN_URL
