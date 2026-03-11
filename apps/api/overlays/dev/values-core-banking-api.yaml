@@ -1,4 +1,7 @@
 # Dev values for core-banking-api-chart. Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret cbanking-api-dev-tls.
+# CA for IAM/Fineract TLS is provided by this overlay (kustomization configMapGenerator + ca.pem).
+caConfigMap:
+  create: false
 replicaCount: 1
 # hostAliases: uncomment and set IP if in-cluster resolution for IAM/Fineract is needed
 # hostAliases:
