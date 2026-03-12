@@ -9,3 +9,8 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - values.yaml=values-core-banking-api.yaml
+  - name: ca-config-map
+    options:
+      disableNameSuffixHash: true
+    files:
+      - ca.pem=ca.pem
