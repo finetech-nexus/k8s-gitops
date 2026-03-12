@@ -30,12 +30,12 @@ env:
   FINERACT_BASE_URL: "https://fynams.dev.sandbox.internal.nbank.fr"
   FINERACT_BASE_PATH: "/fineract-provider/api/v1"
   FINERACT_TENANT: "nexusbank"
-  DEFAULT_SAVING_PRODUCT: 4
+  DEFAULT_SAVING_PRODUCT: 3
   SAVING_PRODUCTS:
-    TND: "4"
-    EURO: "3"
-    USD: "2"
-  OFFICE_ID: 5
+    TND: "3"
+    EURO: "2"
+    USD: "1"
+  OFFICE_ID: 2
   SWIFT_BIC: "NEXUSTN"
   BANK_CODE: "30000000"
   COUNTRY_CODE: "TN"
