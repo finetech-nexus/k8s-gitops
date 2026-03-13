@@ -367,6 +367,10 @@ ph-ee-engine:
   # identity:
   #  hostname: "iam.nexus-bank.io"
 
+  # Disable in-cluster MySQL; we use mysql.infra. Condition in Chart.yaml is "operations.mysql.enabled".
+  operations:
+    mysql:
+      enabled: false
 
   operationsmysql:
     enabled: false
