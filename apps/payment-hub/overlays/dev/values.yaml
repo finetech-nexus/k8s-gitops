@@ -1,4 +1,4 @@
-
+# Hosts: *.payment-hub.dev.sandbox.internal.nbank.fr; IAM/fynams: dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev.
 ph-ee-engine:
   enabled: true
   global:
@@ -129,7 +129,12 @@ ph-ee-engine:
 
       ingress:
         enabled: true
-        host: "zeebe-gateway.sandbox.nexus-bank.io"
+        host: "zeebe-gateway.payment-hub.dev.sandbox.internal.nbank.fr"
+        annotations:
+          cert-manager.io/cluster-issuer: nbank-dev
+        tls:
+          enabled: true
+          secretName: zeebe-gateway-ph-dev-tls
 
     operate:
       enabled: true
@@ -148,7 +153,12 @@ ph-ee-engine:
 
       ingress:
         enabled: true
-        host: "zeebe-operate.sandbox.nexus-bank.io"
+        host: "zeebe-operate.payment-hub.dev.sandbox.internal.nbank.fr"
+        annotations:
+          cert-manager.io/cluster-issuer: nbank-dev
+        tls:
+          enabled: true
+          secretName: zeebe-operate-ph-dev-tls
 
     tasklist:
       enabled: true
@@ -197,9 +207,9 @@ ph-ee-engine:
         - name: MOJALOOP_ENABLED
           value: "false"
         - name: parties_0_domain
-          value: "https://fynams.sandbox.nexus-bank.io"
+          value: "https://fynams.dev.sandbox.internal.nbank.fr"
         - name: parties_1_domain
-          value: "https://mojaloop.mifos.gazelle.test"
+          value: "https://mojaloop.payment-hub.dev.sandbox.internal.nbank.fr"
         - name: parties_0_tenantId
           value: "nexusbank"
         - name: parties_1_tenantId
@@ -252,9 +262,9 @@ ph-ee-engine:
       - name: "BAASFLOW_EVENTS_CHANNELS_AUDIT_TOPIC"
         value: "auditlog"
       - name: "FRONTEND_CALLBACK_URL_BASE"
-        value: "ops-bk-web.mifos.gazelle.test"
+        value: "ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
       - name: "CHANNEL-CONNECTOR_URL"
-        value: "channel.mifos.gazelle.test"
+        value: "channel.payment-hub.dev.sandbox.internal.nbank.fr"
       - name: "CHANNEL-CONNECTOR_TRANSFER-PATH"
         value: "/channel/transfer"
       - name: "ZEEBE_GATEWAY_ADDRESS"
@@ -288,14 +298,17 @@ ph-ee-engine:
       annotations:
         kubernetes.io/ingress.class: "nginx"
         nginx.ingress.kubernetes.io/enable-cors: "true"
-        nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops-bk-web.sandbox.nexus-bank.io"
+        cert-manager.io/cluster-issuer: nbank-dev
+        nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
         nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
         nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Platform-TenantId"
         nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
       tls:
-        - secretName: sandbox-secret
+        - hosts:
+            - ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: ops-bk-dev-tls
       hosts:
-        - host: ops-bk.sandbox.nexus-bank.io
+        - host: ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:
@@ -312,8 +325,13 @@ ph-ee-engine:
       className: nginx
       annotations:
         kubernetes.io/ingress.class: "nginx"
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: ops-bk-web-dev-tls
       hosts:
-        - host: ops-bk-web.sandbox.nexus-bank.io
+        - host: ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:
@@ -329,16 +347,16 @@ ph-ee-engine:
                   port:
                     number: 4200
     backend:
-      PH_OPS_BACKEND_SERVER_URL: https://ops-bk.sandbox.nexus-bank.io/api/v1
-      PH_VOU_BACKEND_SERVER_URL: https://vouchers-demo.sandbox.nexus-bank.io
-      PH_ACT_BACKEND_SERVER_URL: https://identity-mapper-demo.sandbox.nexus-bank.io
+      PH_OPS_BACKEND_SERVER_URL: https://ops-bk.payment-hub.dev.sandbox.internal.nbank.fr/api/v1
+      PH_VOU_BACKEND_SERVER_URL: https://vouchers-demo.payment-hub.dev.sandbox.internal.nbank.fr
+      PH_ACT_BACKEND_SERVER_URL: https://identity-mapper-demo.payment-hub.dev.sandbox.internal.nbank.fr
       PH_PLATFORM_TENANT_ID: nexusbank
       PH_PLATFORM_TENANT_IDS: nexusbank,bluebank
       PH_REGISTERING_INSTITUTION_ID: 123
     auth:
       PH_OAUTH_ENABLED: false
       PH_OAUTH_TYPE: keycloak
-      PH_OAUTH_SERVER_URL: https://iam.nexus-bank.io/auth
+      PH_OAUTH_SERVER_URL: https://iam.dev.sandbox.internal.nbank.fr/auth
       PH_OAUTH_REALM: paymenthub
       PH_OAUTH_CLIENT_ID: opsapp
       PH_OAUTH_CLIENT_SECRET: YMoGqfaBo9aBmxMbT6x3L8PMUxvz5PSh
@@ -424,10 +442,10 @@ ph-ee-engine:
     image: docker.io/nexusbank/ph-ee-connector-ams-mifos:1.7.0
     SPRING_PROFILES_ACTIVE: "fin12, bb"
     ams_local_enabled: true
-    ams_local_interop_host: https://fynams.sandbox.nexus-bank.io
-    ams_local_account_host: https://fynams.sandbox.nexus-bank.io
-    ams_local_customer_host: https://fynams.sandbox.nexus-bank.io
-    ams_local_auth_host: https://iam.nexus-bank.io
+    ams_local_interop_host: https://fynams.dev.sandbox.internal.nbank.fr
+    ams_local_account_host: https://fynams.dev.sandbox.internal.nbank.fr
+    ams_local_customer_host: https://fynams.dev.sandbox.internal.nbank.fr
+    ams_local_auth_host: https://iam.dev.sandbox.internal.nbank.fr
     ams_local_tenants: "nexusbank"
     ams_local_loan_host: ""
     operations_app:
@@ -436,8 +454,8 @@ ph-ee-engine:
     hostAliases:
       - ip: "172.18.0.3"
         hostnames:
-          - "fynams.sandbox.nexus-bank.io"
-          - "iam.nexus-bank.io"
+          - "fynams.dev.sandbox.internal.nbank.fr"
+          - "iam.dev.sandbox.internal.nbank.fr"
 
   channel:
     enabled: true
@@ -478,12 +496,14 @@ ph-ee-engine:
       enabled: true
       className: nginx
       pathType: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
       tls:
         - hosts:
-            - channel.mifos.gazelle.test
-          secretName: sandbox-secret
+            - channel.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: channel-ph-dev-tls
       hosts:
-        - host: channel.mifos.gazelle.test
+        - host: channel.payment-hub.dev.sandbox.internal.nbank.fr
           paths:
             - path: /
               backend:
@@ -511,17 +531,28 @@ ph-ee-engine:
         memory: "2Gi"
         cpu: "500m"
     ingress:
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
       hosts:
-        - minio.sandbox.nexus-bank.io
+        - minio.payment-hub.dev.sandbox.internal.nbank.fr
+      tls:
+        - hosts:
+            - minio.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: minio-ph-dev-tls
 
     consoleIngress:
       enabled: true
       ingressClassName: nginx
       labels: {}
-      annotations: {}
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
       path: /
       hosts:
-        - minio-console.sandbox.nexus-bank.io
+        - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
+      tls:
+        - hosts:
+            - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: minio-console-ph-dev-tls
 
   ph-ee-connector:
     enabled: true
@@ -552,8 +583,14 @@ ph-ee-engine:
       cpu: "50m"
     ingress:
       enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: zeebeops-ph-dev-tls
       hosts:
-        - host: zeebeops.sandbox.nexus-bank.io
+        - host: zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:
@@ -663,22 +700,25 @@ account_mapper:
   #TODO
   enabled: false
   image: docker.io/openmf/ph-ee-identity-account-mapper:v1.6.0-gazelle-1.1.0
-  hostname: "identity-mapper.sandbox.nexus-bank.io"
+  hostname: "identity-mapper.payment-hub.dev.sandbox.internal.nbank.fr"
   LOGGING_LEVEL_ROOT: INFO
   ingress:
     enabled: true
     className: nginx
     pathtype: Prefix
     annotations:
+      cert-manager.io/cluster-issuer: nbank-dev
       nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
       nginx.ingress.kubernetes.io/cors-allow-headers: 'x-registering-institution-id'
       nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
       nginx.ingress.kubernetes.io/cors-allow-origin: '*'
       nginx.ingress.kubernetes.io/enable-cors: 'true'
     tls:
-      - secretName: sandbox-secret
+      - hosts:
+          - identity-mapper.payment-hub.dev.sandbox.internal.nbank.fr
+        secretName: identity-mapper-ph-dev-tls
     hosts:
-      - host: identity-mapper.sandbox.nexus-bank.io
+      - host: identity-mapper.payment-hub.dev.sandbox.internal.nbank.fr
         paths:
           - path: "/"
             backend:
