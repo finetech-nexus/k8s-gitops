@@ -1,0 +1,27 @@
+name: Reconcile — infra
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/infra/**', 'apps/overlays/dev/06-infra/**', 'clusters/**', '.github/workflows/reconcile-infra.yml']
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Flux CLI
+        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile Kustomization — infra
+        run: flux reconcile kustomization infra -n flux-system --timeout=3m || true
+      - name: Reconcile HelmReleases — infra
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -n infra --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+            [ -z "$name" ] && continue
+            flux reconcile helmrelease "$name" -n infra --timeout=3m || true
+          done

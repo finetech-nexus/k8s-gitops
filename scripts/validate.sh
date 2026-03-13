@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
-# Local equivalent of .github/workflows/validate.yml
+# Local equivalent of .github/workflows/validate.yml (kustomize build).
+# Reconcile: use scripts/reconcile.sh <app> or scripts/reconcile.sh all.
 # Usage:
-#   ./scripts/validate.sh              # validate only (kustomize build)
-#   ./scripts/validate.sh --reconcile # validate + flux reconcile (requires KUBECONFIG)
-#   ./scripts/validate.sh -r --prune   # reconcile + prune (delete resources no longer in Git)
-#   ./scripts/validate.sh --delete      # delete all Flux Kustomizations and their resources (destructive)
+#   ./scripts/validate.sh                    # validate only (kustomize build)
+#   ./scripts/validate.sh --reconcile         # validate then reconcile all (requires KUBECONFIG)
+#   ./scripts/validate.sh --reconcile --app=api
+#   ./scripts/reconcile.sh api                # reconcile one app only
+#   ./scripts/reconcile.sh all                # reconcile all apps
+#   ./scripts/validate.sh --delete            # delete all Flux Kustomizations (destructive)
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 RECONCILE=false
+RECONCILE_APP=""
 PRUNE=false
 DELETE=false
 for arg in "$@"; do
@@ -18,11 +22,15 @@ for arg in "$@"; do
     -r|--reconcile) RECONCILE=true ;;
     -p|--prune)     PRUNE=true ;;
     -d|--delete)    DELETE=true ;;
+    --app=*)        RECONCILE_APP="${arg#--app=}" ;;
     -h|--help)
-      echo "Usage: $0 [--reconcile] [--prune] [--delete]"
-      echo "  --reconcile, -r  After validate, run flux reconcile (requires flux CLI and KUBECONFIG)"
-      echo "  --prune, -p      With --reconcile: force full reconcile so resources no longer in Git are deleted (Kustomizations must have spec.prune: true)"
-      echo "  --delete, -d    Delete all Flux Kustomizations and their applied resources (destructive; requires kubectl and KUBECONFIG)"
+      echo "Usage: $0 [--reconcile] [--app=NAME] [--prune] [--delete]"
+      echo "  --reconcile, -r   After validate, run flux reconcile (requires flux CLI and KUBECONFIG)"
+      echo "  --app=NAME        With --reconcile: only reconcile this app (sources, api, app, kyc, ...). Default: all"
+      echo "  --prune, -p       With --reconcile: pass --force to flux reconcile"
+      echo "  --delete, -d     Delete all Flux Kustomizations and their applied resources (destructive)"
+      echo "Reconcile one app: ./scripts/reconcile.sh <app>"
+      echo "Reconcile all:     ./scripts/reconcile.sh all"
       exit 0
       ;;
   esac
@@ -40,9 +48,8 @@ if $DELETE; then
     echo "Aborted."
     exit 1
   fi
-  # Reverse order: delete leaf Kustomizations first, then roots
   DEL_KUSTOMIZATIONS=(
-    kong kyc app apis core-banking iam infra platform
+    kong kong-routes kyc app apis core-banking iam infra platform
     ingress-nginx cert-manager-issuers cert-manager
     sources flux-system
   )
@@ -58,7 +65,7 @@ fi
 echo "==> Validating (kustomize build)..."
 echo ""
 
-# Cluster config
+# Cluster config (must match .github/workflows/validate.yml)
 echo "Building clusters/dev..."
 kustomize build clusters/dev >/dev/null
 echo "  OK"
@@ -70,7 +77,8 @@ PATHS=(
   apps/cert-manager-install
   apps/cert-manager
   apps/ingress-nginx
-  apps/kong
+  apps/kong/install
+  apps/kong/overlay
   apps/overlays/dev/01-platform
   apps/overlays/dev/06-infra
   apps/overlays/dev/02-identity
@@ -92,68 +100,26 @@ echo "All kustomize builds succeeded."
 echo ""
 
 if ! $RECONCILE; then
-  echo "Done. Use --reconcile to run flux reconcile. Use --prune to delete resources no longer in Git. Use --delete to remove all Kustomizations and their resources."
+  echo "Done. To reconcile: ./scripts/reconcile.sh <app> or ./scripts/reconcile.sh all"
+  echo "  Or: $0 --reconcile [--app=api]"
   exit 0
 fi
 
-# Reconcile (requires flux + kubeconfig)
+# Reconcile: delegate to reconcile.sh
 if ! command -v flux &>/dev/null; then
   echo "flux CLI not found. Install: curl -sSL https://fluxcd.io/install.sh | bash"
   exit 1
 fi
 if ! kubectl get namespace flux-system &>/dev/null; then
   echo "Namespace flux-system not found. Flux is not installed on this cluster."
-  echo "Bootstrap with: flux bootstrap git --url=<repo> --branch=<branch> --path=clusters/dev"
   exit 0
 fi
 
-echo "==> Reconciling Flux..."
-if $PRUNE; then
-  echo "Prune enabled: resources no longer in Git will be deleted."
+RECONCILE_ARGS=()
+$PRUNE && RECONCILE_ARGS+=(--force)
+
+if [ -n "$RECONCILE_APP" ]; then
+  "$REPO_ROOT/scripts/reconcile.sh" "$RECONCILE_APP" "${RECONCILE_ARGS[@]}"
+else
+  "$REPO_ROOT/scripts/reconcile.sh" all "${RECONCILE_ARGS[@]}"
 fi
-if ! kubectl get gitrepository flux-system -n flux-system &>/dev/null; then
-  echo "GitRepository flux-system not found. Re-create with:"
-  echo "  kubectl apply -f clusters/dev/flux-system/gotk-sync.yaml"
-  echo "  See docs/flux-recreate-source.md for details."
-  exit 0
-fi
-echo "Reconciling source git flux-system (timeout 15s)..."
-flux reconcile source git flux-system -n flux-system --timeout=15s || true
-echo "Reconciling kustomization flux-system (may take 1–2 min)..."
-flux reconcile kustomization flux-system -n flux-system --timeout=2m $($PRUNE && echo --force) || true
-
-for name in platform; do
-  flux resume kustomization "$name" -n flux-system 2>/dev/null || true
-done
-
-KUSTOMIZATIONS=(
-  sources
-  cert-manager
-  cert-manager-issuers
-  ingress-nginx
-  platform
-  infra
-  iam
-  core-banking
-  apis
-  app
-  kyc
-  kong
-  kong-routes
-)
-
-for name in "${KUSTOMIZATIONS[@]}"; do
-  echo "Reconcile Kustomization — $name"
-  flux reconcile kustomization "$name" -n flux-system --timeout=3m $($PRUNE && echo --force) || true
-done
-
-for ns in apim iam core-banking api app kyc infra payment-hub; do
-  echo "Reconcile HelmReleases — $ns"
-  kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
-    [ -z "$name" ] && continue
-    flux reconcile helmrelease "$name" -n "$ns" --timeout=3m || true
-  done
-done
-
-echo ""
-echo "Done."

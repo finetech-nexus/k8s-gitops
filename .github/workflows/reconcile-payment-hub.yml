@@ -1,0 +1,25 @@
+name: Reconcile — payment-hub
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/payment-hub/**', 'apps/overlays/dev/03-core/**', 'clusters/**', '.github/workflows/reconcile-payment-hub.yml']
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Flux CLI
+        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile HelmReleases — payment-hub
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -n payment-hub --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+            [ -z "$name" ] && continue
+            flux reconcile helmrelease "$name" -n payment-hub --timeout=3m || true
+          done

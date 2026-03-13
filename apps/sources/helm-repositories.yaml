@@ -108,18 +108,15 @@ spec:
   secretRef:
     name: ghcr-auth
 ---
-# GitRepository for payment-hub Helm chart (payment-hub-helm-charts). Required by HelmRelease payment-hub/payment-hub.
-# Repo must contain payment-hub-helm-charts at root. Use same credentials as flux-system if private.
+# OCI: payment-hub chart (payment-hub-helm-charts repo). Create secret ghcr-auth if private.
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
+kind: HelmRepository
 metadata:
-  name: ph-helm-chart-oci
+  name: payment-hub-helm-chart-oci
   namespace: flux-system
 spec:
+  type: oci
   interval: 5m
-  url: https://github.com/finetech-nexus/nexus-bank.git
-  ref:
-    branch: main
-  # Uncomment if repo is private (use same secret as flux bootstrap or create one with git credentials):
-  # secretRef:
-  #   name: flux-system
+  url: oci://ghcr.io/finetech-nexus/payment-hub-helm-chart
+  secretRef:
+    name: ghcr-auth

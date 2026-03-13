@@ -1,0 +1,25 @@
+name: Reconcile — sources
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/sources/**', 'apps/overlays/**', 'clusters/**', '.github/workflows/reconcile-sources.yml']
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Flux CLI
+        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile source and root
+        run: |
+          flux reconcile source git flux-system -n flux-system
+          flux reconcile kustomization flux-system -n flux-system --timeout=5m
+      - name: Reconcile Kustomization — sources
+        run: flux reconcile kustomization sources -n flux-system --timeout=3m || true
