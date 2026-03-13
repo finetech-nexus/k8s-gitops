@@ -16,7 +16,7 @@ EXTRA_ARGS=("$@")
 
 if [ -z "$APP" ] || [ "$APP" = "-h" ] || [ "$APP" = "--help" ]; then
   echo "Usage: $0 <app> [--force]"
-  echo "  app: sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | all"
+  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | all"
   exit 0
 fi
 
@@ -50,13 +50,20 @@ reconcile_kustomization() {
 reconcile_helmreleases() {
   local ns="$1"
   shift
+  local timeout="3m"
+  if [ -n "${1:-}" ] && [[ "$1" =~ ^[0-9]+[ms]$ ]]; then timeout="$1"; shift; fi
   kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o 'custom-columns=NAME:.metadata.name' 2>/dev/null | while read -r name; do
     [ -z "$name" ] && continue
-    flux reconcile helmrelease "$name" -n "$ns" --timeout=3m "$@" || true
+    flux reconcile helmrelease "$name" -n "$ns" --timeout="$timeout" "$@" || true
   done
 }
 
 case "$APP" in
+  flux-system)
+    echo "==> Reconcile - flux-system (source git + root kustomization)"
+    flux reconcile source git flux-system -n flux-system --timeout=15s || true
+    flux reconcile kustomization flux-system -n flux-system --timeout=5m "${EXTRA_ARGS[@]}" || true
+    ;;
   sources)
     echo "==> Reconcile - sources"
     reconcile_sources "${EXTRA_ARGS[@]}"
@@ -111,12 +118,13 @@ case "$APP" in
     reconcile_helmreleases apim "${EXTRA_ARGS[@]}"
     ;;
   payment-hub)
-    echo "==> Reconcile - payment-hub"
-    reconcile_helmreleases payment-hub "${EXTRA_ARGS[@]}"
+    echo "==> Reconcile - payment-hub (Kustomization + HelmRelease; may take 10-15 min)"
+    reconcile_kustomization payment-hub "${EXTRA_ARGS[@]}"
+    reconcile_helmreleases payment-hub 15m "${EXTRA_ARGS[@]}"
     ;;
   all)
     echo "==> Reconcile all apps"
-    for a in sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub; do
+    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub; do
       "$REPO_ROOT/scripts/reconcile.sh" "$a" "${EXTRA_ARGS[@]}" || true
     done
     echo "Done."
@@ -124,7 +132,7 @@ case "$APP" in
     ;;
   *)
     echo "Unknown app: $APP"
-    echo "  Valid: sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, all"
+    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, all"
     exit 1
     ;;
 esac

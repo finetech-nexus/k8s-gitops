@@ -3,7 +3,7 @@ name: Reconcile — payment-hub
 on:
   push:
     branches: [main]
-    paths: ['apps/payment-hub/**', 'apps/overlays/dev/03-core/**', 'clusters/**', '.github/workflows/reconcile-payment-hub.yml']
+    paths: ['apps/payment-hub/**', 'clusters/dev/payment-hub.yaml', 'apps/payment-hub/overlays/dev/**', 'clusters/**', '.github/workflows/reconcile-payment-hub.yml']
   workflow_dispatch:
 
 jobs:
@@ -17,9 +17,11 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile Kustomization — payment-hub
+        run: flux reconcile kustomization payment-hub -n flux-system --timeout=10m || true
       - name: Reconcile HelmReleases — payment-hub
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n payment-hub --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
-            flux reconcile helmrelease "$name" -n payment-hub --timeout=3m || true
+            flux reconcile helmrelease "$name" -n payment-hub --timeout=15m || true
           done

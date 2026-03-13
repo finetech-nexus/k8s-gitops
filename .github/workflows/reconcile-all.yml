@@ -23,11 +23,11 @@ jobs:
           - infra
           - iam
           - core-banking
+          - payment-hub
           - api
           - app
           - kyc
           - kong
-          - payment-hub
     steps:
       - uses: actions/checkout@v4
       - uses: azure/k8s-set-context@v4
@@ -60,6 +60,9 @@ jobs:
           elif [ "$APP" = "core-banking" ]; then
             flux reconcile kustomization core-banking -n flux-system --timeout=3m || true
             for name in $(kubectl get helmreleases.helm.toolkit.fluxcd.io -n core-banking --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do flux reconcile helmrelease "$name" -n core-banking --timeout=3m || true; done
+          elif [ "$APP" = "payment-hub" ]; then
+            flux reconcile kustomization payment-hub -n flux-system --timeout=10m || true
+            for name in $(kubectl get helmreleases.helm.toolkit.fluxcd.io -n payment-hub --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do flux reconcile helmrelease "$name" -n payment-hub --timeout=15m || true; done
           elif [ "$APP" = "api" ]; then
             flux reconcile kustomization apis -n flux-system --timeout=3m || true
             for name in $(kubectl get helmreleases.helm.toolkit.fluxcd.io -n api --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do flux reconcile helmrelease "$name" -n api --timeout=3m || true; done
@@ -73,6 +76,4 @@ jobs:
             flux reconcile kustomization kong -n flux-system --timeout=5m || true
             flux reconcile kustomization kong-routes -n flux-system --timeout=3m || true
             for name in $(kubectl get helmreleases.helm.toolkit.fluxcd.io -n apim --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do flux reconcile helmrelease "$name" -n apim --timeout=5m || true; done
-          elif [ "$APP" = "payment-hub" ]; then
-            for name in $(kubectl get helmreleases.helm.toolkit.fluxcd.io -n payment-hub --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do flux reconcile helmrelease "$name" -n payment-hub --timeout=3m || true; done
           fi
