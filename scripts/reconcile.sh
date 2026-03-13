@@ -43,12 +43,14 @@ reconcile_cert_manager() {
 
 reconcile_kustomization() {
   local name="$1"
+  shift
   flux reconcile kustomization "$name" -n flux-system --timeout=3m "$@" || true
 }
 
 reconcile_helmreleases() {
   local ns="$1"
-  kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+  shift
+  kubectl get helmreleases.helm.toolkit.fluxcd.io -n "$ns" --no-headers -o 'custom-columns=NAME:.metadata.name' 2>/dev/null | while read -r name; do
     [ -z "$name" ] && continue
     flux reconcile helmrelease "$name" -n "$ns" --timeout=3m "$@" || true
   done
@@ -56,60 +58,60 @@ reconcile_helmreleases() {
 
 case "$APP" in
   sources)
-    echo "==> Reconcile — sources"
+    echo "==> Reconcile - sources"
     reconcile_sources "${EXTRA_ARGS[@]}"
     ;;
   cert-manager)
-    echo "==> Reconcile — cert-manager"
+    echo "==> Reconcile - cert-manager"
     reconcile_cert_manager "${EXTRA_ARGS[@]}"
     ;;
   ingress-nginx)
-    echo "==> Reconcile — ingress-nginx"
+    echo "==> Reconcile - ingress-nginx"
     reconcile_kustomization ingress-nginx "${EXTRA_ARGS[@]}"
     ;;
   platform)
-    echo "==> Reconcile — platform"
+    echo "==> Reconcile - platform"
     flux resume kustomization platform -n flux-system 2>/dev/null || true
     reconcile_kustomization platform "${EXTRA_ARGS[@]}"
     ;;
   infra)
-    echo "==> Reconcile — infra"
+    echo "==> Reconcile - infra"
     reconcile_kustomization infra "${EXTRA_ARGS[@]}"
     reconcile_helmreleases infra "${EXTRA_ARGS[@]}"
     ;;
   iam)
-    echo "==> Reconcile — iam"
+    echo "==> Reconcile - iam"
     reconcile_kustomization iam "${EXTRA_ARGS[@]}"
     reconcile_helmreleases iam "${EXTRA_ARGS[@]}"
     ;;
   core-banking)
-    echo "==> Reconcile — core-banking"
+    echo "==> Reconcile - core-banking"
     reconcile_kustomization core-banking "${EXTRA_ARGS[@]}"
     reconcile_helmreleases core-banking "${EXTRA_ARGS[@]}"
     ;;
   api)
-    echo "==> Reconcile — api"
+    echo "==> Reconcile - api"
     reconcile_kustomization apis "${EXTRA_ARGS[@]}"
     reconcile_helmreleases api "${EXTRA_ARGS[@]}"
     ;;
   app)
-    echo "==> Reconcile — app"
+    echo "==> Reconcile - app"
     reconcile_kustomization app "${EXTRA_ARGS[@]}"
     reconcile_helmreleases app "${EXTRA_ARGS[@]}"
     ;;
   kyc)
-    echo "==> Reconcile — kyc"
+    echo "==> Reconcile - kyc"
     reconcile_kustomization kyc "${EXTRA_ARGS[@]}"
     reconcile_helmreleases kyc "${EXTRA_ARGS[@]}"
     ;;
   kong)
-    echo "==> Reconcile — kong"
+    echo "==> Reconcile - kong"
     reconcile_kustomization kong --timeout=5m "${EXTRA_ARGS[@]}"
     reconcile_kustomization kong-routes "${EXTRA_ARGS[@]}"
     reconcile_helmreleases apim "${EXTRA_ARGS[@]}"
     ;;
   payment-hub)
-    echo "==> Reconcile — payment-hub"
+    echo "==> Reconcile - payment-hub"
     reconcile_helmreleases payment-hub "${EXTRA_ARGS[@]}"
     ;;
   all)
