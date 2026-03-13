@@ -451,12 +451,6 @@ ph-ee-engine:
     operations_app:
       datasource:
         host: mysql.infra.svc.cluster.local
-    hostAliases:
-      - ip: "172.18.0.3"
-        hostnames:
-          - "fynams.dev.sandbox.internal.nbank.fr"
-          - "iam.dev.sandbox.internal.nbank.fr"
-
   channel:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-channel:1.12.2
