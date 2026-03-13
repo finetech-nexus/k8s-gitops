@@ -1,489 +1,2466 @@
-# Values from payment-hub-helm-charts for dev overlay.
-# Chart: payment-hub (root Chart.yaml), dependencies: common, ph-ee-engine.
-# Hosts: *.payment-hub.dev.sandbox.internal.nbank.fr (and fynams/iam as in rest of dev). TLS: cert-manager ClusterIssuer nbank-dev.
+global:
+  bucket_name: paymenthub-ee
+  region: "ap-south-1"
+  s3BaseUrl: "http://minio:9000"
+  SPRING_PROFILES_ACTIVE: "fin12, bb"
+  imagePullPolicy: IfNotPresent
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_PATTERN_CONSOLE: "%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M - %msg%n"
+  # schema for the tenants will get created in the paymenthub database by importer-rdbms
+  tenants: "nexusbank,bluebank"
+  DFSPIDS: "nexusbank,bluebank"
+  max_execution_threads: 50
+  poll_interval: 10
 
-ph-ee-engine:
+zeebe-operate-helm:
   enabled: true
+  image:
+    repository: camunda/operate
+    tag: 1.1.0
   global:
-    SPRING_PROFILES_ACTIVE: "bb,fin12,tenantsConnection"
-    imagePullPolicy: "Always"
-    LOGGING_LEVEL_ROOT: "INFO"
-    tenants: "nexusbank"
-    DFSPIDS: "nexusbank,bluebank"
+    elasticsearch:
+      host: "ph-ee-elasticsearch"
+      clusterName: "ph-ee-elasticsearch"
+  ingress:
+    enabled: false
+    annotations: 
+      kubernetes.io/ingress.class: nginx     
+    path: /
+    host: operate.mifos.gazelle.test
+    tls:
+      enabled: true
+
+camunda-platform:
+#   connectors:
+#     enabled: false
+  global:
+    #zeebe: "{{ .Release.Name }}-zeebe"
+    elasticsearch:
+      disableExporter: true
+      host: "ph-ee-elasticsearch"
+    identity:
+      auth:
+        enabled: false
+
+  zeebe:
+    enabled: true
+    image:
+      #repository: camunda/zeebe
+      tag: 8.2.12
+    imagePullPolicy: IfNotPresent  
+    clusterSize: "1"
+    partitionCount: "1"
+    replicationFactor: "1"
+    cpuThreadCount: "1"
+    ioThreadCount: "1"
+#     pvcSize: "10Gi"
+    logLevel: debug
+    env:
+      - name: ZEEBE_BROKER_BACKPRESSURE_ENABLED
+        value: "false"
+      - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
+        value: "true"
+      # - name: ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME
+      #   value: "hu.dpc.rt.kafkastreamer.exporter.NoOpExporter"
+      - name: ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_JARPATH
+        value: "/exporters/ph-ee-kafka-exporter.jar"
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_JARPATH
+        value: "/exporters/ph-ee-kafka-exporter.jar"
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_CLASSNAME
+        value: "hu.dpc.rt.kafkastreamer.exporter.KafkaExporter"
+      - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_INITIALLIMIT
+        value: "1000"
+      - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_ALPHA
+        value: "2"
+      - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_BETA
+        value: "8"
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_EVENT
+        value: 'true'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLE
+        value: 'true'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESSINSTANCE
+        value: 'true'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESS
+        value: 'true'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_INCIDENT
+        value: 'true'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_DEPLOYMENT
+        value: 'false'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_ERROR
+        value: 'false'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_JOB
+        value: 'false'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLEDOCUMENT
+        value: 'false'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_WORKFLOWINSTANCE
+        value: 'false'
+      - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_CREATETEMPLATE
+        value: 'false'
+
+    # extraInitContainers:
+    #   - name: init-ph-ee-kafka-exporter
+    #     image: busybox:1.28
+    #     command: ['/bin/sh', '-c']
+    #     args: ['wget -O /exporters/ph-ee-kafka-exporter.jar "https://mifos.jfrog.io/artifactory/phee-gradle-local/org/mifos/phee/phee-exporter/exporter-1.1.1-SNAPSHOT.jar"; ls -al /exporters/']
+    #     volumeMounts:
+    #       - name: exporters
+    #         mountPath: /exporters/
+    volumeClaimTemplate:  
+      storageClassName: "local-path"
+
+
+
+
+  zeebe-gateway:
+    replicas: 1
+    logLevel: warn
+    env:
+      - name: ZEEBE_GATEWAY_THREADS_MANAGEMENTTHREADS
+        value: "4"
+      - name: ZEEBE_GATEWAY_MONITORING_ENABLED
+        value: "true"
+
+#   elasticsearch:
+#     enabled: false
+#     fullnameOverride: "zeebe-elasticsearch"
+#     clusterName: "zeebe-elasticsearch"
+
+#   operate:
+#     enabled: false
+
+#   tasklist:
+#     enabled: false
+#   optimize:
+#     enabled: false
+#   prometheusServiceMonitor:
+#     enabled: true
+#   identity:
+#     enabled: false
+
+
   elasticsearch:
     enabled: false
+    #Single Node Solution
+    clusterHealthCheckParams: "wait_for_status=yellow&timeout=100s"
+    protocol: http
+    master:
+      readinessProbe:
+        httpGet:
+          allow-insecure: true
+          username: elastic
+          password: "{{ .Env.ELASTIC_PASSWORD }}"
+          path: /_cluster/health?wait_for_status=yellow&timeout=5s
+          port: 9200
+        initialDelaySeconds: 30
+    data:
+      readinessProbe:
+        httpGet:
+          allow-insecure: true
+          username: elastic
+          password: "{{ .Env.ELASTIC_PASSWORD }}"
+          path: /_cluster/health?wait_for_status=yellow&timeout=5s
+          port: 9200
+        initialDelaySeconds: 30
+    # Shrink default JVM heap.
+    esJavaOpts: "-Xmx128m -Xms512m"
+    # Allocate smaller chunks of memory per pod.
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128M"
+      limits:
+        cpu: "1000m"
+        memory: "256M"
+    volumeClaimTemplate:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "local-path"
+      resources:
+        requests:
+          storage: 1Gi
+    ingress:
+      enabled: false
+      className: nginx
+      pathtype: ImplementationSpecific
+      hosts:
+        - host: elastic-phee.mifos.gazelle.test
+          paths:
+            - path: /    
+
   kibana:
     enabled: false
+    readinessProbe:
+      initialDelaySeconds: 45
+      timeoutSeconds: 15
+      successThreshold: 1    
+    protocol: http
+    ingress:
+      enabled: false
+      className: "nginx"
+      pathtype: ImplementationSpecific
+      annotations: {
+        kubernetes.io/ingress.class: nginx
+        # kubernetes.io/tls-acme: "true" 
+      }      
+      hosts:
+        - host: kibana-phee.mifos.gazelle.test
+          paths:
+            - path: /
+      #tls: []
+      #  - secretName: chart-example-tls
+      #    hosts:
+      #      - chart-example.mifos.gazelle.test
 
-  importer_rdbms:
+channel:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-channel:v1.11.0-gazelle-1.1.0
+  hostname: "channel.mifos.gazelle.test"
+  stub_hostname: "channel-gsma.mifos.gazelle.test"
+  #SPRING_PROFILES_ACTIVE: "bb,tenants"q
+  TRANSACTION_ID_LENGTH: 20
+  gsma_payee_tenant: ""
+  redis:
+    host: "127.0.0.1"
+    port: 6379
+    password: ""
+    idempotency:
+      enabled: true
+      keyFormat: "clientCorrelationId_tenant_api"
+      apiList: "/channel/transfer,/channel/collection,/channel/gsma/transaction,/channel/transactionRequest"
+  operations:
+    url: "http://ph-ee-operations-app:80/api/v1"
+    authEnabled: false
+  tenantPrimary:
+    clientId: ""
+    clientSecret: ""
+    tenant: ""
+  tenantSecondary:
+    clientId: ""
+    clientSecret: ""
+    tenant: ""
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+      scheme: HTTPS 
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  managedServiceAccount: true 
+  serviceAccount: "channel" 
+  serviceAccountAnnotations: {} 
+  terminationGracePeriod: 30 
+# Extra environment variables for channel container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  priorityClassName: "" 
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  limits:
+    memory: "512M"
+    cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"
+  service:
+    annotations: {}  
+  ingress:
     enabled: true
-    replicas: 1
-    image: docker.io/openmf/ph-ee-importer-rdbms:v1.13.1-gazelle-1.1.0
-    imagePullPolicy: IfNotPresent
-    SPRING_PROFILES_ACTIVE: "rdbms,tenantsConnection"
-    LOGGING_LEVEL_ROOT: "INFO"
-    datasource:
-      host: "mysql.infra.svc.cluster.local"
-      core:
-        host: mysql.infra.svc.cluster.local
-        port: 3306
-        schema: "tenants"
-        username: "mifos"
-        password: "password"
-    deployment:
-      extraEnvs:
-        - name: KAFKA_BROKERS
-          value: kafka.infra.svc.cluster.local:9092
+    className: nginx
+    # tls:
+    #   - secretName: sandbox-secret
+    hosts:
+      - host: channel.mifos.gazelle.test          
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: ph-ee-connector-channel
+              port:
+                number: 8443
+      - host: channel-gsma.mifos.gazelle.test          
+        paths:          
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-connector-channel-gsma"
+              port:
+                number: 82 
+  deployment:
+    annotations:
+        deployTime: "{{ .Values.deployTime }}"
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the channel Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-channel.yml for deployment  
+    # ph-ee-connector-channelConfig: {}
+    #   ph-ee-connector-channel.yml: |        
 
-  camunda-platform:
-    global:
-      elasticsearch:
-        disableExporter: false
-        host: "infra-elasticsearch.infra.svc.cluster.local"
-        port: 9200
-        clusterName: "fred"
-      identity:
-        auth:
-          enabled: false
+operations:
+  mysql:
+    enabled: true
 
-    zeebe:
-      enabled: true
-      broker:
-        contactpoint: "ph-ee-gazelle-zeebe-gateway:26500"
-      env:
-        - name: ZEEBE_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS
-          value: kafka.infra.svc.cluster.local:9092
-        - name: ZEEBE_BROKER_BACKPRESSURE_ENABLED
-          value: "false"
-        - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
-          value: "true"
-        - name: ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_JARPATH
-          value: "/exporters/ph-ee-kafka-exporter.jar"
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_JARPATH
-          value: "/exporters/ph-ee-kafka-exporter.jar"
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_CLASSNAME
-          value: "hu.dpc.rt.kafkastreamer.exporter.KafkaExporter"
-        - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_INITIALLIMIT
-          value: "1000"
-        - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_ALPHA
-          value: "2"
-        - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_BETA
-          value: "8"
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_EVENT
-          value: 'true'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLE
-          value: 'true'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESSINSTANCE
-          value: 'true'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESS
-          value: 'true'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_INCIDENT
-          value: 'true'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_DEPLOYMENT
-          value: 'false'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_ERROR
-          value: 'false'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_JOB
-          value: 'false'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLEDOCUMENT
-          value: 'false'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_WORKFLOWINSTANCE
-          value: 'false'
-        - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_CREATETEMPLATE
-          value: 'false'
-      resources:
-        requests:
-          cpu: 200m
-          memory: 1200Mi
-        limits:
-          cpu: 960m
-          memory: 1920Mi
-      affinity: {}
-      extraInitContainers:
-        - name: init-ph-ee-kafka-exporter
-          image: busybox:1.37.0
-          imagePullPolicy: IfNotPresent
-          command: ['/bin/sh', '-c']
-          args: ['wget -O /exporters/ph-ee-kafka-exporter.jar "https://mifos.jfrog.io/artifactory/phee-gradle-local/org/mifos/phee/phee-exporter/exporter-1.1.1-SNAPSHOT.jar"; ls -al /exporters/']
-          volumeMounts:
-            - name: exporters
-              mountPath: /exporters/
+operationsmysql:
+  enabled: true
+  fullnameOverride: "operationsmysql"
+  image:
+    tag: "5.7"
+    debug: false
+  auth:
+    database: "tenants"
+    username: "mifos"
+    password: "password"
+    rootPassword: "ethieTieCh8ahv"
+  initdbScripts:
+    setup.sql: |-
+      CREATE DATABASE IF NOT EXISTS tenants;
+      CREATE DATABASE IF NOT EXISTS phdefault;
+      CREATE DATABASE IF NOT EXISTS messagegateway;
+      CREATE DATABASE IF NOT EXISTS voucher_management; 
+      CREATE DATABASE IF NOT EXISTS identity_account_mapper;
+      CREATE DATABASE IF NOT EXISTS nexusbank;
+      CREATE DATABASE IF NOT EXISTS bluebank;
+      GRANT ALL ON *.* TO 'root'@'%';
+      GRANT ALL PRIVILEGES ON tenants.* to 'mifos'; 
+      GRANT ALL PRIVILEGES ON messagegateway.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON phdefault.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON voucher_management.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON identity_account_mapper.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `nexusbank`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `bluebank`.* TO 'mifos';  
+  volumeClaimTemplate:
+    storageClassName: "local-path"
 
-    zeebe-gateway:
-      replicas: 1
-      logLevel: debug
-      resources:
-        limits:
-          cpu: 500m
-          memory: 1Gi
-        requests:
-          cpu: 500m
-          memory: 750Mi
-      affinity: {}
-      ingress:
-        enabled: true
-        host: "zeebe-gateway.payment-hub.dev.sandbox.internal.nbank.fr"
-        annotations:
-          cert-manager.io/cluster-issuer: nbank-dev
-        tls:
-          enabled: true
-          secretName: zeebe-gateway-ph-dev-tls
-
-    operate:
-      enabled: true
-      replicas: 1
-      logging:
-        level:
-          ROOT: INFO
-          io.camunda.operate: DEBUG
-      resources:
-        requests:
-          cpu: 300m
-          memory: 400Mi
-      affinity: {}
-      ingress:
-        enabled: true
-        host: "zeebe-operate.payment-hub.dev.sandbox.internal.nbank.fr"
-        annotations:
-          cert-manager.io/cluster-issuer: nbank-dev
-        tls:
-          enabled: true
-          secretName: zeebe-operate-ph-dev-tls
-
-    tasklist:
-      enabled: true
-    optimize:
-      enabled: false
-    identity:
-      enabled: false
-    connectors:
-      enabled: false
-    elasticsearch:
-      enabled: false
-
-  ph_ee_connector_mojaloop:
-    enabled: false
-
-  post_installation_job:
-    enabled: false
-  integration_test:
-    enabled: false
-
+ph_ee_connector_ams_mifos:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-ams-mifos:v1.7.0-gazelle-1.1.0
+  SPRING_PROFILES_ACTIVE: "fin12, bb"
+  imagePullPolicy: Always
+  ams_local_enabled: true
+  ams_local_interop_host: http://fineract-server.mifosx.svc.cluster.local:8080
+  ams_local_account_host: http://fineract-server.mifosx.svc.cluster.local:8080
+  ams_local_customer_host: http://fineract-server.mifosx.svc.cluster.local:8080
+  ams_local_auth_host: http://fineract-server.mifosx.svc.cluster.local:8080
+  ams_local_tenants: ""
+  ams_local_loan_host: ""
   operations_app:
-    enabled: true
-    SPRING_PROFILES_ACTIVE: "tenantsConnection,bb"
-    secret:
-      datasource:
-        host: mysql.infra.svc.cluster.local
     datasource:
+      host: operationsmysql
+  managedServiceAccount: true 
+  serviceAccount: "" 
+  serviceAccountAnnotations: {} 
+  terminationGracePeriod: 180
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []  
+  priorityClassName: "" 
+  # ph-ee-connector-ams-mifosConfig: ""
+  #   ph-ee-connector-ams-mifos.yml: |
+  securityContext:
+    runAsUser: 0
+    privileged: false    
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: 
+      kubernetes.io/ingress.class: nginx
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: ams-mifos.mifos.gazelle.test          
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: ph-ee-connector-ams-mifos
+              port:
+                number: 80  
+      
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+    securityContext:
+      runAsUser: 0
+      privileged: false
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-ams-mifos.yml for deployment  
+    # ph-ee-connector-ams-mifosConfig: {}
+    #   ph-ee-connector-ams-mifos.yml: | 
+
+ph_ee_connector_mojaloop:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-mojaloop-java:gazelle-v1.1.0
+  imagePullPolicy: IfNotPresent
+  hostname: "mojaloop.mifos.gazelle.test"
+  switch:
+    quotes:
+      host: ""
+      service: ""
+    als:
+      host: vnextadmin.mifos.gazelle.test/_interop
+      service: ""
+    transfers:
+      host: ""
+      service: ""
+    transactions:
+      host: ""
+      service: ""
+    oracle:
+      host: ""
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  managedServiceAccount: true 
+  serviceAccount: "" 
+  serviceAccountAnnotations: {} 
+  terminationGracePeriod: 30 
+# Extra environment variables for mojaloop container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  priorityClassName: "" 
+  # ph-ee-connector-mojaloop-javaConfig: ""
+  #   ph-ee-connector-mojaloop-java.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the mojaloop Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"           
+# Enabling this will publicly expose your mojaloop instance.
+# Only enable this if you have security enabled on your cluster  
+  ingress:
+    enabled: false
+    annotations: 
+      kubernetes.io/ingress.class: nginx     
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: mojaloop.mifos.gazelle.test          
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: ph-ee-connector-mojaloop-java
+              port:
+                number: 80   
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the mojaloop Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-mojaloop-java.yml for deployment  
+    # ph-ee-connector-mojaloop-javaConfig: {}
+    #   ph-ee-connector-mojaloop-java.yml: |
+
+operations_app:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-operations-app:v1.17.1-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  hostname: "ops-bk.mifos.gazelle.test"
+  token_client_channel_secret: ""
+  # note curently BOTH secret.datasource and datasource are used by the chart
+  # TODO examine if secret.datasource can be removed
+  secret:
+    datasource:
+      host: operationsmysql 
+  datasource:
       username: "mifos"
       password: "password"
-      host: mysql.infra.svc.cluster.local
+      host: operationsmysql
       port: 3306
       schema: "tenants"
-    image: docker.io/nexusbank/ph-ee-operations-app:1.17.1
-    replicas: 1
-    extraEnvs:
-      - name: "BAASFLOW_EVENTS_DISABLED"
-        value: "true"
-      - name: "BAASFLOW_EVENTS_KAFKA_BROKERS"
-        value: "kafka.infra.svc.cluster.local:9092"
-      - name: "BAASFLOW_EVENTS_CHANNELS_AUDIT_TOPIC"
-        value: "auditlog"
-      - name: "FRONTEND_CALLBACK_URL_BASE"
-        value: "ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
-      - name: "CHANNEL-CONNECTOR_URL"
-        value: "channel.payment-hub.dev.sandbox.internal.nbank.fr"
-      - name: "CHANNEL-CONNECTOR_TRANSFER-PATH"
-        value: "/channel/transfer"
-      - name: "ZEEBE_GATEWAY_ADDRESS"
-        value: "ph-ee-gazelle-zeebe-gateway:26500"
-      - name: "SPRING_LIQUIBASE_CONTEXTS"
-        value: "postgresql,initial_switch,tenant_store_db"
-      - name: "SPRING_CONFIG_ADDITIONAL_LOCATION"
-        value: "/config/"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for operations_app pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for operations_app container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+# operations_appConfig: ""
+#   operations_app.yml: |
+# - User that the container will execute as.
+# Not necessary to run as root (0) as the operations_app Deployment use cases do not need access to Kubernetes Node internals
+# - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
     limits:
-      memory: "3000M"
-      cpu: "800m"
-    requests:
-      memory: "1000M"
+      memory: "512M"
       cpu: "500m"
-    readinessProbe:
-      httpGet:
-        path: /oauth/token_key
-        port: 5000
-        httpHeaders:
-          - name: Platform-TenantId
-            value: nexusbank
-        scheme: HTTP
-      initialDelaySeconds: 120
-      timeoutSeconds: 1
-      periodSeconds: 30
-      successThreshold: 1
-      failureThreshold: 3
-    ingress:
-      enabled: true
-      className: nginx
-      annotations:
-        kubernetes.io/ingress.class: "nginx"
-        cert-manager.io/cluster-issuer: nbank-dev
-        nginx.ingress.kubernetes.io/enable-cors: "true"
-        nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
-        nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
-        nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Platform-TenantId"
-        nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
-      tls:
-        - hosts:
-            - ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: ops-bk-dev-tls
-      hosts:
-        - host: ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
-          paths:
-            - path: "/"
-              backend:
-                service:
-                  name: "ph-ee-operations-app"
-                  port:
-                    number: 80
+  requests:
+    memory: "128k"
+    cpu: "50m"        
 
-  operations_web:
+  ingress:
     enabled: true
-    image: docker.io/openmf/ph-ee-operations-web:gazelle-v1.1.0
-    ingress:
-      enabled: true
-      className: nginx
-      annotations:
-        kubernetes.io/ingress.class: "nginx"
-        cert-manager.io/cluster-issuer: nbank-dev
-      tls:
-        - hosts:
-            - ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: ops-bk-web-dev-tls
-      hosts:
-        - host: ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
-          paths:
-            - path: "/"
-              backend:
-                service:
-                  name: "ph-ee-operations-web"
-                  port:
-                    number: 4200
-            - path: "/paymenthub"
-              pathType: Prefix
-              backend:
-                service:
-                  name: "ph-ee-operations-app"
-                  port:
-                    number: 4200
-    backend:
-      PH_OPS_BACKEND_SERVER_URL: https://ops-bk.payment-hub.dev.sandbox.internal.nbank.fr/api/v1
-      PH_VOU_BACKEND_SERVER_URL: https://vouchers-demo.payment-hub.dev.sandbox.internal.nbank.fr
-      PH_ACT_BACKEND_SERVER_URL: https://identity-mapper-demo.payment-hub.dev.sandbox.internal.nbank.fr
-      PH_PLATFORM_TENANT_ID: nexusbank
-      PH_PLATFORM_TENANT_IDS: nexusbank,bluebank
-      PH_REGISTERING_INSTITUTION_ID: "123"
-    auth:
-      PH_OAUTH_ENABLED: false
-      PH_OAUTH_TYPE: keycloak
-      PH_OAUTH_SERVER_URL: https://iam.dev.sandbox.internal.nbank.fr/auth
-      PH_OAUTH_REALM: paymenthub
-      PH_OAUTH_CLIENT_ID: opsapp
-      PH_OAUTH_CLIENT_SECRET: YMoGqfaBo9aBmxMbT6x3L8PMUxvz5PSh
-      PH_OAUTH_BASIC_AUTH: true
-      PH_OAUTH_BASIC_AUTH_TOKEN: YMoGqfaBo9aBmxMbT6x3L8PMUxvz5PSh
+    className: nginx
+    pathtype: Prefix
+    path: "/"
+    annotations:
+      nginx.ingress.kubernetes.io/cors-allow-headers: 'platform-tenantid'
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: ops-bk.mifos.gazelle.test
+        paths:
+        - path: "/"
+          backend:
+            service:
+              name: ph-ee-operations-app
+              port:
+                number: 80  
+  # ingress:
+  #   enabled: true
+  #   path: "/opsapp"
+  #   annotations: {}
+  #   backend: {}
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+
+operations_web:
+  enabled: true
+  replicas: 1
+  #IMAGETODO - check this one 
+  #image: docker.io/openmf/ph-ee-operations-web:v1.20.0
+  image: docker.io/openmf/ph-ee-operations-web:v1.25.0-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  hostname: "ops.mifos.gazelle.test"
+  webhost: ""
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for operations_web pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for operations_web container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+# ph-ee-operations-web-configConfig: ""
+#   ph-ee-operations-web-config.yml: |
+# - User that the container will execute as.
+# Not necessary to run as root (0) as the operations_web Deployment use cases do not need access to Kubernetes Node internals
+# - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"   
+
+  backend:
+    PH_OPS_BACKEND_SERVER_URL: https://ops.mifos.gazelle.test/api/v1
+    PH_VOU_BACKEND_SERVER_URL: https://ops.mifos.gazelle.test/api/v1
+    PH_ACT_BACKEND_SERVER_URL: https://ops.mifos.gazelle.test
+    PH_OPS_BULK_CONNECTOR_URL: https://bulk-connector.mifos.gazelle.test
+    PH_OPS_SIGNATURE_URL: https://ops.mifos.gazelle.test/api/v1/util/x-signature
+    PH_PLATFORM_TENANT_ID: nexusbank
+    PH_PLATFORM_TENANT_IDS: "nexusbank,bluebank"
+    PH_REGISTERING_INSTITUTION_ID: 123
+  auth:
+    PH_AUTH_ENABLED: false
+    PH_OAUTH_ENABLED: false
+    PH_OAUTH_TYPE: keycloak
+    PH_OAUTH_SERVER_URL: https://ops-bk.mifos.gazelle.test/auth
+    PH_OAUTH_REALM: paymenthub
+    PH_OAUTH_CLIENT_ID: opsapp
+    PH_OAUTH_CLIENT_SECRET: Y2xpZW50Og==
+    PH_OAUTH_BASIC_AUTH: true
+    PH_OAUTH_BASIC_AUTH_TOKEN: Y2xpZW50Og==
     PH_DEFAULT_LANGUAGE: en
-    PH_SUPPORTED_LANGUAGES: en,fr,es
+    PH_SUPPORTED_LANGUAGES: en,fr,es      
+  ingress:
+    enabled: true 
+    className: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/cors-allow-headers: content-type,platform-tenantid,privatekey,x-correlationid,x-correlation-id,purpose,type,x-callback-url,x-program-id,x-registering-institution-id,x-signature
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/enable-cors: "true"
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: ops.mifos.gazelle.test       
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-operations-web"
+              port:
+                number: 80    
+        - path: "/paymenthub"
+          backend:
+            service:
+              name: "ph-ee-operations-web"
+              port:
+                number: 80
+        - path: "/api/v1"
+          backend:
+            service:
+              name: "ph-ee-operations-app"
+              port:
+                number: 80
+        - path: "/oauth"
+          backend:
+            service:
+              name: "ph-ee-operations-app"
+              port:
+                number: 80
+        # - path: "/batchtransactions"
+        #   backend:
+        #     service:
+        #       name: "ph-ee-connector-bulk"
+        #       port:
+        #         number: 8443
+        # - path: "/bulk"
+        #   backend:
+        #     service:
+        #       name: "ph-ee-connector-bulk"
+        #       port:
+        #         number: 8443
+        - path: /benficiary
+          backend:
+            service:
+              name: ph-ee-identity-account-mapper
+              port:
+                number: 80  
+  # ingress:
+  #   enabled: true
+  #   className: nginx
+  #   tls:
+  #     - secretName: sandbox-secret
+  #   hosts:
+  #     - host: ops.mifos.gazelle.test          
+  #       paths: 
+  #       - path: "/"
+  #         backend:
+  #           service:
+  #             name: "ph-ee-operations-web"
+  #             port:
+  #               number: 4200
 
-  operationsmysql:
+  deployment:
+    #config:
+    #  - name: ph-ee-operations-web-config
+    #    mountPath: "/usr/share/nginx/html/assets/configuration.properties"
+    #    subPath: "configuration.properties"
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+# - User that the container will execute as.
+# Not necessary to run as root (0) as the operation-web Deployment use cases do not need access to Kubernetes Node internals
+# - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-operations-web.yml for deployment
+    # ph-ee-operations-webConfig: {}
+    #   ph-ee-operations-web.yml: |          
+
+identity:
+
+mpesa:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: "docker.io/openmf/ph-ee-connector-mpesa"
+  imagePullPolicy: IfNotPresent
+  imageTag: "v1.7.0"
+  zeebe_init_transfer_wait_timer: 10
+  tenant: ""
+  serviceAccountName: ""
+  callback_host: ""
+  channel:
+    host: ""
+  paygops:
+    host: ""
+  roster:
+    host: ""
+  accounts:
+    default:
+      name: "default"
+      business_short_code: "7385028"
+      till: "1234567"
+      auth_host: "https://sandbox.safaricom.co.ke/oauth/v1/generate"
+      api_host: "https://sandbox.safaricom.co.ke"
+      client_key: "0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5"
+      client_secret: "YzuGNoJxeub8ZC6d"
+      pass_key: "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+    roster:
+      name: "roster"
+      business_short_code: "7385028"
+      till: "1234567"
+      auth_host: "https://sandbox.safaricom.co.ke/oauth/v1/generate"
+      api_host: "https://sandbox.safaricom.co.ke"
+      client_key: "0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5"
+      client_secret: "YzuGNoJxeub8ZC6d"
+      pass_key: "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+    paygops:
+      name: "paygops"
+      business_short_code: "174379"
+      till: "9347335"
+      auth_host: "https://sandbox.safaricom.co.ke/oauth/v1/generate"
+      api_host: "https://sandbox.safaricom.co.ke"
+      client_key: "0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5"
+      client_secret: "YzuGNoJxeub8ZC6d"
+      pass_key: "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+  
+  paybill:
+    accountHoldingInstitutionId: "default"
+    paygops:
+      business_short_code: "24322607"
+      currency: "KES"
+    roster:
+      business_short_code: "12345678"
+      currency: "KES"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for mpesa pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for mpesa container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-connector-mpesaConfig: ""
+  #   ph-ee-connector-mpesa.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the mpesa Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"       
+# Enabling this will publicly expose your mpesa instance.
+# Only enable this if you have security enabled on your cluster    
+  ingress:
     enabled: false
+    path: "/mpesa"
+    annotations: {}
+    backend: {}
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the mpesa Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-mpesa.yml for deployment  
+    # ph-ee-connector-mpesaConfig: {}
+    #   ph-ee-connector-mpesa.yml: |
 
-  connector_bulk:
+roster_connector:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/phee-roster"
+  imagePullPolicy: IfNotPresent
+  imageTag: "v1.3.1"
+  containerPort: 5000
+  ams:
+    local:
+      enabled: ""
+  pesacore:
+    auth_header: ""
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for roster_connector pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for roster_connector container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-connector-ams-rosterConfig: ""
+  #   ph-ee-connector-ams-roster.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the roster_connector Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"        
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the roster_connector Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-ams-roster.yml for deployment  
+    # ph-ee-connector-ams-rosterConfig: {}
+    #   ph-ee-connector-ams-roster.yml: |
+  
+paygops_connector:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/phee-connector-ams-paygops"
+  imagePullPolicy: IfNotPresent
+  imageTag: "v1.6.1"
+  containerPort: 5000
+  ams:
+    local:
+      enabled: ""
+  paygops:
+    authheader: ""
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for paygops pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for paygops container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-connector-ams-paygopsConfig: ""
+  #   ph-ee-connector-ams-paygops.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the paygops Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"       
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the paygops Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-ams-paygops.yml for deployment  
+    # ph-ee-connector-ams-paygopsConfig: {}
+    #   ph-ee-connector-ams-paygops.yml: |
+
+messagegateway:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: docker.io/openmf/message-gateway:v1.2.0
+  imagePullPolicy: IfNotPresent
+  hostname: "messagegateway.mifos.gazelle.test"
+  CALLBACKCONFIG_HOST: "ph-ee-connector-notifications"
+  HOSTCONFIG_HOST: "message-gateway"
+  MYSQL_USERNAME: "mifos"
+  MYSQL_PASSWORD: "password"
+  DATASOURCE_URL: jdbc:mysql:thin://operationsmysql3306/messagegateway
+  PROVIDERSOURCE_FROMDATABASE: "disabled"
+  PROVIDERSOURCE_FROMYML: "enabled"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for message-gateway pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for message-gateway container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-message-gatewayConfig: ""
+  #   ph-ee-message-gateway.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the message-gateway Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"   
+# Enabling this will publicly expose your message-gateway instance.
+# Only enable this if you have security enabled on your cluster    
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: 
+      kubernetes.io/ingress.class: nginx 
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: messagegateway.mifos.gazelle.test       
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: "message-gateway"
+              port:
+                number: 80   
+  # ingress:
+  #   enabled: true
+  #   path: "/messages"
+  #   annotations: {}
+  #   backend: {}
+  secret:
+    name: ""
+    key:
+      telerivet_api_key: ""
+    value:
+      api_key: "<api_key>"
+      project_id: "<project_id>"  
+  deployment:
+    annotations:
+        deployTime: "{{ .Values.deployTime }}"  
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the message-gateway Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as message-gateway.yml for deployment  
+    # message-gatewayConfig: {}
+    #   message-gateway.yml: |
+
+notifications:
+  enabled: true 
+  image: docker.io/openmf/ph-ee-notifications
+  imageTag: v1.4.0-gazelle-1.1.0
+  imagePullPolicy:  IfNotPresent
+  hostname: "notifications.mifos.gazelle.test"
+  SPRING_PROFILES_ACTIVE: "bb"
+  LOGGING_LEVEL_ROOT: "INFO"
+  MESSAGEGATEWAYCONFIG_HOST: "message-gateway-1"
+  NOTIFICATION_LOCAL_HOST: "ph-ee-connector-notifications"
+  NOTIFICATION_SUCCESS_ENABLED: "false"
+  NOTIFICATION_FAILURE_ENABLED: "true"  
+  includeResources: false
+
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for notifications pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for notifications container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-connector-notificationsConfig: ""
+  #   ph-ee-connector-notifications.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the notifications Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  
+# Enabling this will publicly expose your notifications instance.
+# Only enable this if you have security enabled on your cluster    
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: 
+      kubernetes.io/ingress.class: nginx  
+    # tls:
+    #   - secretName: sandbox-secret
+    hosts:
+      - host: notifications.mifos.gazelle.test         
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-connector-notifications"
+              port:
+                number: 80  
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the notifications Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+
+
+zeebe_ops:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-zeebe-ops:v1.4.0-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  hostname: "zeebeops.mifos.gazelle.test"
+  elasticsearch_contactpoint: "infra-elasticsearch.infra.svc.cluster.local:9200"
+  elasticsearch_url: "http://infra-elasticsearch.infra.svc.cluster.local:9200/"
+  elasticsearch_sslverification: false
+  elasticsearch_security_enabled: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for Zeebe-ops pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for Zeebe-ops container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-zeebe-opsConfig: ""
+  #   ph-ee-zeebe-ops.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the Zeebe-ops Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+
+# Enabling this will publicly expose your zeebe_ops instance.
+# Only enable this if you have security enabled on your cluster   
+  ingress:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-bulk-processor:1.12.1
-    imagePullPolicy: IfNotPresent
-    tenants: "nexusbank,bluebank"
-    operations_app:
+    className: nginx
+    annotations: 
+      kubernetes.io/ingress.class: nginx  
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: zeebeops.mifos.gazelle.test          
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-zeebe-ops"
+              port:
+                number: 80    
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the zeebeops Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as zeebeops.yml for deployment  
+    # ph-ee-zeebe-opsConfig: {}
+    #   ph-ee-zeebe-ops.yml: |
+
+importer_es:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: docker.io/openmf/ph-ee-importer-es:v1.14.0
+  imagePullPolicy: IfNotPresent
+  importer_elasticsearch_url: "infra-elasticsearch.infra.svc.cluster.local:9200/"
+  reporting:
+    enabled: false
+    fields:
+      amount: false
+      accountId: false
+      ams: false
+      clientCorrelationId: false
+      currency: false
+      customData: false
+      confirmationReceived: false
+      errorCode: false
+      errorDescription: false
+      errorInformation: false
+      externalId: false
+      initiator: false
+      initiatorType: false
+      isNotificationsFailureEnabled: false
+      isNotificationsSuccessEnabled: false
+      mpesaTransactionId: false
+      mpesaTransactionStatusRetryCount: false
+      originDate: false
+      partyLookupFailed: false
+      phoneNumber: false
+      processDefinitionKey: false
+      processInstanceKey: false
+      scenario: false
+      tenantId: false
+      timer: false
+      timestamp: false
+      transactionFailed: false
+      transactionId: false
+      transferCreateFailed: false
+      transferSettlementFailed: false
+      transferResponseCREATE: false
+  elasticsearch_sslverification: false
+  elasticsearch_security_enabled: false
+  logging:
+    level:
+      root: "INFO"
+    pattern:
+      console: "%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M - %msg%n"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for Zeebe-ops pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for Zeebe-ops container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph-ee-zeebe-opsConfig: ""
+  #   ph-ee-zeebe-ops.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the Zeebe-ops Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"  
+  javaToolOptions: "-Xmx256M"
+  deployment:
+    annotations: {}
+
+
+
+mockpayment:
+  enabled: true
+  image: docker.io/openmf/ph-ee-connector-mock-payment-schema:v1.6.0-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  hostname: "mockpayment.mifos.gazelle.test"
+  mockFailure:
+    percentage: "0"
+  limits:
+    memory: "512M"
+    cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m" 
+  ingress:
+    enabled: false
+    className: nginx
+    annotations:
+        kubernetes.io/ingress.class: nginx
+    hosts:
+      - host: mockpayment.mifos.gazelle.test
+        paths:
+        - path: "/"
+          backend:
+            service:
+              name: ph-ee-connector-mock-payment-schema
+              port:
+                number: 80
+  deployment:
+    annotations: {}
+
+kafka:
+  enabled: false
+  fullnameOverride: kafka
+
+  provisioning:
+    enabled: true
+    topics:
+      - name: zeebe-export
+        partitions: 1
+        replicationFactor: 1
+
+  controller:
+    replicaCount: 1
+
+  listeners:
+    client:
+      protocol: PLAINTEXT
+
+    controller:
+      protocol: PLAINTEXT
+
+    interbroker:
+      protocol: PLAINTEXT
+
+    external:
+      protocol: PLAINTEXT
+
+  kraft:
+    clusterId: spDnn4oSr6DLKPx3cEheLp
+
+  # externalAccess:
+  #   enabled: true
+  #   autoDiscovery:
+  #     enabled: true
+
+  # rbac:
+  #   create: true
+
+  extraConfig: |
+    offsets.topic.replication.factor=1
+    transaction.state.log.replication.factor=1    
+
+importer_rdbms:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-importer-rdbms:v1.13.1-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  SPRING_PROFILES_ACTIVE: "local,tenantsConnection"
+  LOGGING_LEVEL_ROOT: "DEBUG"
+  # note both datasource and datasource.core are used by the rdbms chart
+  # TODO: remove datasource.core from the rdbms chart
+  datasource:
+    core:
+      host: operationsmysql
+      port: 3306
+      schema: "tenants"
+      username: "mifos"
+      password: "password"
+
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+
+  managedServiceAccount: true 
+  serviceAccount: "" 
+  serviceAccountAnnotations: {} 
+  terminationGracePeriod: 30 
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  priorityClassName: "" 
+  # ph-ee-importer_rdbmsConfig: ""
+  #   ph-ee-importer_rdbms.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the importer_rdbms Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "500m"      
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    extraEnvs: []
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-importer_rdbms.yml for deployment  
+    # ph-ee-importer_rdbmsConfig: {}
+    #   ph-ee-importer_rdbms.yml: |
+  javaToolOptions: "-Xmx128m"
+
+connector_bulk:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-bulk-processor:v1.12.1-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  hostname: bulk-connector.mifos.gazelle.test
+  tenants: "nexusbank, bluebank"
+  SPRING_PROFILES_ACTIVE: ""
+  camel_disable_ssl: true
+  channel:
+    hostname: ""
+  pollingApi:
+    timer: "180"
+  operations_app:
+      #contactpoint: "http://ph-ee-operations-app:5000"
       contactpoint: "http://ph-ee-operations-app:80"
       endpoints:
         batch_transaction: "/api/v1/batch/transactions"
-    limits:
-      memory: "1536M"
-      cpu: "700m"
-    requests:
-      memory: "512M"
-      cpu: "100m"
-    deployment:
-      extraEnvs:
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
-        - name: KAFKA_BOOTSTRAPADDRESS
-          value: kafka.infra.svc.cluster.local:9092
-
-  mockpayment:
-    enabled: false
-
-  ph_ee_connector_ams_mifos:
+  identity_account_mapper:
+    hostname: "http://ph-ee-identity-account-mapper:80"
+  config:
+    partylookup:
+      enable: false
+    approval:
+      enable: false
+    ordering:
+      enable: false
+      field: ""
+    splitting:
+      enable: true
+      sub_batch_size: 5
+    formatting:
+      enable: false
+      standard: "DEFAULT"
+    mergeback:
+      enable: true
+    backpressure:
+      enable: false
+    completion_threshold_check:
+      enable: true
+      completion_rate: 95
+    deduplication:
+      enabled: true  
+  aws:
+    access_key: "root"
+    secret_key: "password"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  managedServiceAccount: true 
+  serviceAccount: "" 
+  serviceAccountAnnotations: {} 
+  terminationGracePeriod: 30 
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: [] 
+  priorityClassName: "" 
+  # ph-ee-connector-bulkConfig: ""
+  #   ph-ee-connector-bulk.yml: |
+  securityContext:
+    runAsUser: 0
+    privileged: false   
+  limits:
+    memory: "512M"
+    cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"
+  service:
+    annotations: {}
+# Enabling this will publicly expose your connector_bulk instance.
+# Only enable this if you have security enabled on your cluster
+  ingress:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-ams-mifos:1.7.0
-    SPRING_PROFILES_ACTIVE: "fin12, bb"
-    ams_local_enabled: true
-    ams_local_interop_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_account_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_customer_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_auth_host: https://iam.dev.sandbox.internal.nbank.fr
-    ams_local_tenants: "nexusbank"
-    ams_local_loan_host: ""
-    operations_app:
-      datasource:
-        host: mysql.infra.svc.cluster.local
-    hostAliases:
-      - ip: "172.18.0.3"
-        hostnames:
-          - "fynams.dev.sandbox.internal.nbank.fr"
-          - "iam.dev.sandbox.internal.nbank.fr"
-
-  channel:
-    enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-channel:1.12.2
-    tenantPrimary:
-      clientId: "mifos"
-      clientSecret: "password"
-      tenant: "nexusbank"
-    tenantSecondary:
-      clientId: "mifos"
-      clientSecret: "password"
-      tenant: "bluebank"
-    server:
-      ssl:
-        keyPassword: "password"
-        keyStorePassword: "password"
-    SPRING_PROFILES_ACTIVE: "fin12,bb,tenants"
-    deployment:
-      extraEnvs:
-        - name: DESTINATION_DFSPID
-          value: "nexusbank"
-        - name: "SPRING_CONFIG_ADDITIONAL_LOCATION"
-          value: "/config/"
-        - name: "SERVER_SSL_ENABLED"
-          value: "false"
-        - name: "SERVER_PORT"
-          value: "8080"
-    LOGGING_LEVEL_ROOT: "INFO"
-    limits:
-      cpu: 500m
-      memory: 1600Mi
-    requests:
-      cpu: 500m
-      memory: 750Mi
-    ingress:
-      enabled: true
-      className: nginx
-      pathType: Prefix
-      annotations:
-        cert-manager.io/cluster-issuer: nbank-dev
-      tls:
-        - hosts:
-            - channel.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: channel-ph-dev-tls
-      hosts:
-        - host: channel.payment-hub.dev.sandbox.internal.nbank.fr
-          paths:
-            - path: /
-              backend:
-                service:
-                  name: ph-ee-connector-channel
-                  port:
-                    number: 82
-
-  minio:
-    enabled: true
-    resources:
-      requests:
-        memory: "2Gi"
-        cpu: "250m"
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/cors-allow-headers: "content-type,platform-tenantid,purpose,type,x-callback-url,x-correlationid,x-program-id,x-registering-institution-id,x-signature"
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      #nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops.mifos.gazelle.test"
+      #nginx.ingress.kubernetes.io/cors-allow-origin-regex: "https?://ops\.mifos.gazelle.test:4200"
+      nginx.ingress.kubernetes.io/enable-cors: 'true'
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: bulk-connector.mifos.gazelle.test     
+        paths: 
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-connector-bulk"
+              port:
+                number: 8443
+  # ingress:
+  #   enabled: false
+  #   annotations:
+  #   #  konghq.com/plugins: cors
+  #     kubernetes.io/ingress.class: nginx
+  #   tls:
+  #     - secretName: sandbox-secret
+  #   hosts:
+  #     - host: bulk-connector.mifos.gazelle.test     
+  #       paths: 
+  #       - path: "/"
+  #         backend:
+  #           service:
+  #             name: "ph-ee-connector-bulk"
+  #             port:
+  #               number: 8443
+  # ingress:
+  #   enabled: false 
+  #   annotations: {}    
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the connector_bulk Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
       limits:
-        memory: "2Gi"
+        memory: "512M"
         cpu: "500m"
-    ingress:
-      annotations:
-        cert-manager.io/cluster-issuer: nbank-dev
-      hosts:
-        - minio.payment-hub.dev.sandbox.internal.nbank.fr
-      tls:
-        - hosts:
-            - minio.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: minio-ph-dev-tls
-    consoleIngress:
-      enabled: true
-      ingressClassName: nginx
-      labels: {}
-      annotations:
-        cert-manager.io/cluster-issuer: nbank-dev
-      path: /
-      hosts:
-        - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
-      tls:
-        - hosts:
-            - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: minio-console-ph-dev-tls
-
-  ph-ee-connector:
-    enabled: true
-    limits:
-      memory: "2048M"
-      cpu: "700m"
     requests:
-      memory: "512M"
-      cpu: "100m"
-
-  zeebe_ops:
-    enabled: true
-    image: docker.io/nexusbank/ph-ee-zeebe-ops:1.4.0
-    readinessProbe:
-      initialDelaySeconds: 60
-    livenessProbe:
-      initialDelaySeconds: 60
-    deployment:
-      extraEnvs:
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xms256m -Xmx512m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
-    limits:
-      memory: "768M"
-      cpu: "500m"
-    requests:
-      memory: "512M"
+      memory: "128k"
       cpu: "50m"
+# Allows you to add any config files in /usr/share/
+    # such as ph-ee-connector-bulk.yml for deployment  
+    # ph-ee-connector-bulkConfig: {}
+    #   ph-ee-connector-bulk.yml: |
+
+ph_ee_connector_gsma:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-gsma:v1.3.0-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for gsma pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for gsma container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph_ee_connector_gsmaConfig: ""
+  #   ph_ee_connector_gsma.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"  
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph_ee_connector_gsma.yml for deployment  
+    # ph_ee_connector_gsmaConfig: {}
+    #   ph_ee_connector_gsma.yml: |
+
+ph-ee-connector_slcb:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/ph-ee-slcb"
+  imagePullPolicy: IfNotPresent
+  imageTag: "v1.5.0"
+  username: "username"
+  password: "password"
+  signature_key: "long_segnature_key"
+  auth_host: "https://g2p-test.slcb.com:8443"
+  api_host: "https://g2p-test.slcb.com:8443"
+  account_number: "003001003879112168"
+  account_type: 0
+  institutioncode: "SLCB"
+  endpoint:
+    auth: "/api/auth"
+    transaction_request: "/api/transactionRequest"
+    reconciliation: "/reconciliation"
+    account_balance: "/accountBalance"
+  config:
+    date_format: "yyyy-MM-dd'T'hh:mm:ssXXX"
+    reconciliation:
+      enable: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5 
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+# Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true 
+# Custom service account override that the pod will use
+  serviceAccount: "" 
+# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {} 
+# How long to wait for ph_ee_connector_slcb pods to stop gracefully
+  terminationGracePeriod: 30 
+# Extra environment variables for ph_ee_connector_slcb container.
+  envFrom: [] 
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
+  priorityClassName: "" 
+  # ph_ee_connector_slcbConfig: ""
+  #   ph_ee_connector_slcb.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:    
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"          
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+    extraEnvs: []
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:    
+      limits:
+        memory: "512M"
+        cpu: "500m"
+    requests:
+      memory: "128k"
+      cpu: "50m"    
+# Allows you to add any config files in /usr/share/
+    # such as ph_ee_connector_slcb.yml for deployment  
+    # ph_ee_connector_slcbConfig: {}
+    #   ph_ee_connector_slcb.yml: |
+
+ph-ee-connector:
+  enabled: true 
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-bulk:v1.1.0-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  aws:
+    region: "ap-south-1"
+    access_key: "aws-access-key"
+    secret_key: "aws-secret-key"
+  hostname: "connector.mifos.gazelle.test"
+  ingress:
+    className: nginx
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/enable-cors: 'true'
+      kubernetes.io/ingress.class: nginx
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: connector.mifos.gazelle.test
+        paths:
+          - path: "/"
+            backend:
+              service:
+                name: ph-ee-connector
+                port:
+                  number: 80
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+
+mock_oracle:
+  enabled: false
+  #IMAGETODO
+  replicas: 1
+  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/mock-asl-oracle"
+  imagePullPolicy: IfNotPresent
+  service:
+    targetport: 4100
+  limits:
+    memory: "512M"
+    cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"
+# Enabling this will publicly expose your mock_oracle instance.
+# Only enable this if you have security enabled on your cluster    
+  ingress:
+    enabled: true
+    path: "/"
+    annotations: {}
+    backend: {}
+  deployment:
+    annotations: {}
+
+keycloak:
+  enabled: false
+  fullnameOverride: "keycloak"
+# Enabling this will publicly expose your keycloak instance.
+# Only enable this if you have security enabled on your cluster
+  ingress:
+    enabled: false
+    ingressClassName: "kong"
+    rules:
+      - host: 'keycloak.mifos.io'
+    tls: []
+  postgresql:
+    initdbUser: "keycloak"
+    initdbPassword: "keycloak"
+    initdbScripts:
+      my_init_script.sql: |-
+          CREATE DATABASE kong;
+  extraVolumes: |
+    - name: realm-secret
+      secret:
+        secretName: realm-secret
+  extraVolumeMounts: |
+    - name: realm-secret
+      mountPath: "/realm/"
+      readOnly: true
+  extraEnv: |
+    - name: KEYCLOAK_IMPORT
+      value: /realm/kong-keycloak-realm.json     
+
+integration_test:
+  enabled: false
+  replicas: 1
+  image: docker.io/openmf/ph-ee-integration-test
+  imagePullPolicy: IfNotPresent
+  imageTag: v1.6.2-gazelle-1.1.0
+  imagePullPolicy: IfNotPresent
+  limits:
+    cpu: "500m"
+    memory: "3Gi"
+  requests:
+    cpu: "100m"
+    memory: "128m"
+  operations_app:
+    contactpoint: "http://ph-ee-operations-app:80"
+  bulk_processor:
+    contactpoint: "https://ph-ee-connector-bulk:8443"
+  channel_connector:
+    contactpoint: "https://ph-ee-connector-channel:8443"
+  kafka:
+    brokers: ""
+    topics: ""
+    consumerTimeoutMs: ""
+  zeebe_operations:
+    contactpoint: ""
+    no_of_workflows: ""
+    thread-count: ""
+  max_retry_count: ""
+  retry_intervals: ""
+  defaults:
+    tenant: ""
+    authorization: ""
+  channel:
+    base_url: ""
+  loan:
+    base_url: ""
+  savings:
+    base_url: ""
+  gradle:
+    command: ""
+
+redis:
+  enabled: true
+  replica:
+    replicaCount: 1
+volumeClaimTemplate:
+    storageClassName: "local-path"
+
+kong:
+  enabled: false
+  image:
+    repository: revomatico/docker-kong-oidc
+    tag: "latest"
+  imagePullPolicy: IfNotPresent
+  migrations:
+    init: true
+    preUpgrade: false
+    postUpgrade: false
+  env:
+    plugins: "bundled,oidc"
+    database: "postgres"
+    pg_host: "g2p-sandbox-security-postgresql"
+    pg_user: "keycloak"
+    pg_password: "keycloak"
+    pg_database: "kong"
+  admin:
+    enabled: true
+    http:
+      enabled: true
+    tls:
+      enabled: false
+# Enabling this will publicly expose your kong instance.
+# Only enable this if you have security enabled on your cluster      
     ingress:
       enabled: true
+      ingressClassName: "kong"
+      hostname: kong-admin.mifos.io
+  extraObjects:
+    - apiVersion: configuration.konghq.com/v1
+      kind: KongClusterPlugin
+      metadata:
+        name: request-transformer
+        annotations:
+          kubernetes.io/ingress.class: "kong"
+        labels:
+          global: "false"
+      disabled: false # optionally disable the plugin in Kong
+      plugin: request-transformer
+      config:
+        remove:
+          headers:
+            - cookie
+            - x-id-token
+    - apiVersion: configuration.konghq.com/v1
+      kind: KongClusterPlugin
+      metadata:
+        name: cors
+        annotations:
+          kubernetes.io/ingress.class: "kong"
+        labels:
+          global: "true"
+      disabled: false # optionally disable the plugin in Kong
+      plugin: cors
+      config:
+        origins:
+          - "*"
+        credentials: true
+        max_age: 3600
+        exposed_headers :
+          - "*"
+        preflight_continue: false
+    - apiVersion: configuration.konghq.com/v1
+      kind: KongClusterPlugin
+      metadata:
+        name: oidc
+        annotations:
+          kubernetes.io/ingress.class: "kong"
+        labels:
+          global: "false"
+      disabled: false # optionally disable the plugin in Kong
+      plugin: oidc
+      config: # configuration for the plugin
+        realm: Kong
+        discovery: https://keycloak.localhost/auth/realms/kong-oidc/.well-known/openid-configuration
+        scope: openid
+        introspection_endpoint: http://keycloak.localhost/auth/realms/Kong/protocol/openid-connect/token/introspect
+        redirect_after_logout_uri: http://keycloak.localhost/auth/realms/kong-oidc/protocol/openid-connect/logout?redirect_uri=http://keycloak.localhost
+
+    
+
+vouchers:
+  enabled: false
+  replicas: 1
+  #IMAGETODO
+  image: docker.io/openmf/ph-ee-vouchers:v1.3.1
+  imagePullPolicy: IfNotPresent
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: vouchers.mifos.gazelle.test
+        paths:
+          - path: "/"
+            backend:
+              service:
+                name: ph-ee-vouchers
+                port:
+                  number: 80
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+  spring:
+    datasource:
+      url: jdbc:mysql://operationsmysql3306/voucher_management
+      username: mifos
+      password: password
+  async:
+    core_pool_size: 10
+    max_pool_size: 10
+    queue_capacity: 100
+  expiry_time: 60
+  payer:
+    tenant: nexusbank
+    identifier: 12345678
+    identifierType: MSISDN
+  salting:
+    enabled: true
+  identity-account-mapper:
+    hostname: "https://ph-ee-identity-mapper:80"
+  operations:
+    hostname: "http://ph-ee-operations-app:80"
+    endpoints:
+      transfers: "/api/v1/transfers?size=1&page=0"
+
+billPay:
+  enabled: true
+  replicas: 1
+  image: docker.io/openmf/ph-ee-bill-pay:v1.1.0-gazelle-1.1.0 
+  imagePullPolicy: IfNotPresent
+  hostname: "bill-pay.mifos.gazelle.test"
+  stub_hostname: "bill-pay.mifos.gazelle.test"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: "billPay"
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  limits:
+    memory: "512M"
+    cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"
+  service:
+    annotations: {}
+  # Only enable this if you have security enabled on your cluster
+  ingress:
+    enabled: false
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/enable-cors: 'true'
+      kubernetes.io/ingress.class: nginx
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: bill-pay.mifos.gazelle.test
+        paths:
+          - path: "/"
+            backend:
+              service:
+                name: "ph-ee-bill-pay"
+                port:
+                  number: 8080
+  # ingress:
+  #   enabled: true
+  #   path: "/billPay"
+  #   annotations: {}
+  #   backend: {}
+  #   stub_backend: {}
+  deployment:
+    annotations:
+        deployTime: "{{ .Values.deployTime }}"
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # - Typically not necessarily unless running within environments such as OpenShift.
+
+crm:
+  enabled: false
+  hostname: "crm.mifos.gazelle.test"
+  stub_hostname: "crm.mifos.gazelle.test"
+  replicas: 1
+  #IMAGETODO
+  image: docker.io/openmf/ph-ee-connector-crm:v1.1.0
+  imagePullPolicy: IfNotPresent
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: "crm"
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:
+    limits:
+      memory: "512M"
+      cpu: "500m"
+  requests:
+    memory: "128k"
+    cpu: "50m"
+  service:
+    annotations: {}
+  # Only enable this if you have security enabled on your cluster
+  ingress:
+      enabled: false
+      className: nginx
       annotations:
-        cert-manager.io/cluster-issuer: nbank-dev
+        nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
+        nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+        nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+        nginx.ingress.kubernetes.io/enable-cors: 'true'
+        kubernetes.io/ingress.class: nginx
       tls:
-        - hosts:
-            - zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: zeebeops-ph-dev-tls
+        - secretName: sandbox-secret
       hosts:
-        - host: zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
+        - host: crm.mifos.gazelle.test
           paths:
             - path: "/"
               backend:
                 service:
-                  name: "ph-ee-zeebe-ops"
+                  name: "ph-ee-connector-crm"
                   port:
-                    number: 80
+  deployment:
+    annotations:
+        deployTime: "{{ .Values.deployTime }}"
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # - Typically not necessarily unless running within environments such as OpenShift.
 
-  ph_ee_connector_gsma:
-    enabled: false
-  billPay:
-    enabled: false
-  notifications:
-    enabled: false
-  messagegateway:
-    enabled: false
-  kafka:
-    enabled: false
-  redis:
-    image:
-      repository: bitnamilegacy/redis
+minio:
+  enabled: true
+  fullnameOverride: "minio"
+  requests:
+    memory: 128k
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 1Gi
+  mode: standalone
+  rootUser: root
+  rootPassword: password
+  buckets:
+    - name: paymenthub-ee
+      policy: public
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - minio.mifos.gazelle.test
 
-account_mapper:
+post_installation_job:
   enabled: false
