@@ -118,9 +118,8 @@ case "$APP" in
     reconcile_helmreleases apim "${EXTRA_ARGS[@]}"
     ;;
   payment-hub)
-    echo "==> Reconcile - payment-hub (Kustomization + HelmRelease; may take 10-15 min)"
-    reconcile_kustomization payment-hub "${EXTRA_ARGS[@]}"
-    reconcile_helmreleases payment-hub 15m "${EXTRA_ARGS[@]}"
+    echo "==> Reconcile - payment-hub (HelmRelease may take 5-10 min)"
+    reconcile_helmreleases payment-hub 10m "${EXTRA_ARGS[@]}"
     ;;
   all)
     echo "==> Reconcile all apps"

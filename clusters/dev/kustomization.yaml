@@ -17,4 +17,3 @@ resources:
   - app.yaml
   - kyc.yaml
   - iam.yaml
-  - payment-hub.yaml

@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: payment-hub
-      version: "1.0.0-SNAPSHOT.1"
+      version: "1.0.0-SNAPSHOT"
       sourceRef:
         kind: HelmRepository
         name: payment-hub-helm-chart-oci
