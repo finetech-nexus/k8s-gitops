@@ -60,6 +60,8 @@ extraEnv: |
     value: sk_test_51SwJKzE0sjkbbrOPBlBY07xkIGHKL0vm4Opg4BEDPVNgAyq6nzLfK713upqTIvpPvQJPNgmWz7Ahj4iHbwzxzhI200jiUVtgPX
   - name: STRIPE_WEBHOOK_SECRET
     value: whsec_152xO3aAcaQdR5bkq5axQ5Xmg38bRUpt
+  - name: STRIPE_PAYMENT_TYPE_ID
+    value: "10"
 
 
 extraVolumes:
