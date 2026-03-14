@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: payment-hub
 resources:
   - ../../base
+  - elastic-credentials-secret.yaml
 configMapGenerator:
   - name: payment-hub-values
     options:
