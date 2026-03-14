@@ -338,7 +338,7 @@ elasticsearch:
 ############### MySQL  ####################
 mysql:
   fullnameOverride: "mysql"
-  enabled: false
+  enabled: true
   auth:
     database: "tenants"
     username: "mifos"
