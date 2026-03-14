@@ -1,0 +1,78 @@
+# Payment Hub: HTTPRoutes -> Kong -> ingress-nginx (Host in payment-hub-service.yaml).
+# Hostnames: zeebe-operate, minio-console, zeebeops, ops-bk-web (*.payment-hub.dev.sandbox.internal.nbank.fr).
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zeebe-operate-ph-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - zeebe-operate.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: zeebe-operate-ph-internal
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: minio-console-ph-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: minio-console-ph-internal
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zeebeops-ph-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: zeebeops-ph-internal
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ops-bk-web-ph-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: ops-bk-web-ph-internal
+          port: 443

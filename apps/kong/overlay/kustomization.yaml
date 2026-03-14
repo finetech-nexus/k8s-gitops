@@ -15,8 +15,11 @@ resources:
   - fynams-endpoints.yaml
   - kyc-service.yaml
   - kyc-endpoints.yaml
+  - payment-hub-service.yaml
+  - payment-hub-endpoints.yaml
   - webapp-route.yaml
   - fynams-route.yaml
   - kyc-route.yaml
   - iam-route.yaml
   - app-route.yaml
+  - payment-hub-route.yaml

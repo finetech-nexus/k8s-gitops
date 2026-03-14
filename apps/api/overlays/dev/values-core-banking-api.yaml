@@ -42,6 +42,8 @@ env:
 
 
 extraEnv: |
+  - name: CHANNEL_BASE_URL
+    value: https://channel.payment-hub.dev.sandbox.internal.nbank.fr
   - name: NODE_EXTRA_CA_CERTS
     value: /etc/certificate/ca.pem
   - name: NODE_TLS_REJECT_UNAUTHORIZED
