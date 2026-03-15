@@ -16,7 +16,7 @@ EXTRA_ARGS=("$@")
 
 if [ -z "$APP" ] || [ "$APP" = "-h" ] || [ "$APP" = "--help" ]; then
   echo "Usage: $0 <app> [--force]"
-  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | all"
+  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | coredns-custom | all"
   exit 0
 fi
 
@@ -121,9 +121,13 @@ case "$APP" in
     echo "==> Reconcile - payment-hub (HelmRelease may take 5-10 min)"
     reconcile_helmreleases payment-hub 10m "${EXTRA_ARGS[@]}"
     ;;
+  coredns-custom)
+    echo "==> Reconcile - coredns-custom"
+    reconcile_kustomization coredns-custom "${EXTRA_ARGS[@]}"
+    ;;
   all)
     echo "==> Reconcile all apps"
-    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub; do
+    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub coredns-custom; do
       "$REPO_ROOT/scripts/reconcile.sh" "$a" "${EXTRA_ARGS[@]}" || true
     done
     echo "Done."
@@ -131,7 +135,7 @@ case "$APP" in
     ;;
   *)
     echo "Unknown app: $APP"
-    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, all"
+    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, coredns-custom, all"
     exit 1
     ;;
 esac

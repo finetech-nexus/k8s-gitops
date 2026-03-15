@@ -283,16 +283,15 @@ elasticsearch:
       enabled: false
     env:
       - name: ES_JAVA_OPTS
-        # Set Xmx and Xms to the same value for stability. 768m is a common low-end starting point.
-        value: "-Xms256m -Xmx256m -XX:+HeapDumpOnOutOfMemoryError" 
+        value: "-Xms2g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError" 
     # Define resources for this single 'all-in-one' master node
     resources:
       requests:
-        memory: "128Mi"  # Request enough memory for the heap + overhead
-        cpu: "100m"
+        memory: "2.5Gi"  # Request enough memory for the heap + overhead
+        cpu: "500m"
       limits:
-        memory: "800Mi" # Allow some buffer over the heap for OS page cache and other overhead
-        cpu: "400m" # 
+        memory: "3Gi"  
+        cpu: "1" # 
 
 
   data:
