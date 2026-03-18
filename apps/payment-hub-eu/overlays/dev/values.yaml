@@ -6,8 +6,8 @@ ph-ee-engine:
     imagePullPolicy: "Always"
     LOGGING_LEVEL_ROOT: "INFO"
     # LOGGING_PATTERN_CONSOLE: "%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M - %msg%n"
-    tenants: "nexusbank"
-    DFSPIDS: "nexusbank,bluebank"
+    tenants: "nexusbankeu"
+    DFSPIDS: "nexusbank,nexusbankeu"
   # we use elastic and kibana from the infra namespace
   elasticsearch:
     enabled: false
@@ -23,11 +23,11 @@ ph-ee-engine:
     SPRING_PROFILES_ACTIVE: "rdbms,tenantsConnection"
     LOGGING_LEVEL_ROOT: "INFO"
     datasource:
-      host: "mysql.infra.svc.cluster.local"
+      host: "mysql.infra1.svc.cluster.local"
       # note both datasource and datasource.core are used by the rdbms chart
       # TODO: remove datasource.core from the rdbms chart
       core:
-        host: mysql.infra.svc.cluster.local
+        host: mysql.infra1.svc.cluster.local
         port: 3306
         schema: "tenants"
         username: "mifos"
@@ -35,7 +35,7 @@ ph-ee-engine:
     deployment:
       extraEnvs:
         - name: KAFKA_BROKERS
-          value: kafka.infra.svc.cluster.local:9092
+          value: kafka.infra1.svc.cluster.local:9092
 
 
   camunda-platform:
@@ -43,7 +43,7 @@ ph-ee-engine:
       elasticsearch:
         # Elasticsearch.disableExporter if true, disables the elastic exporter in zeebe
         disableExporter: false
-        host: "infra-elasticsearch.infra.svc.cluster.local"
+        host: "infra-elasticsearch.infra1.svc.cluster.local"
         port: 9200
         clusterName: "fred"
       identity:
@@ -56,7 +56,7 @@ ph-ee-engine:
         contactpoint: "ph-ee-gazelle-zeebe-gateway:26500"
       env:
         - name: ZEEBE_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS
-          value: kafka.infra.svc.cluster.local:9092
+          value: kafka.infra1.svc.cluster.local:9092
         - name: ZEEBE_BROKER_BACKPRESSURE_ENABLED
           value: "false"
         - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
@@ -129,12 +129,12 @@ ph-ee-engine:
 
       ingress:
         enabled: true
-        host: "zeebe-gateway.payment-hub.dev.sandbox.internal.nbank.fr"
+        host: "zeebe-gateway.payment-hub.dev1.sandbox.internal.nbank.fr"
         annotations:
           cert-manager.io/cluster-issuer: nbank-dev
         tls:
           enabled: true
-          secretName: zeebe-gateway-ph-dev-tls
+          secretName: zeebe-gateway-ph-dev-tls1
 
     operate:
       enabled: true
@@ -153,12 +153,12 @@ ph-ee-engine:
 
       ingress:
         enabled: true
-        host: "zeebe-operate.payment-hub.dev.sandbox.internal.nbank.fr"
+        host: "zeebe-operate.payment-hub.dev1.sandbox.internal.nbank.fr"
         annotations:
           cert-manager.io/cluster-issuer: nbank-dev
         tls:
           enabled: true
-          secretName: zeebe-operate-ph-dev-tls
+          secretName: zeebe-operate-ph-dev-tls1
 
     tasklist:
       enabled: true
@@ -245,11 +245,11 @@ ph-ee-engine:
     SPRING_PROFILES_ACTIVE: "tenantsConnection,bb"
     secret:
       datasource:
-        host: mysql.infra.svc.cluster.local
+        host: mysql.infra1.svc.cluster.local
     datasource:
       username: "mifos"
       password: "password"
-      host: mysql.infra.svc.cluster.local
+      host: mysql.infra1.svc.cluster.local
       port: 3306
       schema: "tenants"
     image:  docker.io/nexusbank/ph-ee-operations-app:1.17.1
@@ -258,13 +258,13 @@ ph-ee-engine:
       - name: "BAASFLOW_EVENTS_DISABLED"
         value: "true"
       - name: "BAASFLOW_EVENTS_KAFKA_BROKERS"
-        value: "kafka.infra.svc.cluster.local:9092"
+        value: "kafka.infra1.svc.cluster.local:9092"
       - name: "BAASFLOW_EVENTS_CHANNELS_AUDIT_TOPIC"
         value: "auditlog"
       - name: "FRONTEND_CALLBACK_URL_BASE"
-        value: "ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
+        value: "ops-bk-web.payment-hub.dev1.sandbox.internal.nbank.fr"
       - name: "CHANNEL-CONNECTOR_URL"
-        value: "channel.payment-hub.dev.sandbox.internal.nbank.fr"
+        value: "channel.payment-hub.dev1.sandbox.internal.nbank.fr"
       - name: "CHANNEL-CONNECTOR_TRANSFER-PATH"
         value: "/channel/transfer"
       - name: "ZEEBE_GATEWAY_ADDRESS"
@@ -299,16 +299,16 @@ ph-ee-engine:
         kubernetes.io/ingress.class: "nginx"
         nginx.ingress.kubernetes.io/enable-cors: "true"
         cert-manager.io/cluster-issuer: nbank-dev
-        nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr"
+        nginx.ingress.kubernetes.io/cors-allow-origin: "https://ops-bk-web.payment-hub.dev1.sandbox.internal.nbank.fr"
         nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
         nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Platform-TenantId"
         nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
       tls:
         - hosts:
-            - ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: ops-bk-dev-tls
+            - ops-bk.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: ops-bk-dev-tls1
       hosts:
-        - host: ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
+        - host: ops-bk.payment-hub.dev1.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:
@@ -328,10 +328,10 @@ ph-ee-engine:
         cert-manager.io/cluster-issuer: nbank-dev
       tls:
         - hosts:
-            - ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: ops-bk-web-dev-tls
+            - ops-bk-web.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: ops-bk-web-dev-tls1
       hosts:
-        - host: ops-bk-web.payment-hub.dev.sandbox.internal.nbank.fr
+        - host: ops-bk-web.payment-hub.dev1.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:
@@ -347,9 +347,9 @@ ph-ee-engine:
                   port:
                     number: 4200
     backend:
-      PH_OPS_BACKEND_SERVER_URL: https://ops-bk.payment-hub.dev.sandbox.internal.nbank.fr/api/v1
-      PH_VOU_BACKEND_SERVER_URL: https://vouchers-demo.payment-hub.dev.sandbox.internal.nbank.fr
-      PH_ACT_BACKEND_SERVER_URL: https://identity-mapper-demo.payment-hub.dev.sandbox.internal.nbank.fr
+      PH_OPS_BACKEND_SERVER_URL: https://ops-bk.payment-hub.dev1.sandbox.internal.nbank.fr/api/v1
+      PH_VOU_BACKEND_SERVER_URL: https://vouchers-demo.payment-hub.dev1.sandbox.internal.nbank.fr
+      PH_ACT_BACKEND_SERVER_URL: https://identity-mapper-demo.payment-hub.dev1.sandbox.internal.nbank.fr
       PH_PLATFORM_TENANT_ID: nexusbank
       PH_PLATFORM_TENANT_IDS: nexusbank,bluebank
       PH_REGISTERING_INSTITUTION_ID: 123
@@ -446,22 +446,22 @@ ph-ee-engine:
     image: docker.io/nexusbank/ph-ee-connector-ams-mifos:1.7.0
     SPRING_PROFILES_ACTIVE: "fin12, bb"
     ams_local_enabled: true
-    ams_local_interop_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_account_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_customer_host: https://fynams.dev.sandbox.internal.nbank.fr
-    ams_local_auth_host: https://iam.dev.sandbox.internal.nbank.fr
+    ams_local_interop_host: https://fynams.dev1.sandbox.internal.nbank.fr
+    ams_local_account_host: https://fynams.dev1.sandbox.internal.nbank.fr
+    ams_local_customer_host: https://fynams.dev1.sandbox.internal.nbank.fr
+    ams_local_auth_host: https://iam.dev1.sandbox.internal.nbank.fr
     ams_local_tenants: "nexusbank"
     ams_local_loan_host: ""
     operations_app:
       datasource:
-        host: mysql.infra.svc.cluster.local
+        host: mysql.infra1.svc.cluster.local
   channel:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-channel:1.17.0
     tenantPrimary:
       clientId: "mifos"
       clientSecret: "password"
-      tenant: "nexusbank"
+      tenant: "nexusbankeu"
     tenantSecondary:
       clientId: "mifos"
       clientSecret: "password"
@@ -498,10 +498,10 @@ ph-ee-engine:
         cert-manager.io/cluster-issuer: nbank-dev
       tls:
         - hosts:
-            - channel.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: channel-ph-dev-tls
+            - channel.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: channel-ph-dev-tls1
       hosts:
-        - host: channel.payment-hub.dev.sandbox.internal.nbank.fr
+        - host: channel.payment-hub.dev1.sandbox.internal.nbank.fr
           paths:
             - path: /
               backend:
@@ -523,20 +523,20 @@ ph-ee-engine:
     enabled: true
     resources:
       requests:
-        memory: "2Gi"
+        memory: "256Mi"
         cpu: "250m"
       limits:
-        memory: "2Gi"
+        memory: "512Mi"
         cpu: "500m"
     ingress:
       annotations:
         cert-manager.io/cluster-issuer: nbank-dev
       hosts:
-        - minio.payment-hub.dev.sandbox.internal.nbank.fr
+        - minio.payment-hub.dev1.sandbox.internal.nbank.fr
       tls:
         - hosts:
-            - minio.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: minio-ph-dev-tls
+            - minio.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: minio-ph-dev-tls1
 
     consoleIngress:
       enabled: true
@@ -546,11 +546,11 @@ ph-ee-engine:
         cert-manager.io/cluster-issuer: nbank-dev
       path: /
       hosts:
-        - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
+        - minio-console.payment-hub.dev1.sandbox.internal.nbank.fr
       tls:
         - hosts:
-            - minio-console.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: minio-console-ph-dev-tls
+            - minio-console.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: minio-console-ph-dev-tls1
 
   ph-ee-connector:
     enabled: true
@@ -585,10 +585,10 @@ ph-ee-engine:
         cert-manager.io/cluster-issuer: nbank-dev
       tls:
         - hosts:
-            - zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
-          secretName: zeebeops-ph-dev-tls
+            - zeebeops.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: zeebeops-ph-dev-tls1
       hosts:
-        - host: zeebeops.payment-hub.dev.sandbox.internal.nbank.fr
+        - host: zeebeops.payment-hub.dev1.sandbox.internal.nbank.fr
           paths:
             - path: "/"
               backend:

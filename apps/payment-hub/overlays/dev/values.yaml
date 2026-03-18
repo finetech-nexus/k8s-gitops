@@ -523,10 +523,10 @@ ph-ee-engine:
     enabled: true
     resources:
       requests:
-        memory: "2Gi"
+        memory: "256Mi"
         cpu: "250m"
       limits:
-        memory: "2Gi"
+        memory: "512Mi"
         cpu: "500m"
     ingress:
       annotations:
