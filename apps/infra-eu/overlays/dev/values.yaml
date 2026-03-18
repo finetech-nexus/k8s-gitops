@@ -287,7 +287,7 @@ elasticsearch:
     # Define resources for this single 'all-in-one' master node
     resources:
       requests:
-        memory: "1.5Gi"  # Request enough memory for the heap + overhead
+        memory: "1Gi"  # Request enough memory for the heap + overhead
         cpu: "500m"
       limits:
         memory: "2Gi"  
