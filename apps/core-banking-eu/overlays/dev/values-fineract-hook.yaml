@@ -16,13 +16,13 @@ env:
 
 extraEnv: |
   - name: BROKER_TOPIC_TRANSACTIONS
-    value: "transactions"
+    value: "transactions1"
   - name: BROKER_SERVER
     value: kafka.infra.svc.cluster.local:9092
   - name: KAFKA_CLIENT_ID
     value: fineract-producer
   - name: FINERACT_TENANT
-    value: tn
+    value: eu
   
   
 
@@ -56,14 +56,14 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"          # disable HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
-    - host: hooks-api.dev.sandbox.internal.nbank.fr
+    - host: hooks-api.dev1.sandbox.internal.nbank.fr
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - hosts:
-        - hooks-api.dev.sandbox.internal.nbank.fr
-      secretName: hooks-api-dev-tls
+        - hooks-api.dev1.sandbox.internal.nbank.fr
+      secretName: hooks-api-dev-tls1
 
 resources: {}
 

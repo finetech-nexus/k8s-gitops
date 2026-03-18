@@ -287,10 +287,10 @@ elasticsearch:
     # Define resources for this single 'all-in-one' master node
     resources:
       requests:
-        memory: "2.5Gi"  # Request enough memory for the heap + overhead
+        memory: "1.5Gi"  # Request enough memory for the heap + overhead
         cpu: "500m"
       limits:
-        memory: "3Gi"  
+        memory: "2Gi"  
         cpu: "1" # 
 
 
@@ -355,7 +355,7 @@ mysql:
       CREATE DATABASE IF NOT EXISTS `voucher_management`;
       CREATE DATABASE IF NOT EXISTS `fineract_tenants`;
       CREATE DATABASE IF NOT EXISTS `fineract_default`;
-      CREATE DATABASE IF NOT EXISTS `nexusbank`;
+      CREATE DATABASE IF NOT EXISTS `nexusbankeu`;
       CREATE DATABASE IF NOT EXISTS `bluebank`;
       GRANT ALL PRIVILEGES ON messagegateway.* TO 'mifos';
       GRANT ALL PRIVILEGES ON `identity_account_mapper`.* TO 'mifos';

@@ -47,6 +47,16 @@ extraEnv: |
           "id":"tn",
           "name":"Tunisia",
           "apiUrl":"https://cbanking-api.api.dev.sandbox.internal.nbank.fr/api",
+          "apiKycUrl":"https://kyc-api.api.dev.sandbox.internal.nbank.fr/api",
+          "apiPaymentUrl":"https://payment-api.api.dev.sandbox.internal.nbank.fr/api",
+          "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
+        },       
+        {
+          "id":"eu",
+          "name":"Europe",
+          "apiUrl":"https://cbanking-api.api.dev1.sandbox.internal.nbank.fr/api",
+          "apiKycUrl":"https://kyc-api.api.dev1.sandbox.internal.nbank.fr/api",
+          "apiPaymentUrl":"https://payment-api.api.dev1.sandbox.internal.nbank.fr/api",
           "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
         }
       ]
