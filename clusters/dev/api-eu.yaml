@@ -1,0 +1,18 @@
+# API EU (namespace api-eu): Core Banking API for EU.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: api-eu
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/api-eu/overlays/dev
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: core-banking-eu
+      namespace: flux-system
+  timeout: 10m0s

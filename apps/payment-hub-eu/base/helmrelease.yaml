@@ -1,0 +1,26 @@
+# Payment Hub from HelmRepository OCI (payment-hub-helm-charts). Chart published to ghcr.io/finetech-nexus/payment-hub-helm-chart
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: payment-hub
+  namespace: payment-hub-eu
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: payment-hub
+      version: "1.0.0-SNAPSHOT"
+      sourceRef:
+        kind: HelmRepository
+        name: payment-hub-helm-chart-oci
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: payment-hub-values
+      valuesKey: values.yaml

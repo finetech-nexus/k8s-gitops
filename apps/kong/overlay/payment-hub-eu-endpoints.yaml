@@ -1,0 +1,73 @@
+# Kong -> ingress-nginx: Payment Hub EU backend endpoints. Update IP if ingress-nginx LoadBalancer changes.
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: zeebe-operate-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: minio-console-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: zeebeops-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ops-bk-web-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: channel-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ops-bk-ph-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

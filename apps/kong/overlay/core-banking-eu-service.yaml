@@ -1,0 +1,49 @@
+# Kong -> ingress-nginx: Core Banking EU backend Services (fynams, webapp, hooks-api).
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fynams-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: fynams.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: web-app.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hooks-api-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: hooks-api.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

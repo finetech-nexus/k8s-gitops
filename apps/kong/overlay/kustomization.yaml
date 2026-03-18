@@ -17,9 +17,23 @@ resources:
   - kyc-endpoints.yaml
   - payment-hub-service.yaml
   - payment-hub-endpoints.yaml
+  # EU apps
+  - kyc-eu-service.yaml
+  - kyc-eu-endpoints.yaml
+  - core-banking-eu-service.yaml
+  - core-banking-eu-endpoints.yaml
+  - api-eu-service.yaml
+  - api-eu-endpoints.yaml
+  - payment-hub-eu-service.yaml
+  - payment-hub-eu-endpoints.yaml
   - webapp-route.yaml
   - fynams-route.yaml
   - kyc-route.yaml
   - iam-route.yaml
   - app-route.yaml
   - payment-hub-route.yaml
+  # EU routes
+  - kyc-eu-route.yaml
+  - core-banking-eu-route.yaml
+  - api-eu-route.yaml
+  - payment-hub-eu-route.yaml

@@ -1,0 +1,403 @@
+# Declare global configurations
+global:
+  kibanaEnabled: true
+
+############### Kafka and Zookeeper ####################
+## Reference: https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml
+kafka:
+  enabled: true
+  image:
+    repository: "bitnamilegacy/kafka"
+  fullnameOverride: "kafka"
+  persistence:
+    enabled: true
+    size: 1Gi
+  externalAccess:
+    enabled: false
+
+  broker:
+    replicaCount: 1
+    heapOpts: "-Xms64M -Xmx256M"
+    resources: 
+      limits:
+        memory: "500Mi" # Using Mi for clarity and consistency
+        cpu: "500m"
+      requests: 
+        memory: "64Mi" # Using Mi for clarity and consistency
+        cpu: "100m"
+  
+  extraConfig:
+    autoCreateTopicsEnabled: "true"
+    offsetsTopicReplicationFactor: "1"
+
+  # need this to ensure redpanda-console can connect to kafka
+  listeners:
+    client:
+      protocol: PLAINTEXT
+      # Explicitly advertise using the Kafka service name
+      advertisedListeners: PLAINTEXT://kafka:9092 
+    interBroker:
+      protocol: PLAINTEXT
+      # For a single-node setup, interBroker can also point to client.
+      advertisedListeners: PLAINTEXT://kafka:9092 
+
+  extraEnvVars:
+    - name: KAFKA_CFG_ADVERTISED_LISTENERS
+      value: PLAINTEXT://kafka:9092
+
+  auth:
+    enabled: false
+    clientProtocol: plaintext
+
+  kraft:
+    enabled: false
+    clusterId: spDnn4oSr6DLKPx3cEheLp
+
+  ## https://github.com/bitnami/charts/blob/main/bitnami/zookeeper/values.yaml
+  zookeeper:
+    enabled: true
+    image:
+      repository: bitnamilegacy/zookeeper
+    persistence:
+      enabled: true
+      size: 1Gi
+    fullnameOverride: "zookeeper"
+    heapOpts: "-Xms64M -Xmx256M"
+
+    resources: 
+      limits:
+        memory: "256Mi" # Using Mi for clarity and consistency
+        cpu: "200m"
+      requests: 
+        memory: "64Mi" # Using Mi for clarity and consistency
+        cpu: "50m"
+    #replicaCount: 1   
+
+  controller:
+    replicaCount: 0
+
+  ## Kafka provisioning
+  provisioning:
+    enabled: true
+    numPartitions: 1
+    replicationFactor: 1
+
+    topics:
+      - name: zeebe-export
+        partitions: 1
+        replicationFactor: 1
+      - name: __consumer_offsets
+        partitions: 50
+        replicationFactor: 1    
+      - name: KAFKA_AUDITS_TOPIC
+        value: audits
+      - name: KAFKA_LOGS_TOPIC
+        value: logs
+      - name: AccountLookupBcRequests
+        value: AccountLookupBcRequests
+      - name: AccountLookupBcEvents
+        value: AccountLookupBcEvents
+      - name: AccountLookupBcResponses
+        value: AccountLookupBcResponses
+      - name: AccountLookupBcErrors
+        value: AccountLookupBcErrors
+      - name: OperatorBcErrors
+        value: OperatorBcErrors
+      - name: QuotingBcErrors
+        value: QuotingBcErrors
+      - name: QuotingBcEvents
+        value: QuotingBcEvents
+      - name: QuotingBcRequests
+        value: QuotingBcRequests
+      - name: SettlementsBcRequests
+        value: SettlementsBcRequests
+      - name: TransfersBcErrors
+        value: TransfersBcErrors
+      - name: TransfersBcEvents
+        value: TransfersBcEvents
+      - name: TransfersBcRequests
+        value: TransfersBcRequests
+      - name: SettlementsBcEvents
+        value: SettlementsBcEvents
+      - name: SettlementsBcCommands
+        value: SettlementsBcCommands
+      - name: PlatformConfigurationBcEvents
+        value: PlatformConfigurationBcEvents
+      - name: TransfersBcTimeouts
+        value: TransfersBcTimeouts
+      - name: ParticipantsBcEvents
+        value: ParticipantsBcEvents
+      - name: SchedulingBcCommands
+        value: SchedulingBcCommands
+      - name: SchedulingBcEvents
+        value: SchedulingBcEvents
+      - name: SecurityBcAuthorizationEvents
+        value: SecurityBcAuthorizationEvents
+      - name: SecurityBcEvents
+        value: SecurityBcEvents
+
+    nodeSelector: {}
+    tolerations: []
+    waitForKafka: true
+
+
+
+  # externalAccess:
+  #   enabled: true
+  #   autoDiscovery:
+  #     enabled: true
+
+  # rbac:
+  #   create: true
+
+############### Kafka and Zookeeper ####################
+
+
+
+############### RedPanda Console for Kafka  ####################
+# https://artifacthub.io/packages/helm/redpanda-data/console?modal=values
+# redpanda kakfa console config
+
+redpanda-console:
+  enabled: true
+  fullnameOverride: rpconsole
+
+  console:
+    config:
+      kafka:
+        brokers:
+          - kafka:9092
+
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: redpanda-console.mifos.gazelle.test
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+
+############### MongoDB  ####################
+#         older amd64 specific 
+# https://github.com/bitnami/charts/tree/main/bitnami/mongodb
+# mongodb:
+#   enabled: true
+#   image:
+#     tag: 5.0.18-debian-11-r8
+
+#   fullnameOverride: "mongodb"
+#   auth:
+#     enabled: true
+
+#     rootUser: root
+#     rootPassword: mongoDbPas42
+#     usernames:
+#     - 'mojaloop'
+#     passwords:
+#     - 'password'
+#     databases:
+#     - 'mlos'
+
+#     replicaSetKey: ""
+#     existingSecret: ""
+#   persistence:
+#     enabled: false
+################### end of  older gazelle v1.1.0 amd64 only ##############
+
+mongodb:
+  enabled: true
+  persistence:
+    enabled: false
+  # image:
+  #   tag: 7.0
+
+  fullnameOverride: mongodb
+  settings:
+    rootUsername: root
+    rootPassword: mongoDbPas42
+############### Mongo Express ####################
+# mongo express config
+mongo-express:
+  fullnameOverride: mongo-express
+  enabled: true
+
+  # image:
+  #   tag: 1.0.0
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: mongoexpress.mifos.gazelle.test
+        paths:
+          - /
+
+  mongodbEnableAdmin: true
+  mongodbAdminUsername: root
+  mongodbAdminPassword: mongoDbPas42
+
+  basicAuthUsername: admin
+  basicAuthPassword: admin
+
+  extraEnv:
+    - name: ME_CONFIG_MONGODB_URL
+      value: "mongodb://root:mongoDbPas42@mongodb:27017/"
+
+############### Redis  ####################
+## Reference: https://github.com/bitnami/charts/blob/main/bitnami/redis/values.yaml
+redis:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/redis
+  fullnameOverride: redis
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    disableCommands: []
+    persistence:
+      enabled: true
+      size: 5Gi
+
+############### Elasticsearch and Kibana  ####################
+elasticsearch:
+  enabled: true
+  #fullnameOverride: "fredelastic"
+  image:
+    repository: bitnamilegacy/elasticsearch
+  security:
+    elasticPassword: elasticSearchPas42
+    tls:
+      restEncryption: false
+  sysctlImage:
+    repository: bitnamilegacy/os-shell
+
+  # coordinating:
+  #   replicaCount: 1
+
+  master:
+    masterOnly: false
+    replicaCount: 1
+    persistence:
+      enabled: false
+    env:
+      - name: ES_JAVA_OPTS
+        value: "-Xms2g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError" 
+    # Define resources for this single 'all-in-one' master node
+    resources:
+      requests:
+        memory: "2.5Gi"  # Request enough memory for the heap + overhead
+        cpu: "500m"
+      limits:
+        memory: "3Gi"  
+        cpu: "1" # 
+
+
+  data:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 10Gi
+  coordinating:
+    replicaCount: 0
+  ingest:
+    replicaCount: 0
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: elasticsearch.mifos.gazelle.test
+    tls:
+      - enabled: false
+
+  kibana:
+    image:
+      repository: bitnamilegacy/kibana
+    persistence:
+      enabled: false
+    env:
+      - name: NODE_OPTIONS
+        value: "--max-old-space-size=128" # Set Kibana's JS heap to 128MB 
+
+    resources:
+      requests:
+        memory: "300Mi"  # Request enough memory for the heap + overhead
+        cpu: "200m"
+      limits:
+        memory: "800Mi" # Allow some buffer over the heap for OS page cache and other overhead
+        cpu: "200m" # 
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hostname: kibana.mifos.gazelle.test
+      tls:
+        enabled: false
+
+############### MySQL  ####################
+mysql:
+  fullnameOverride: "mysql"
+  enabled: true
+  auth:
+    database: "tenants"
+    username: "mifos"
+    password: "password"
+    rootPassword: "mysqlpw"
+    # rootPassword: "ethieTieCh8ahv"
+  image:
+    repository: bitnamilegacy/mysql
+    tag: "5.7"
+    debug: false
+  initdbScripts:
+    setup.sql: |-
+      CREATE DATABASE IF NOT EXISTS messagegateway;
+      CREATE DATABASE IF NOT EXISTS `identity_account_mapper`;
+      CREATE DATABASE IF NOT EXISTS `voucher_management`;
+      CREATE DATABASE IF NOT EXISTS `fineract_tenants`;
+      CREATE DATABASE IF NOT EXISTS `fineract_default`;
+      CREATE DATABASE IF NOT EXISTS `nexusbank`;
+      CREATE DATABASE IF NOT EXISTS `bluebank`;
+      GRANT ALL PRIVILEGES ON messagegateway.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `identity_account_mapper`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `voucher_management`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `fineract_tenants`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `fineract_default`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `nexusbank`.* TO 'mifos';
+      GRANT ALL PRIVILEGES ON `bluebank`.* TO 'mifos';
+      GRANT ALL ON *.* TO 'root'@'%';
+operations-postgres:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 17.6.0-debian-12-r4
+  auth:
+    username: postgres
+    password: password
+    database: ph_ee_operations
+  persistence:
+    enabled: true
+    size: 1Gi
+    mountPath: /var/lib/postgresql/data
+  extraInitScripts: |
+    CREATE DATABASE messagegateway;
+    CREATE DATABASE `rhino`;
+    CREATE DATABASE `gorilla`;
+    CREATE DATABASE `wakanda`;
+    CREATE DATABASE `identity_account_mapper`;
+    CREATE DATABASE `voucher_management`;
+    CREATE DATABASE `pluto`;
+    CREATE DATABASE `venus`;
+    CREATE DATABASE `jupiter`;
+    CREATE DATABASE `lion`;
+    GRANT ALL ON *.* TO 'root'@'%';
+    GRANT ALL PRIVILEGES ON `rhino`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `gorilla`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `lion`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `wakanda`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON messagegateway.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `identity_account_mapper`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `voucher_management`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `pluto`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `venus`.* TO 'mifos';
+    GRANT ALL PRIVILEGES ON `jupiter`.* TO 'mifos';

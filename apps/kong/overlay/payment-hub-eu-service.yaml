@@ -1,0 +1,97 @@
+# Kong -> ingress-nginx: Payment Hub EU backend Services.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeebe-operate-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: zeebe-operate.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-console-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: minio-console.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeebeops-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: zeebeops.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ops-bk-web-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: ops-bk-web.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: channel-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: channel.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ops-bk-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: ops-bk.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

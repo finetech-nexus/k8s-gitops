@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: core-banking-eu
+resources:
+  - ../../base
+configMapGenerator:
+  - name: core-banking-values
+    options:
+      disableNameSuffixHash: true
+    files:
+      - values.yaml=values-core-banking.yaml
+  - name: fineract-hook-values
+    options:
+      disableNameSuffixHash: true
+    files:
+      - values.yaml=values-fineract-hook.yaml

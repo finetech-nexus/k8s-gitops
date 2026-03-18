@@ -1,0 +1,49 @@
+# Kong -> ingress-nginx: KYC EU backend Services.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backoffice-kyc-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: backoffice.kyc.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflowdashboard-kyc-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: workflowdashboard.kyc.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflowsvc-kyc-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: workflowsvc.kyc.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

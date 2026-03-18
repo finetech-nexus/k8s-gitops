@@ -18,3 +18,9 @@ resources:
   - app.yaml
   - kyc.yaml
   - iam.yaml
+  # EU stack
+  - infra-eu.yaml
+  - core-banking-eu.yaml
+  - payment-hub-eu.yaml
+  - api-eu.yaml
+  - kyc-eu.yaml

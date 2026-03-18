@@ -1,0 +1,26 @@
+# KYC from OCI (ghcr.io/finetech-nexus/kyc-helm-chart/kyc)
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyc
+  namespace: kyc-eu
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: kyc
+      version: "0.0.1"
+      sourceRef:
+        kind: HelmRepository
+        name: kyc-chart-oci
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: kyc-values
+      valuesKey: values.yaml
