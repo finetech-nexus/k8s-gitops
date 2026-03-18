@@ -4,11 +4,11 @@ namespace: api-eu
 resources:
   - ../../base
 configMapGenerator:
-  - name: core-banking-api-values
+  - name: core-api-values
     options:
       disableNameSuffixHash: true
     files:
-      - values.yaml=values-core-banking-api.yaml
+      - values.yaml=values.yaml
   - name: ca-config-map
     options:
       disableNameSuffixHash: true

@@ -23,11 +23,11 @@ ph-ee-engine:
     SPRING_PROFILES_ACTIVE: "rdbms,tenantsConnection"
     LOGGING_LEVEL_ROOT: "INFO"
     datasource:
-      host: "mysql.infra1.svc.cluster.local"
+      host: "mysql.infra-eu.svc.cluster.local"
       # note both datasource and datasource.core are used by the rdbms chart
       # TODO: remove datasource.core from the rdbms chart
       core:
-        host: mysql.infra1.svc.cluster.local
+        host: mysql.infra-eu.svc.cluster.local
         port: 3306
         schema: "tenants"
         username: "mifos"
@@ -35,7 +35,7 @@ ph-ee-engine:
     deployment:
       extraEnvs:
         - name: KAFKA_BROKERS
-          value: kafka.infra1.svc.cluster.local:9092
+          value: kafka.infra-eu.svc.cluster.local:9092
 
 
   camunda-platform:
@@ -43,7 +43,7 @@ ph-ee-engine:
       elasticsearch:
         # Elasticsearch.disableExporter if true, disables the elastic exporter in zeebe
         disableExporter: false
-        host: "infra-elasticsearch.infra1.svc.cluster.local"
+        host: "infra-elasticsearch.infra-eu.svc.cluster.local"
         port: 9200
         clusterName: "fred"
       identity:
@@ -56,7 +56,7 @@ ph-ee-engine:
         contactpoint: "ph-ee-gazelle-zeebe-gateway:26500"
       env:
         - name: ZEEBE_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS
-          value: kafka.infra1.svc.cluster.local:9092
+          value: kafka.infra-eu.svc.cluster.local:9092
         - name: ZEEBE_BROKER_BACKPRESSURE_ENABLED
           value: "false"
         - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
@@ -245,11 +245,11 @@ ph-ee-engine:
     SPRING_PROFILES_ACTIVE: "tenantsConnection,bb"
     secret:
       datasource:
-        host: mysql.infra1.svc.cluster.local
+        host: mysql.infra-eu.svc.cluster.local
     datasource:
       username: "mifos"
       password: "password"
-      host: mysql.infra1.svc.cluster.local
+      host: mysql.infra-eu.svc.cluster.local
       port: 3306
       schema: "tenants"
     image:  docker.io/nexusbank/ph-ee-operations-app:1.17.1
@@ -258,7 +258,7 @@ ph-ee-engine:
       - name: "BAASFLOW_EVENTS_DISABLED"
         value: "true"
       - name: "BAASFLOW_EVENTS_KAFKA_BROKERS"
-        value: "kafka.infra1.svc.cluster.local:9092"
+        value: "kafka.infra-eu.svc.cluster.local:9092"
       - name: "BAASFLOW_EVENTS_CHANNELS_AUDIT_TOPIC"
         value: "auditlog"
       - name: "FRONTEND_CALLBACK_URL_BASE"
@@ -395,7 +395,7 @@ ph-ee-engine:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
         - name: KAFKA_BOOTSTRAPADDRESS
-          value: kafka.infra.svc.cluster.local:9092
+          value: kafka.infra-eu.svc.cluster.local:9092
 
     # ingress:
     #   enabled: true
@@ -454,7 +454,7 @@ ph-ee-engine:
     ams_local_loan_host: ""
     operations_app:
       datasource:
-        host: mysql.infra1.svc.cluster.local
+        host: mysql.infra-eu.svc.cluster.local
   channel:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-channel:1.17.0
@@ -657,7 +657,7 @@ ph-ee-engine:
     HOSTCONFIG_HOST: "message-gateway"
     MYSQL_USERNAME: "mifos"
     MYSQL_PASSWORD: "password"
-    DATASOURCE_URL: jdbc:mysql:thin://mysql.infra.svc.cluster.local:3306/messagegateway
+    DATASOURCE_URL: jdbc:mysql:thin://mysql.infra-eu.svc.cluster.local:3306/messagegateway
   kafka:
     enabled: false
     image:

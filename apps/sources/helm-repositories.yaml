@@ -82,11 +82,11 @@ spec:
   secretRef:
     name: ghcr-auth
 ---
-# OCI: core-banking chart (core-banking-api-charts repo)
+# OCI: core-api chart (core-banking-api-charts repo)
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: core-banking-api-chart-oci
+  name: core-api-chart-oci
   namespace: flux-system
 spec:
   type: oci

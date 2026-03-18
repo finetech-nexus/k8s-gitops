@@ -1,0 +1,169 @@
+  # Dev values for core-banking-api-chart. Hosts under api.dev.sandbox.internal.nbank.fr. TLS: cert-manager ClusterIssuer nbank-dev, secret cbanking-api-dev-tls.
+  # CA for IAM/Fineract TLS is provided by this overlay (configMapGenerator + ca.pem). Replace ca.pem with the CA that signs iam.dev.sandbox.internal.nbank.fr if different.
+core-banking-api: 
+  caConfigMap:
+    create: false
+  replicaCount: 1
+  # hostAliases: uncomment and set IP if in-cluster resolution for IAM/Fineract is needed
+  # hostAliases:
+  #   - ip: "172.18.0.3"
+  #     hostnames:
+  #       - "iam.dev.sandbox.internal.nbank.fr"
+  #       - "fynams.dev.sandbox.internal.nbank.fr"
+  image:
+    repository: nexusbank/core-banking-api
+    tag: "latest"
+    pullPolicy: Always
+
+  env:
+    KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
+    KEYCLOAK_REALM: "customer"
+    KEYCLOAK_CLIENT_ID: "cbanking-api-oidc"
+    KEYCLOAK_CLIENT_SECRET: "Mh26ufWhUWLGabGsC84zNzmw26xLTp5U"
+    SUBJECT_ISSUER: "global-oidc"
+    KEYCLOAK_ADMIN_CLIENT_ID: "cbanking-registration-api-oidc"
+    KEYCLOAK_ADMIN_CLIENT_SECRET: "urY34FtvS2K4QtTo7xhjMZAx63n7khNg"
+    KEYCLOAK_INTERNAL_REALM: "internal"
+    KEYCLOAK_FINERACT_CLIENT_ID: "cbanking-api-oidc"
+    KEYCLOAK_FINERACT_CLIENT_SECRET: "Iu8NODQxGQgPP0cYtDK3ZF3vEBzJ6nRs"
+    KEYCLOAK_FINERACT_USERNAME: "mifos"
+    KEYCLOAK_FINERACT_PASSWORD: "password"
+    FINERACT_BASE_URL: "https://fynams.dev.sandbox.internal.nbank.fr"
+    FINERACT_BASE_PATH: "/fineract-provider/api/v1"
+    FINERACT_TENANT: "nexusbank"
+    DEFAULT_SAVING_PRODUCT: 3
+    SAVING_PRODUCTS:
+      TND: "3"
+      EURO: "2"
+      USD: "1"
+    OFFICE_ID: 2
+    SWIFT_BIC: "NEXUSTN"
+    BANK_CODE: "30000000"
+    COUNTRY_CODE: "TN"
+
+
+  extraEnv: |
+    - name: CHANNEL_BASE_URL
+      value: https://channel.payment-hub.dev.sandbox.internal.nbank.fr
+    - name: NODE_EXTRA_CA_CERTS
+      value: /etc/certificate/ca.pem
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+
+  extraVolumes:
+    - name: certificate
+      configMap:
+        name: ca-config-map
+  extraVolumeMounts:
+    - name: certificate
+      mountPath: /etc/certificate
+      readOnly: true
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+      nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
+      nginx.ingress.kubernetes.io/proxy-buffers: "416k"
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: cbanking-api.api.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - cbanking-api.api.dev.sandbox.internal.nbank.fr
+        secretName: cbanking-api-dev-tls
+
+  resources: {}
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+
+kyc-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/kyc-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: 3000
+    NODE_ENV: production
+    LOG_LEVEL: info
+    BALLERINE_ENDPOINT: "https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr"
+    BALLERINE_API_KEY: "webhook-shared-secret-secret"
+    KYC_PROXY_URL: "https://apim.nbank.fr"
+    KYC_TIMEOUT: 300000
+    KYC_MAX_RETRIES: 3
+    ML_BACKEND_URL: "http://localhost:8000"
+ 
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  ingress:
+    enabled: false
+    ingressClassName: "nginx"
+    annotations: {}
+    hosts: []
+    tls: []
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  extraEnv: |
+    - name: NODE_EXTRA_CA_CERTS
+      value: /etc/certificate/ca.pem
+  extraVolumes:
+    - name: certificate
+      configMap:
+        name: ca-config-map
+  extraVolumeMounts:
+    - name: certificate
+      mountPath: /etc/certificate
+      readOnly: true
+

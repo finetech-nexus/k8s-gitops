@@ -60,12 +60,7 @@ extraEnv: |
           "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
         }
       ]
-  - name: KYC_PROXY_URL
-    value: https://apim.nbank.fr
-  - name: BALLERINE_API_KEY
-    value: webhook-shared-secret-secret
-  - name: BALLERINE_ENDPOINT
-    value: https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr
+
   - name: STRIPE_SECRET_KEY
     value: sk_test_51SwJKzE0sjkbbrOPBlBY07xkIGHKL0vm4Opg4BEDPVNgAyq6nzLfK713upqTIvpPvQJPNgmWz7Ahj4iHbwzxzhI200jiUVtgPX
   - name: STRIPE_WEBHOOK_SECRET
