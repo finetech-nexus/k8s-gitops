@@ -15,4 +15,6 @@ spec:
   dependsOn:
     - name: core-banking
       namespace: flux-system
+    - name: ingress-nginx
+      namespace: flux-system
   timeout: 10m0s
