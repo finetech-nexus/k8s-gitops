@@ -91,7 +91,7 @@ metadata:
 spec:
   type: oci
   interval: 5m
-  url: oci://ghcr.io/finetech-nexus/core-api-chart
+  url: oci://ghcr.io/finetech-nexus/core-api-charts
   secretRef:
     name: ghcr-auth
 ---
