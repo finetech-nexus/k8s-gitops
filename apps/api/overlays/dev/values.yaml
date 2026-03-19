@@ -110,6 +110,8 @@ core-banking-api:
 
 
 kyc-api:
+  caConfigMap:
+    create: false
   replicaCount: 1
   image:
     repository: nexusbank/kyc-api
@@ -161,7 +163,7 @@ kyc-api:
   extraVolumes:
     - name: certificate
       configMap:
-        name: ca-config-map
+        name: kyc-ca-config-map
   extraVolumeMounts:
     - name: certificate
       mountPath: /etc/certificate

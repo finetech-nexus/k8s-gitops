@@ -14,3 +14,8 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - ca.pem=ca.pem
+  - name: kyc-ca-config-map
+    options:
+      disableNameSuffixHash: true
+    files:
+      - ca.pem=ca.pem

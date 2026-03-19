@@ -9,7 +9,12 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - values.yaml=values.yaml
-  - name: ca-config-map
+ - name: ca-config-map
+    options:
+      disableNameSuffixHash: true
+    files:
+      - ca.pem=ca.pem
+  - name: kyc-ca-config-map
     options:
       disableNameSuffixHash: true
     files:
