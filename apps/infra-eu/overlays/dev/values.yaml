@@ -307,7 +307,7 @@ elasticsearch:
   ingress:
     enabled: true
     ingressClassName: nginx
-    hostname: elasticsearch.mifos.gazelle.test
+    hostname: elasticsearch1.mifos.gazelle.test
     tls:
       - enabled: false
 
