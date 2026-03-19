@@ -228,7 +228,7 @@ mongo-express:
     enabled: true
     ingressClassName: nginx
     hosts:
-      - host: mongoexpress.mifos.gazelle.test
+      - host: mongoexpress1.mifos.gazelle.test
         paths:
           - /
 
