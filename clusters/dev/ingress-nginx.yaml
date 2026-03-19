@@ -5,6 +5,7 @@ metadata:
   name: ingress-nginx
   namespace: flux-system
 spec:
+  suspend: false
   interval: 5m0s
   path: ./apps/ingress-nginx
   prune: true

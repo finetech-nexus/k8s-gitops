@@ -9,7 +9,7 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - values.yaml=values.yaml
- - name: ca-config-map
+  - name: ca-config-map
     options:
       disableNameSuffixHash: true
     files:
