@@ -396,7 +396,8 @@ ph-ee-engine:
           value: "-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
         - name: KAFKA_BOOTSTRAPADDRESS
           value: kafka.infra-eu.svc.cluster.local:9092
-
+    ingress:
+      enabled:false #TODO a checker
     # ingress:
     #   enabled: true
     #   className: nginx
@@ -553,13 +554,15 @@ ph-ee-engine:
           secretName: minio-console-ph-dev-tls1
 
   ph-ee-connector:
-    enabled: false #TODO a reactiver 
+    enabled: true 
     limits:
       memory: "2048M"
       cpu: "700m"
     requests:
       memory: "512M"
       cpu: "100m"
+    ingress:
+      enabled: false #TODO a checker 
 
   zeebe_ops:
     enabled: true

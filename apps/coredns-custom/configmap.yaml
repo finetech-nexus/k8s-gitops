@@ -11,7 +11,15 @@ data:
   internal.server: |
     dev.sandbox.internal.nbank.fr:53 {
       hosts {
-        10.43.169.196 channel.payment-hub.dev.sandbox.internal.nbank.fr iam.dev.sandbox.internal.nbank.fr fynams.dev.sandbox.internal.nbank.fr web-app.dev.sandbox.internal.nbank.fr cbanking-api.api.dev.sandbox.internal.nbank.fr app.api.dev.sandbox.internal.nbank.fr app-ws.api.dev.sandbox.internal.nbank.fr hooks-api.dev.sandbox.internal.nbank.fr workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowdashboard.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.dev.sandbox.internal.nbank.fr
+        10.43.169.196 channel.payment-hub.dev.sandbox.internal.nbank.fr iam.dev.sandbox.internal.nbank.fr fynams.dev.sandbox.internal.nbank.fr web-app.dev.sandbox.internal.nbank.fr cbanking-api.api.dev.sandbox.internal.nbank.fr app.api.dev.sandbox.internal.nbank.fr app-ws.api.dev.sandbox.internal.nbank.fr hooks-api.dev.sandbox.internal.nbank.fr kyc-api.api.dev.sandbox.internal.nbank.fr workflowsvc.kyc.dev.sandbox.internal.nbank.fr workflowdashboard.kyc.dev.sandbox.internal.nbank.fr backoffice.kyc.dev.sandbox.internal.nbank.fr
+        fallthrough
+      }
+      cache
+    }
+
+    dev1.sandbox.internal.nbank.fr:53 {
+      hosts {
+        10.43.169.196 kyc-api.api.dev1.sandbox.internal.nbank.fr channel.payment-hub.dev1.sandbox.internal.nbank.fr fynams.dev1.sandbox.internal.nbank.fr web-app.dev1.sandbox.internal.nbank.fr cbanking-api.api.dev1.sandbox.internal.nbank.fr app.api.dev1.sandbox.internal.nbank.fr app-ws.api.dev1.sandbox.internal.nbank.fr hooks-api.dev1.sandbox.internal.nbank.fr workflowsvc.kyc.dev1.sandbox.internal.nbank.fr workflowdashboard.kyc.dev1.sandbox.internal.nbank.fr backoffice.kyc.dev1.sandbox.internal.nbank.fr
         fallthrough
       }
       cache
