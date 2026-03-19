@@ -172,7 +172,7 @@ redpanda-console:
     enabled: true
     className: nginx
     hosts:
-      - host: redpanda-console.mifos.gazelle.test
+      - host: redpanda1-console.mifos.gazelle.test
         paths:
           - path: /
             pathType: ImplementationSpecific

@@ -553,7 +553,7 @@ ph-ee-engine:
           secretName: minio-console-ph-dev-tls1
 
   ph-ee-connector:
-    enabled: true
+    enabled: false #TODO a reactiver 
     limits:
       memory: "2048M"
       cpu: "700m"
