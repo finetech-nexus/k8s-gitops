@@ -36,9 +36,9 @@ fineract:
   preStopScript: 'echo -e "******Fineract is stopping********";'
   ingress:
     enabled: true
-    hostname: "fynams.dev.sandbox.internal.nbank.fr"
+    hostname: "fynams.dev1.sandbox.internal.nbank.fr"
     path: "/"
-    wildcardhostname: "fynams.dev.sandbox.internal.nbank.fr"
+    wildcardhostname: "fynams.dev1.sandbox.internal.nbank.fr"
     ingressClassName: nginx
     annotations:
       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
