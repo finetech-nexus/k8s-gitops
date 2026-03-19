@@ -134,11 +134,18 @@ kyc-api:
     port: 80
     targetPort: 3000
   ingress:
-    enabled: false
+    enabled: true
     ingressClassName: "nginx"
     annotations: {}
-    hosts: []
-    tls: []
+    hosts:
+      - host: kyc-api.api.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - kyc-api.api.dev.sandbox.internal.nbank.fr
+        secretName: kyc-api-dev-tls
   resources: {}
   nodeSelector: {}
   tolerations: []
