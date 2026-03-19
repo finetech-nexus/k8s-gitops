@@ -251,7 +251,7 @@ workflowService:
            - workflowsvc.kyc.dev.sandbox.internal.nbank.fr
   applicationConfig:
     BCRYPT_SALT: "10"
-    DB_URL: "postgresql://admin:admin@kyc-postgresql.kyc.svc.cluster.local:5432/postgres"
+    DB_URL: "postgresql://admin:admin@postgresql.kyc.svc.cluster.local:5432/postgres"
     DB_USER: "admin"
     DB_PASSWORD: "admin"
     DB_PORT: "5432"
