@@ -91,7 +91,7 @@ metadata:
 spec:
   type: oci
   interval: 5m
-  url: oci://ghcr.io/finetech-nexus/core-banking-api-chart
+  url: oci://ghcr.io/finetech-nexus/core-api-chart
   secretRef:
     name: ghcr-auth
 ---
