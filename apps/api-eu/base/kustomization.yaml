@@ -3,4 +3,4 @@ kind: Kustomization
 namespace: api-eu
 resources:
   - namespace.yaml
-  - helmrelease-core-banking-api.yaml
+  - helmrelease-core-api.yaml
