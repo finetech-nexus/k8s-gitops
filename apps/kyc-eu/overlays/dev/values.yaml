@@ -275,11 +275,11 @@ workflowService:
     WEBHOOK_URL: "https://workflowsvc.kyc.dev1.sandbox.internal.nbank.fr/api/v1/hooks/onboarding"
     SYNC_UNIFIED_API: "false"
     ONBORDING_URL: "https://cbanking-api.api.dev1.sandbox.internal.nbank.fr/api/kyc/onboarding"
-    KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token"
+    KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu/protocol/openid-connect/token"
     KEYCLOAK_CLIENT_ID: "kyc"
-    KEYCLOAK_CLIENT_SECRET: "tudlWzNqRrF41T8ciEmDggDIejeLqNUa"
+    KEYCLOAK_CLIENT_SECRET: "9doYD8dGAeYwwpAfNrB4m205MYVr7a0C"
     BALLERINE_WEBHOOK_SECRET: 'webhooksecret'
-    TENANT: 'tn'
+    TENANT: 'eu'
     NODE_TLS_REJECT_UNAUTHORIZED: "0"
 
 
