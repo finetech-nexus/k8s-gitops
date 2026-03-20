@@ -31,12 +31,12 @@ core-banking-api:
     FINERACT_BASE_URL: "https://fynams.dev1.sandbox.internal.nbank.fr"
     FINERACT_BASE_PATH: "/fineract-provider/api/v1"
     FINERACT_TENANT: "nexusbank"
-    DEFAULT_SAVING_PRODUCT: 3
+    DEFAULT_SAVING_PRODUCT: 2
     SAVING_PRODUCTS:
       TND: "3"
       EURO: "2"
       USD: "1"
-    OFFICE_ID: 2
+    OFFICE_ID: 1
     SWIFT_BIC: "NEXUSFR"
     BANK_CODE: "30000000"
     COUNTRY_CODE: "FR"
