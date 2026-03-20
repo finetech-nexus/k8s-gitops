@@ -17,7 +17,7 @@ core-banking-api:
 
   env:
     KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
-    KEYCLOAK_REALM: "customer"
+    KEYCLOAK_REALM: "customer_eu"
     KEYCLOAK_CLIENT_ID: "cbanking-api-oidc"
     KEYCLOAK_CLIENT_SECRET: "dAWHQ5LTQyFFvKMoojP58V8cLOanQV82"
     SUBJECT_ISSUER: "global-oidc"
