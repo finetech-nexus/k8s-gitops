@@ -19,13 +19,13 @@ core-banking-api:
     KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth"
     KEYCLOAK_REALM: "customer"
     KEYCLOAK_CLIENT_ID: "cbanking-api-oidc"
-    KEYCLOAK_CLIENT_SECRET: "Mh26ufWhUWLGabGsC84zNzmw26xLTp5U"
+    KEYCLOAK_CLIENT_SECRET: "dAWHQ5LTQyFFvKMoojP58V8cLOanQV82"
     SUBJECT_ISSUER: "global-oidc"
     KEYCLOAK_ADMIN_CLIENT_ID: "cbanking-registration-api-oidc"
-    KEYCLOAK_ADMIN_CLIENT_SECRET: "urY34FtvS2K4QtTo7xhjMZAx63n7khNg"
-    KEYCLOAK_INTERNAL_REALM: "internal"
+    KEYCLOAK_ADMIN_CLIENT_SECRET: "V3tssu7LScFCwM3RztwGSOKDc2u8fIOA"
+    KEYCLOAK_INTERNAL_REALM: "internal_eu"
     KEYCLOAK_FINERACT_CLIENT_ID: "cbanking-api-oidc"
-    KEYCLOAK_FINERACT_CLIENT_SECRET: "Iu8NODQxGQgPP0cYtDK3ZF3vEBzJ6nRs"
+    KEYCLOAK_FINERACT_CLIENT_SECRET: "dAWHQ5LTQyFFvKMoojP58V8cLOanQV82"
     KEYCLOAK_FINERACT_USERNAME: "mifos"
     KEYCLOAK_FINERACT_PASSWORD: "password"
     FINERACT_BASE_URL: "https://fynams.dev1.sandbox.internal.nbank.fr"
@@ -37,9 +37,9 @@ core-banking-api:
       EURO: "2"
       USD: "1"
     OFFICE_ID: 2
-    SWIFT_BIC: "NEXUSTN"
+    SWIFT_BIC: "NEXUSFR"
     BANK_CODE: "30000000"
-    COUNTRY_CODE: "TN"
+    COUNTRY_CODE: "FR"
 
 
   extraEnv: |

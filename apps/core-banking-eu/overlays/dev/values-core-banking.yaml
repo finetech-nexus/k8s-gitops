@@ -57,7 +57,7 @@ fineract:
   deployment:
     extraEnvs:
       - name: FINERACT_SECURITY_OAUTH_ALLOWED_ISSUERS
-        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal,https://iam.nexus-bank.io/auth/realms/customer-eu
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu,https://iam.nexus-bank.io/auth/realms/customer-eu
       - name: JAVA_TOOL_OPTIONS
         value: >
           -Xms1024m -Xmx2048m
@@ -138,15 +138,15 @@ webapp:
         value: 'false'
       # IdP issuer URL for OAuth2 discovery (Keycloak). Discovery loads from here; userdetails use MIFOS_OAUTH_SERVER_URL (Fineract).
       - name: MIFOS_OAUTH_ISSUER_URL
-        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu
       - name: MIFOS_OAUTH_SERVER_URL
         value: https://fynams.dev1.sandbox.internal.nbank.fr/fineract-provider/api/v1
       - name: MIFOS_OAUTH_AUTHORIZE_URL
-        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/auth
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu/protocol/openid-connect/auth
       - name: MIFOS_OAUTH_TOKEN_URL
-        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu/protocol/openid-connect/token
       - name: MIFOS_OAUTH_SERVER_LOGOUT_URL
-        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/logout
+        value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu/protocol/openid-connect/logout
       - name: MIFOS_OAUTH_CLIENT_ID
         value: web-app
       - name: MIFOS_OAUTH_REDIRECT_URI
