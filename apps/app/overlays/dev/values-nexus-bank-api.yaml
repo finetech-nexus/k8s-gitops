@@ -65,11 +65,17 @@ extraEnv: |
         }
       ]
 
-  - name: STRIPE_SECRET_KEY
+  - name: STRIPE_SECRET_KEY_TN
     value: sk_test_51SwJKzE0sjkbbrOPBlBY07xkIGHKL0vm4Opg4BEDPVNgAyq6nzLfK713upqTIvpPvQJPNgmWz7Ahj4iHbwzxzhI200jiUVtgPX
-  - name: STRIPE_WEBHOOK_SECRET
+  - name: STRIPE_WEBHOOK_SECRET_TN
     value: whsec_152xO3aAcaQdR5bkq5axQ5Xmg38bRUpt
-  - name: STRIPE_PAYMENT_TYPE_ID
+  - name: STRIPE_PAYMENT_TYPE_ID_TN
+    value: "10"
+  - name: STRIPE_SECRET_KEY_EU
+    value: sk_test_51TDCreLpYvw6uPlj4osWsO13I9UV734TZCXYBgeSOT4HCx87mcFL5kcjbNqzmwYeosbd3qQ3YbBufAngOLiE5KbS00NOEOT1hX
+  - name: STRIPE_WEBHOOK_SECRET_EU
+    value: whsec_neW780VwN2MnkCnsijw5GbuUApQhVThx
+  - name: STRIPE_PAYMENT_TYPE_ID_EU
     value: "10"
 
 
