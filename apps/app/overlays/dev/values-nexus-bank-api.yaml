@@ -76,7 +76,7 @@ extraEnv: |
   - name: STRIPE_WEBHOOK_SECRET_EU
     value: whsec_neW780VwN2MnkCnsijw5GbuUApQhVThx
   - name: STRIPE_PAYMENT_TYPE_ID_EU
-    value: "10"
+    value: "23"
 
 
 extraVolumes:
