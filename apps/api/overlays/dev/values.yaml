@@ -50,7 +50,7 @@ core-banking-api:
     - name: NODE_TLS_REJECT_UNAUTHORIZED
       value: "0"
     - name: GLOBAL_KEYCLOAK_URL
-      value: "https://iam.nexus-bank.io/auth"
+      value: "https://iam.dev.sandbox.internal.nbank.fr/auth"
     - name: GLOBAL_KEYCLOAK_REALM
       value: "global"
     - name: GLOBAL_KEYCLOAK_CLIENT_ID
