@@ -57,7 +57,7 @@ core-banking-api:
       value: "nexusbank-registration-app-oidc" 
     - name: GLOBAL_KEYCLOAK_CLIENT_SECRET
       value: "cZdzGmXkkgGOxOMoUgQozP0xPdSEV8Rh" 
-    - name: tenant
+    - name: TENANT
       value: "eu" 
 
   extraVolumes:
