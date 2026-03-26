@@ -49,6 +49,14 @@ core-banking-api:
       value: /etc/certificate/ca.pem
     - name: NODE_TLS_REJECT_UNAUTHORIZED
       value: "0"
+    - name: GLOBAL_KEYCLOAK_URL
+      value: "https://iam.nexus-bank.io/auth"
+    - name: GLOBAL_KEYCLOAK_REALM
+      value: "global"
+    - name: GLOBAL_KEYCLOAK_CLIENT_ID
+      value: "nexusbank-registration-app-oidc" 
+    - name: GLOBAL_KEYCLOAK_CLIENT_SECRET
+      value: "cZdzGmXkkgGOxOMoUgQozP0xPdSEV8Rh" 
 
   extraVolumes:
     - name: certificate
