@@ -8,6 +8,7 @@ resources:
   - coredns-custom.yaml
   - ingress-nginx.yaml
   - platform.yaml
+  - docs.yaml
   - infra.yaml
   - kong.yaml
   - kong-routes.yaml
@@ -18,7 +19,6 @@ resources:
   - app.yaml
   - kyc.yaml
   - iam.yaml
-  - docs.yaml
   # EU stack
   - infra-eu.yaml
   - core-banking-eu.yaml

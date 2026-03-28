@@ -24,11 +24,12 @@ spec:
       retries: 3
   values:
     installCRDs: true
-    # Optional: reduce resource requests for dev
+    # Controller needs enough RAM to avoid OOM (exit 137) and liveness timeouts. The chart
+    # default is ~128Mi request; 64Mi was too low with concurrent ACME challenges / API watches.
     resources:
       requests:
-        cpu: 10m
-        memory: 32Mi
+        cpu: 50m
+        memory: 128Mi
       limits:
-        cpu: 100m
-        memory: 64Mi
+        cpu: 500m
+        memory: 256Mi
