@@ -42,14 +42,14 @@ if $DELETE; then
     exit 1
   fi
   echo "==> DELETE: Remove all Flux Kustomizations and their resources (prune)."
-  echo "    This will delete resources in: kong, kyc, app, apis, core-banking, iam, infra, platform, ingress-nginx, cert-manager, sources, flux-system, and EU stack (infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu)."
+  echo "    This will delete resources in: kong, kyc, app, apis, core-banking, iam, infra, platform, docs, ingress-nginx, cert-manager, sources, flux-system, and EU stack (infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu)."
   read -r -p "Type 'yes' to continue: " confirm
   if [ "$confirm" != "yes" ]; then
     echo "Aborted."
     exit 1
   fi
   DEL_KUSTOMIZATIONS=(
-    kong kong-routes kyc app apis core-banking iam infra platform
+    kong kong-routes kyc app apis core-banking iam infra platform docs
     ingress-nginx cert-manager-issuers cert-manager
     sources flux-system
     infra-eu core-banking-eu payment-hub-eu api-eu kyc-eu
@@ -86,6 +86,7 @@ PATHS=(
   apps/overlays/dev/03-core
   apps/overlays/dev/04-apis
   apps/overlays/dev/05-app
+  apps/docs/overlays/dev
   apps/overlays/staging
   apps/overlays/production
   # EU stack

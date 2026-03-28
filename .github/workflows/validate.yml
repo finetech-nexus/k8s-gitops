@@ -50,6 +50,7 @@ jobs:
             apps/overlays/dev/03-core \
             apps/overlays/dev/04-apis \
             apps/overlays/dev/05-app \
+            apps/docs/overlays/dev \
             apps/overlays/staging \
             apps/overlays/production \
             ; do

@@ -1,4 +1,5 @@
-# Dev (OKE): sources + cert-manager + infra + IAM + api + core-banking + kyc + payment-hub + docs
+# Dev (OKE): sources + cert-manager + infra + IAM + api + core-banking + kyc + payment-hub
+# (docs is applied via Flux Kustomization clusters/dev/docs.yaml → apps/docs/overlays/dev)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -10,4 +11,3 @@ resources:
   - ../../core-banking/overlays/dev
   - ../../kyc/overlays/dev
   - ../../payment-hub/overlays/dev
-  - ../../docs/overlays/dev

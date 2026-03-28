@@ -16,7 +16,7 @@ EXTRA_ARGS=("$@")
 
 if [ -z "$APP" ] || [ "$APP" = "-h" ] || [ "$APP" = "--help" ]; then
   echo "Usage: $0 <app> [--force]"
-  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | coredns-custom | infra-eu | core-banking-eu | payment-hub-eu | api-eu | kyc-eu | all"
+  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | docs | coredns-custom | infra-eu | core-banking-eu | payment-hub-eu | api-eu | kyc-eu | all"
   exit 0
 fi
 
@@ -122,6 +122,11 @@ case "$APP" in
     reconcile_kustomization payment-hub "${EXTRA_ARGS[@]}"
     reconcile_helmreleases payment-hub 10m "${EXTRA_ARGS[@]}"
     ;;
+  docs)
+    echo "==> Reconcile - docs"
+    reconcile_kustomization docs "${EXTRA_ARGS[@]}"
+    reconcile_helmreleases docs "${EXTRA_ARGS[@]}"
+    ;;
   infra-eu)
     echo "==> Reconcile - infra-eu"
     reconcile_kustomization infra-eu "${EXTRA_ARGS[@]}"
@@ -153,7 +158,7 @@ case "$APP" in
     ;;
   all)
     echo "==> Reconcile all apps"
-    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub coredns-custom infra-eu core-banking-eu payment-hub-eu api-eu kyc-eu; do
+    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub docs coredns-custom infra-eu core-banking-eu payment-hub-eu api-eu kyc-eu; do
       "$REPO_ROOT/scripts/reconcile.sh" "$a" "${EXTRA_ARGS[@]}" || true
     done
     echo "Done."
@@ -161,7 +166,7 @@ case "$APP" in
     ;;
   *)
     echo "Unknown app: $APP"
-    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, coredns-custom, infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu, all"
+    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, docs, coredns-custom, infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu, all"
     exit 1
     ;;
 esac

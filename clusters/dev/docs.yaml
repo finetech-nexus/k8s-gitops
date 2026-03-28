@@ -1,0 +1,22 @@
+# Docusaurus docs (HelmRelease in namespace docs, Ingress docs.nbank.fr)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: docs
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/docs/overlays/dev
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: sources
+      namespace: flux-system
+    - name: ingress-nginx
+      namespace: flux-system
+    - name: cert-manager-issuers
+      namespace: flux-system
+  timeout: 5m0s
