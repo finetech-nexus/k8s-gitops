@@ -1,0 +1,27 @@
+# Docusaurus docs site from OCI (docs/deploy Helm chart published to ghcr.io/.../docs).
+# Chart name must match Chart.yaml (nexus-bank-docs). Values from overlay ConfigMap docs-values.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: docs
+  namespace: docs
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: nexus-bank-docs
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: docs-oci
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: false
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: ConfigMap
+      name: docs-values
+      valuesKey: values.yaml
