@@ -1,8 +1,8 @@
-# Dev overlay — align image tag with your registry; TLS via cert-manager (ClusterIssuer).
+# Dev overlay — TLS via cert-manager (ClusterIssuer).
 replicaCount: 1
 
 image:
-  repository: ghcr.io/finetech-nexus/nexus-bank-docs
+  repository: nexusbank/docs
   tag: latest
   pullPolicy: Always
 
