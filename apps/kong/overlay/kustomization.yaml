@@ -9,6 +9,8 @@ resources:
   - app-endpoints.yaml
   - webapp-service.yaml
   - webapp-endpoints.yaml
+  - docs-service.yaml
+  - docs-endpoints.yaml
   - iam-service.yaml
   - iam-endpoints.yaml
   - fynams-service.yaml
@@ -27,6 +29,7 @@ resources:
   - payment-hub-eu-service.yaml
   - payment-hub-eu-endpoints.yaml
   - webapp-route.yaml
+  - docs-route.yaml
   - fynams-route.yaml
   - kyc-route.yaml
   - iam-route.yaml

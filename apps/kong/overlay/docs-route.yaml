@@ -1,0 +1,21 @@
+# Docs site: HTTPRoute -> Kong -> ingress-nginx (Host docs.nbank.fr matches docs Ingress).
+# KongPlugin internal-only is in overlay/kong-plugins.yaml.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: docs-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - docs.nbank.fr
+  rules:
+    - backendRefs:
+        - name: docs-internal
+          port: 443

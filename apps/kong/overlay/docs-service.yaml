@@ -1,0 +1,17 @@
+# Kong -> ingress-nginx: Docusaurus docs (HelmRelease in namespace docs). Ingress host: docs.nbank.fr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: docs.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
