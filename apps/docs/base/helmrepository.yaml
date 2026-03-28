@@ -1,0 +1,13 @@
+# OCI chart registry for nexus-bank-docs (same as ghcr.io/finetech-nexus/docs).
+# Lives in flux-system so the HelmRelease can reference it; not under namespace: docs.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: docs-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/docs
+  secretRef:
+    name: ghcr-auth

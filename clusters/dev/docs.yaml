@@ -13,8 +13,7 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: sources
-      namespace: flux-system
+    # HelmRepository docs-oci is applied with this stack (apps/docs/base/helmrepository.yaml).
     - name: ingress-nginx
       namespace: flux-system
     - name: cert-manager-issuers

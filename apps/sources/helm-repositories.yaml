@@ -120,3 +120,4 @@ spec:
   url: oci://ghcr.io/finetech-nexus/payment-hub-helm-chart
   secretRef:
     name: ghcr-auth
+# docs-oci HelmRepository is defined in apps/docs/base/helmrepository.yaml (applied with docs Kustomization).
