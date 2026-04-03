@@ -1,4 +1,4 @@
-# Dev overlay — TLS via cert-manager. Basic auth: set ingress.basicAuth.password (stored in cluster ConfigMap — prefer private overlay / SOPS for prod).
+# Dev overlay — TLS via cert-manager. Basic auth: set ingress.basicAuth.password (chart creates Secret when non-empty).
 replicaCount: 1
 
 image:
@@ -11,14 +11,11 @@ ingress:
   className: nginx
   annotations:
     cert-manager.io/cluster-issuer: nbank
-    # Bare https://docs.nbank.fr/ → introduction
-    nginx.ingress.kubernetes.io/app-root: /docs/3.0/index/
   basicAuth:
     enabled: true
     secretName: docs-basic-auth
     realm: "Nexus Bank Docs"
     username: docs
-    # Non-empty: chart creates Secret docs-basic-auth (bcrypt). Empty: create secret manually (see scripts/create-docs-basic-auth-secret.sh).
     password: ""
   hosts:
     - host: docs.nbank.fr
