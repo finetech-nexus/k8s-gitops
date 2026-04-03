@@ -1,5 +1,4 @@
 # Docs site: HTTPRoute -> Kong -> ingress-nginx (Host docs.nbank.fr matches docs Ingress).
-# KongPlugin internal-only is in overlay/kong-plugins.yaml.
 # strip-path must be false: Docusaurus baseUrl is /docs/3.0/; stripping would break paths (503 upstream).
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -9,7 +8,6 @@ metadata:
   namespace: apim
   annotations:
     konghq.com/strip-path: "false"
-    konghq.com/plugins: internal-only
 spec:
   parentRefs:
     - name: kong
