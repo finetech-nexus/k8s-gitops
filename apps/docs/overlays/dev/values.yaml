@@ -1,38 +1,36 @@
 # Dev overlay — TLS via cert-manager.
 replicaCount: 1
 
-# Must match Dockerfile CMD `serve` listening on 8080.
+image:
+  repository: nexusbank/docs
+  tag: latest
+  pullPolicy: Always
+
 containerPort: 8080
+
 service:
   type: ClusterIP
   port: 80
   targetPort: 8080
 
-# Probes: port 8080 numeric (matches `serve`). Named port "http" can fail probe resolution on some setups.
-# startupProbe: delay liveness until something listens (avoid NotReady while serve prints banner).
-startupProbe:
-  tcpSocket:
-    port: 8080
-  periodSeconds: 2
-  failureThreshold: 30
-  timeoutSeconds: 2
+# Match docusaurus baseUrl when CF_PAGES is unset (Docker / k8s). Probing / returns 404 → Readiness fails.
 readinessProbe:
-  tcpSocket:
-    port: 8080
-  periodSeconds: 5
-  timeoutSeconds: 2
+  httpGet:
+    path: /docs/3.0/
+    port: http
+  initialDelaySeconds: 8
+  periodSeconds: 10
+  timeoutSeconds: 5
   failureThreshold: 6
-livenessProbe:
-  tcpSocket:
-    port: 8080
-  initialDelaySeconds: 15
-  periodSeconds: 30
-  timeoutSeconds: 3
 
-image:
-  repository: nexusbank/docs
-  tag: latest
-  pullPolicy: Always
+livenessProbe:
+  httpGet:
+    path: /docs/3.0/
+    port: http
+  initialDelaySeconds: 25
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
 
 ingress:
   enabled: true
