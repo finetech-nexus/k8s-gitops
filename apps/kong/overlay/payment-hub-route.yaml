@@ -76,3 +76,22 @@ spec:
     - backendRefs:
         - name: ops-bk-web-ph-internal
           port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ops-bk-ph-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - ops-bk.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: ops-bk-ph-internal
+          port: 443
