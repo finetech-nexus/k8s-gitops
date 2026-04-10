@@ -47,3 +47,15 @@ subsets:
     ports:
       - port: 443
         name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ops-bk-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
