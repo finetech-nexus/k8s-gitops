@@ -131,10 +131,6 @@ keycloakx:
         -Djava.awt.headless=true
         -Dkubeping_namespace={{ .Release.Namespace }}
         -Djgroups.dns.query={{ include "keycloak.fullname" . }}-headless
-        -DNOVU_TRIGGER_URL=https://api.novu.co/v1/events/trigger
-        -DNOVU_API_KEY=2908919c1940693dd83eb92e4c79be9e
-        -DNOVU_SMS_WORKFLOW_ID=NOVU_SMS_WORKFLOW_ID
-        -DNOVU_EMAIL_WORKFLOW_ID=NOVU_EMAIL_WORKFLOW_ID
     - name: KC_HTTPS_CERTIFICATE_FILE
       value: /tls/tls.crt
     - name: KC_HTTPS_CERTIFICATE_KEY_FILE
@@ -145,6 +141,14 @@ keycloakx:
       value: "password"
     - name: KC_FEATURES
       value: "preview,token-exchange,admin-fine-grained-authz:v1"
+    - name: NOVU_TRIGGER_URL
+      value: https://api.novu.co/v1/events/trigger
+    - name: NOVU_API_KEY
+      value: 2908919c1940693dd83eb92e4c79be9e
+    - name: NOVU_SMS_WORKFLOW_ID
+      value: NOVU_SMS_WORKFLOW_ID
+    - name: NOVU_EMAIL_WORKFLOW_ID
+      value: NOVU_EMAIL_WORKFLOW_ID
  # - name: KC_HTTPS_KEY_STORE_FILE
   #    value: "/jks/keystore.jks"
   #    - name: KC_HTTPS_KEY_STORE_PASSWORD
