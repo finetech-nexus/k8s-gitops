@@ -145,10 +145,10 @@ keycloakx:
       value: https://api.novu.co/v1/events/trigger
     - name: NOVU_API_KEY
       value: 2908919c1940693dd83eb92e4c79be9e
-    - name: NOVU_SMS_WORKFLOW_ID
-      value: novu-sms-workflow
-    - name: NOVU_EMAIL_WORKFLOW_ID
-      value: novu-email-workflow
+    - name: OTP_SMS_WORKFLOW_ID
+      value: otp-sms-workflow
+    - name: OTP_EMAIL_WORKFLOW_ID
+      value: otp-email-workflow
  # - name: KC_HTTPS_KEY_STORE_FILE
   #    value: "/jks/keystore.jks"
   #    - name: KC_HTTPS_KEY_STORE_PASSWORD
