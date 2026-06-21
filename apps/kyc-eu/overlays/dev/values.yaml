@@ -281,7 +281,7 @@ workflowService:
     AWS_S3_BUCKET_KEY: "7M0KO9hp3fVqUqHJVmpb"
     AWS_S3_BUCKET_SECRET: "ORyuJopXh56DdaLlp2YFuqBMOjr0QhTsP2p8SKFN"
     AWS_REGION: "us-east-1"
-    AWS_S3_ENDPOINT: "http://minio.payment-hub.svc.cluster.local:9000"
+    AWS_S3_ENDPOINT: "http://minio.payment-hub-eu.svc.cluster.local:9000"
     AWS_S3_FORCE_PATH_STYLE: "true"
     ONBORDING_URL: "https://cbanking-api.api.dev1.sandbox.internal.nbank.fr/api/kyc/onboarding"
     KEYCLOAK_URL: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal_eu/protocol/openid-connect/token"
