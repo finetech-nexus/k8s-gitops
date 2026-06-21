@@ -1,5 +1,8 @@
 # KYC dev overlay — hosts under kyc.dev.sandbox.internal.nbank.fr. TLS: secret "nbank" (ClusterIssuer/cert for *.dev.sandbox.internal.nbank.fr).
 # Chart template tls.yaml creates tls-kyc-nexusbank for sandbox.nexus-bank.io; this overlay uses "nbank" for nbank.fr.
+tlsCertificate:
+  enabled: false
+
 postgresql:
   image:
     repository: nexusbank/postgres-plv8
