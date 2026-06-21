@@ -74,7 +74,7 @@ backoffice:
         paths:
           - path: /
     tls:
-       - secretName: nbank
+       - secretName: kyc-dev-tls
          hosts:
            - backoffice.kyc.dev.sandbox.internal.nbank.fr
 
@@ -202,7 +202,7 @@ workflowsdashboard:
         paths:
           - path: /
     tls:
-       - secretName: nbank
+       - secretName: kyc-dev-tls
          hosts:
            - workflowdashboard.kyc.dev.sandbox.internal.nbank.fr
 
@@ -252,7 +252,7 @@ workflowService:
         paths:
           - path: /
     tls:
-       - secretName: nbank
+       - secretName: kyc-dev-tls
          hosts:
            - workflowsvc.kyc.dev.sandbox.internal.nbank.fr
   applicationConfig:
