@@ -397,7 +397,8 @@ ph-ee-engine:
         - name: KAFKA_BOOTSTRAPADDRESS
           value: kafka.infra-eu.svc.cluster.local:9092
     ingress:
-      enabled:false #TODO a checker
+      enabled: false 
+      #TODO a checker
     # ingress:
     #   enabled: true
     #   className: nginx
