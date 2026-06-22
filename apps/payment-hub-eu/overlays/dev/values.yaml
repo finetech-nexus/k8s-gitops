@@ -454,6 +454,24 @@ ph-ee-engine:
     ams_local_auth_host: https://iam.dev1.sandbox.internal.nbank.fr
     ams_local_tenants: "nexusbank"
     ams_local_loan_host: ""
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - ams-mifos.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: ams-mifos-ph-dev-tls1
+      hosts:
+        - host: ams-mifos.payment-hub.dev1.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+              backend:
+                service:
+                  name: ph-ee-connector-ams-mifos
+                  port:
+                    number: 80
     operations_app:
       datasource:
         host: mysql.infra-eu.svc.cluster.local
