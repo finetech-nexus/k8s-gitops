@@ -530,6 +530,8 @@ ph-ee-engine:
         memory: "512Mi"
         cpu: "500m"
     ingress:
+      enabled: true
+      ingressClassName: nginx
       annotations:
         cert-manager.io/cluster-issuer: nbank-dev
       hosts:
