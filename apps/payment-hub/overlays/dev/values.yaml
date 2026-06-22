@@ -396,7 +396,8 @@ ph-ee-engine:
           value: "-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
         - name: KAFKA_BOOTSTRAPADDRESS
           value: kafka.infra.svc.cluster.local:9092
-
+    ingress:
+      enabled:false 
     # ingress:
     #   enabled: true
     #   className: nginx
