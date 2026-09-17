@@ -194,3 +194,47 @@ kyc-api:
       mountPath: /etc/certificate
       readOnly: true
 
+ai-api:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nexusbank/ai-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "8000"
+    ENV: production
+    LOG_LEVEL: INFO
+    CORS_ORIGINS: "*"
+    MAX_UPLOAD_SIZE_MB: "10"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: ai-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - ai-api.api.dev1.sandbox.internal.nbank.fr
+        secretName: ai-api-dev-tls
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 6Gi
+

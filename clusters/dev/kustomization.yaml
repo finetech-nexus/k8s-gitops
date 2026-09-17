@@ -18,7 +18,6 @@ resources:
   - apis.yaml
   - app.yaml
   - kyc.yaml
-  - ai-api.yaml
   - iam.yaml
   # EU stack
   - infra-eu.yaml
@@ -26,4 +25,3 @@ resources:
   - payment-hub-eu.yaml
   - api-eu.yaml
   - kyc-eu.yaml
-  - ai-api-eu.yaml
