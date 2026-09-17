@@ -138,6 +138,10 @@ kyc-api:
     KYC_MAX_RETRIES: 3
     ML_BACKEND_URL: "http://localhost:8000"
     JSON_BODY_LIMIT: "20mb"
+    # Liveness gate: the final submit is refused unless the ML backend recorded a
+    # pass for the challenge id sent with it. Keep the bypass off.
+    LIVENESS_PASS_TTL_MS: 900000
+    ALLOW_LIVENESS_BYPASS: "false"
  
 
   service:
