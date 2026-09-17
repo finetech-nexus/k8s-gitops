@@ -137,6 +137,7 @@ kyc-api:
     KYC_TIMEOUT: 300000
     KYC_MAX_RETRIES: 3
     ML_BACKEND_URL: "http://localhost:8000"
+    JSON_BODY_LIMIT: "20mb"
  
 
   service:
@@ -146,7 +147,8 @@ kyc-api:
   ingress:
     enabled: true
     ingressClassName: "nginx"
-    annotations: {}
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "20m"
     hosts:
       - host: kyc-api.api.dev.sandbox.internal.nbank.fr
         paths:
