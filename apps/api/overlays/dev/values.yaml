@@ -136,7 +136,7 @@ kyc-api:
     KYC_PROXY_URL: "https://apim.nbank.fr"
     KYC_TIMEOUT: 300000
     KYC_MAX_RETRIES: 3
-    ML_BACKEND_URL: "http://localhost:8000"
+    ML_BACKEND_URL: "http://core-api-ai-api"
     JSON_BODY_LIMIT: "20mb"
     # Liveness gate: the final submit is refused unless the ML backend recorded a
     # pass for the challenge id sent with it. Keep the bypass off.
