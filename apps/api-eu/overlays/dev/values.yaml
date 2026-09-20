@@ -194,6 +194,51 @@ kyc-api:
       mountPath: /etc/certificate
       readOnly: true
 
+produit-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/produit-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "8080"
+    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global"
+    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global/protocol/openid-connect/certs"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: produit-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - produit-api.api.dev1.sandbox.internal.nbank.fr
+        secretName: produit-api-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
 ai-api:
   enabled: true
   replicaCount: 1
