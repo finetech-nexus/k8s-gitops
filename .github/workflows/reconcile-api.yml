@@ -3,7 +3,12 @@ name: Reconcile — api
 on:
   push:
     branches: [main]
-    paths: ['apps/api/**', 'apps/overlays/dev/04-apis/**', 'clusters/**', '.github/workflows/reconcile-api.yml']
+    paths:
+      - 'apps/api/**'
+      - 'apps/api-eu/**'
+      - 'apps/overlays/dev/04-apis/**'
+      - 'clusters/**'
+      - '.github/workflows/reconcile-api.yml'
   workflow_dispatch:
 
 jobs:
@@ -19,9 +24,17 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Reconcile Kustomization — apis
         run: flux reconcile kustomization apis -n flux-system --timeout=3m || true
+      - name: Reconcile Kustomization — api-eu
+        run: flux reconcile kustomization api-eu -n flux-system --timeout=3m || true
       - name: Reconcile HelmReleases — api
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n api --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
             [ -z "$name" ] && continue
             flux reconcile helmrelease "$name" -n api --timeout=3m || true
+          done
+      - name: Reconcile HelmReleases — api-eu
+        run: |
+          kubectl get helmreleases.helm.toolkit.fluxcd.io -n api-eu --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
+            [ -z "$name" ] && continue
+            flux reconcile helmrelease "$name" -n api-eu --timeout=3m || true
           done
