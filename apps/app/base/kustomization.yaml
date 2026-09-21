@@ -4,3 +4,6 @@ namespace: app
 resources:
   - namespace.yaml
   - helmrelease-nexus-bank-api.yaml
+  - produit-app-deployment.yaml
+  - produit-app-service.yaml
+  - produit-app-ingress.yaml

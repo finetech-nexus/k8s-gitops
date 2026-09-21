@@ -202,8 +202,8 @@ produit-api:
     pullPolicy: Always
   env:
     PORT: "8080"
-    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global"
-    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global/protocol/openid-connect/certs"
+    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
+    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
   service:
     type: ClusterIP
     port: 80

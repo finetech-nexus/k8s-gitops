@@ -23,6 +23,8 @@ resources:
   - ai-api-endpoints.yaml
   - produit-api-service.yaml
   - produit-api-endpoints.yaml
+  - produit-app-service.yaml
+  - produit-app-endpoints.yaml
   - card-management-api-service.yaml
   - card-management-api-endpoints.yaml
   - invest-api-service.yaml
@@ -53,6 +55,7 @@ resources:
   - payment-hub-route.yaml
   - ai-api-route.yaml
   - produit-api-route.yaml
+  - produit-app-route.yaml
   - card-management-api-route.yaml
   - invest-api-route.yaml
   # EU routes
