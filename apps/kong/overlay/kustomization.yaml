@@ -23,6 +23,10 @@ resources:
   - ai-api-endpoints.yaml
   - produit-api-service.yaml
   - produit-api-endpoints.yaml
+  - card-management-api-service.yaml
+  - card-management-api-endpoints.yaml
+  - invest-api-service.yaml
+  - invest-api-endpoints.yaml
   # EU apps
   - kyc-eu-service.yaml
   - kyc-eu-endpoints.yaml
@@ -36,6 +40,10 @@ resources:
   - ai-api-eu-endpoints.yaml
   - produit-api-eu-service.yaml
   - produit-api-eu-endpoints.yaml
+  - card-management-api-eu-service.yaml
+  - card-management-api-eu-endpoints.yaml
+  - invest-api-eu-service.yaml
+  - invest-api-eu-endpoints.yaml
   - webapp-route.yaml
   - docs-route.yaml
   - fynams-route.yaml
@@ -45,6 +53,8 @@ resources:
   - payment-hub-route.yaml
   - ai-api-route.yaml
   - produit-api-route.yaml
+  - card-management-api-route.yaml
+  - invest-api-route.yaml
   # EU routes
   - kyc-eu-route.yaml
   - core-banking-eu-route.yaml
@@ -52,3 +62,5 @@ resources:
   - payment-hub-eu-route.yaml
   - ai-api-eu-route.yaml
   - produit-api-eu-route.yaml
+  - card-management-api-eu-route.yaml
+  - invest-api-eu-route.yaml

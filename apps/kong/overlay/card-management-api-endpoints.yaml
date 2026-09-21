@@ -1,0 +1,13 @@
+# Kong -> ingress-nginx: Card-management API backend endpoints. Update IP if ingress-nginx LoadBalancer changes.
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: card-management-api-internal
+  namespace: apim
+subsets:
+  - addresses:
+    - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

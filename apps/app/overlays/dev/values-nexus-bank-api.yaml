@@ -51,6 +51,8 @@ extraEnv: |
           "apiUrl":"https://cbanking-api.api.dev.sandbox.internal.nbank.fr/api",
           "apiKycUrl":"https://kyc-api.api.dev.sandbox.internal.nbank.fr/api",
           "apiProduitUrl":"https://produit-api.api.dev.sandbox.internal.nbank.fr",
+          "apiCardUrl":"https://card-management-api.api.dev.sandbox.internal.nbank.fr",
+          "apiInvestUrl":"https://invest-api.api.dev.sandbox.internal.nbank.fr",
           "apiPaymentUrl":"https://payment-api.api.dev.sandbox.internal.nbank.fr/api",
           "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
         },       
@@ -62,6 +64,8 @@ extraEnv: |
           "apiUrl":"https://cbanking-api.api.dev1.sandbox.internal.nbank.fr/api",
           "apiKycUrl":"https://kyc-api.api.dev1.sandbox.internal.nbank.fr/api",
           "apiProduitUrl":"https://produit-api.api.dev1.sandbox.internal.nbank.fr",
+          "apiCardUrl":"https://card-management-api.api.dev1.sandbox.internal.nbank.fr",
+          "apiInvestUrl":"https://invest-api.api.dev1.sandbox.internal.nbank.fr",
           "apiPaymentUrl":"https://payment-api.api.dev1.sandbox.internal.nbank.fr/api",
           "apiKey":"bafnWmshdwbsYZfJY7uYVaxowgU9icKt"
         }

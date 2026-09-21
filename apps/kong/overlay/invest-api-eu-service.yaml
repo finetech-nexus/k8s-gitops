@@ -1,0 +1,17 @@
+# Kong -> ingress-nginx: Invest API EU backend Service.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: invest-api-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: invest-api.api.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

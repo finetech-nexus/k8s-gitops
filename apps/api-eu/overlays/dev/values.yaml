@@ -239,6 +239,102 @@ produit-api:
     initialDelaySeconds: 20
     periodSeconds: 10
 
+card-management-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/card-management-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "3000"
+    NODE_ENV: production
+    LOG_LEVEL: info
+    PRODUIT_API_URL: "http://core-api-produit-api"
+    PROCESSOR: mock
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: card-management-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - card-management-api.api.dev1.sandbox.internal.nbank.fr
+        secretName: card-management-api-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 20
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+invest-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/invest-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "3000"
+    NODE_ENV: production
+    LOG_LEVEL: info
+    PRODUIT_API_URL: "http://core-api-produit-api"
+    MARKET: mock
+    BROKER: mock
+    ACCOUNT: mock
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: invest-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - invest-api.api.dev1.sandbox.internal.nbank.fr
+        secretName: invest-api-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 20
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
 ai-api:
   enabled: true
   replicaCount: 1
