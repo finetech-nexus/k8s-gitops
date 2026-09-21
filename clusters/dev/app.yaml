@@ -1,4 +1,4 @@
-# Layer 5 — App (BFF nexus-bank-api + Product Studio in namespace app)
+# Layer 5 — App (nexus-bank-api BFF in namespace app)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

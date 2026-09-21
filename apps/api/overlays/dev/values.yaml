@@ -194,6 +194,50 @@ kyc-api:
       mountPath: /etc/certificate
       readOnly: true
 
+produit-app:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nexusbank/produit-app
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    API_UPSTREAM: "http://core-api-produit-api"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: produit-app.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - produit-app.dev.sandbox.internal.nbank.fr
+        secretName: produit-app-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 30
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
 produit-api:
   replicaCount: 1
   image:

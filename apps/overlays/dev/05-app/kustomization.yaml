@@ -1,4 +1,4 @@
-# Layer 5 — App: BFF (nexus-bank-api) + Product Studio (produit-app)
+# Layer 5 — App: nexus-bank-api BFF (namespace app)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

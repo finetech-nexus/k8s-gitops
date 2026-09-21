@@ -194,6 +194,9 @@ kyc-api:
       mountPath: /etc/certificate
       readOnly: true
 
+produit-app:
+  enabled: false
+
 produit-api:
   replicaCount: 1
   image:
