@@ -208,6 +208,9 @@ produit-api:
     TENANT: "eu"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global/protocol/openid-connect/certs"
+    OFFERS_ACTIONS_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer_eu"
+    OFFERS_ACTIONS_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer_eu/protocol/openid-connect/certs"
+    OFFERS_ACTIONS_TLS_VERIFY: "false"
   service:
     type: ClusterIP
     port: 80
@@ -382,4 +385,3 @@ ai-api:
     limits:
       cpu: "2"
       memory: 6Gi
-
