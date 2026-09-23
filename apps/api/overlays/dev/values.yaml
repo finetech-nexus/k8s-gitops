@@ -252,6 +252,7 @@ produit-api:
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
     OFFERS_ACTIONS_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer"
     OFFERS_ACTIONS_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer/protocol/openid-connect/certs"
+    OFFERS_ACTIONS_TLS_VERIFY: "false"
   service:
     type: ClusterIP
     port: 80
