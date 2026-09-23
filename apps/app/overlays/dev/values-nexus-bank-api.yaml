@@ -12,7 +12,7 @@ replicaCount: 1
 #       - "workflowsvc.kyc.dev.sandbox.internal.nbank.fr"
 image:
   repository: nexusbank/nexus-bank-api
-  tag: "043a1be"
+  tag: "98e09aa"
   pullPolicy: Always
 
 env:
