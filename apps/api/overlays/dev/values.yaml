@@ -40,6 +40,7 @@ core-banking-api:
     SWIFT_BIC: "NEXUSTN"
     BANK_CODE: "30000000"
     COUNTRY_CODE: "TN"
+    SUBSCRIPTION_API_URL: "http://core-api-subscription-api"
 
 
   extraEnv: |
@@ -249,6 +250,8 @@ produit-api:
     TENANT: "tn"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
+    OFFERS_ACTIONS_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer"
+    OFFERS_ACTIONS_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer/protocol/openid-connect/certs"
   service:
     type: ClusterIP
     port: 80
@@ -433,8 +436,8 @@ subscription-api:
   env:
     PORT: "8080"
     DISABLE_AUTH: "false"
-    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
-    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
+    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer"
+    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer/protocol/openid-connect/certs"
     JPA_DDL_AUTO: update
   service:
     type: ClusterIP
