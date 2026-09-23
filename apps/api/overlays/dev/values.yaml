@@ -435,7 +435,6 @@ subscription-api:
     DISABLE_AUTH: "false"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
-    DATABASE_URL: "jdbc:h2:file:/data/subscriptions;DB_CLOSE_ON_EXIT=FALSE"
     JPA_DDL_AUTO: update
   service:
     type: ClusterIP
@@ -472,3 +471,35 @@ subscription-api:
     enabled: true
     initialDelaySeconds: 20
     periodSeconds: 10
+  postgresql:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "16-alpine"
+      pullPolicy: IfNotPresent
+    auth:
+      username: subscription
+      database: subscriptions
+      existingSecret: ""
+      existingSecretPasswordKey: password
+    service:
+      port: 5432
+    persistence:
+      enabled: true
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
