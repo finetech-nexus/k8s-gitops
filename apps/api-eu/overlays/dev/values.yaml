@@ -205,6 +205,7 @@ produit-api:
     pullPolicy: Always
   env:
     PORT: "8080"
+    TENANT: "eu"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global/protocol/openid-connect/certs"
   service:

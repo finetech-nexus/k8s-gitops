@@ -246,6 +246,7 @@ produit-api:
     pullPolicy: Always
   env:
     PORT: "8080"
+    TENANT: "tn"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
   service:
@@ -423,3 +424,51 @@ ai-api:
       cpu: "2"
       memory: 6Gi
 
+subscription-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/subscription-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "8080"
+    DISABLE_AUTH: "false"
+    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
+    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
+    DATABASE_URL: "jdbc:h2:file:/data/subscriptions;DB_CLOSE_ON_EXIT=FALSE"
+    JPA_DDL_AUTO: update
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: subscription-api.api.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - subscription-api.api.dev.sandbox.internal.nbank.fr
+        secretName: subscription-api-dev-tls
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+    storageClass: ""
+    mountPath: /data
+  resources: {}
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 10
