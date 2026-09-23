@@ -243,7 +243,8 @@ produit-api:
   replicaCount: 1
   image:
     repository: nexusbank/produit-api
-    tag: "latest"
+    # Pin the API build that configures the dev-only JWKS TLS workaround.
+    tag: "467c085"
     pullPolicy: Always
   env:
     PORT: "8080"
