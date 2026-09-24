@@ -439,6 +439,7 @@ subscription-api:
     DISABLE_AUTH: "false"
     KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer"
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer/protocol/openid-connect/certs"
+    SUBSCRIPTION_JWKS_TLS_VERIFY: "false"
     JPA_DDL_AUTO: update
   service:
     type: ClusterIP
