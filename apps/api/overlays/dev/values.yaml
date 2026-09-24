@@ -243,8 +243,7 @@ produit-api:
   replicaCount: 1
   image:
     repository: nexusbank/produit-api
-    # Pin the API build that accepts RS512 customer-realm action tokens.
-    tag: "5051cd1"
+    tag: "latest"
     pullPolicy: Always
   env:
     PORT: "8080"

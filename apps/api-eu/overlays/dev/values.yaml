@@ -201,7 +201,7 @@ produit-api:
   replicaCount: 1
   image:
     repository: nexusbank/produit-api
-    tag: "5051cd1"
+    tag: "latest"
     pullPolicy: Always
   env:
     PORT: "8080"
