@@ -1,4 +1,4 @@
-# Finexus marketing site (HelmRelease in namespace webapp, Ingress finexus.nbank.fr)
+# Finexus marketing site (HelmRelease in namespace webapp, Ingress nbank.fr)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

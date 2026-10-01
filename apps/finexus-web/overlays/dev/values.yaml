@@ -1,4 +1,4 @@
-# Dev — Finexus marketing site on finexus.nbank.fr
+# Dev — Finexus marketing site on nbank.fr
 replicaCount: 1
 
 image:
@@ -37,11 +37,11 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: nbank
   hosts:
-    - host: finexus.nbank.fr
+    - host: nbank.fr
       paths:
         - path: /
           pathType: Prefix
   tls:
     - hosts:
-        - finexus.nbank.fr
-      secretName: finexus-nbank-fr-tls
+        - nbank.fr
+      secretName: nbank-fr-tls
