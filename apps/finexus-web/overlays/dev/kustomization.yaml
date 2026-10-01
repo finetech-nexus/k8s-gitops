@@ -4,7 +4,7 @@ resources:
   - ../../base
 configMapGenerator:
   - name: finexus-web-values
-    namespace: finexus-web
+    namespace: webapp
     options:
       disableNameSuffixHash: true
     files:

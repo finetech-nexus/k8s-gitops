@@ -1,9 +1,10 @@
 # Finexus marketing site from OCI (finexus-web/helm chart published to ghcr.io/.../finexus-web).
+# Deployed in namespace webapp.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: finexus-web
-  namespace: finexus-web
+  namespace: webapp
 spec:
   interval: 5m
   chart:

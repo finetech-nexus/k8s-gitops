@@ -128,9 +128,9 @@ case "$APP" in
     reconcile_helmreleases docs "${EXTRA_ARGS[@]}"
     ;;
   finexus-web)
-    echo "==> Reconcile - finexus-web"
+    echo "==> Reconcile - finexus-web (namespace webapp)"
     reconcile_kustomization finexus-web "${EXTRA_ARGS[@]}"
-    reconcile_helmreleases finexus-web "${EXTRA_ARGS[@]}"
+    reconcile_helmreleases webapp "${EXTRA_ARGS[@]}"
     ;;
   infra-eu)
     echo "==> Reconcile - infra-eu"
