@@ -9,6 +9,7 @@ resources:
   - ingress-nginx.yaml
   - platform.yaml
   - docs.yaml
+  - finexus-web.yaml
   - infra.yaml
   - kong.yaml
   - kong-routes.yaml

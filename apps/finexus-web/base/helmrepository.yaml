@@ -1,0 +1,12 @@
+# OCI chart registry for finexus-web (published from finetech-nexus/finexus-web CI).
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: finexus-web-oci
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 5m
+  url: oci://ghcr.io/finetech-nexus/finexus-web
+  secretRef:
+    name: ghcr-auth

@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+configMapGenerator:
+  - name: finexus-web-values
+    namespace: finexus-web
+    options:
+      disableNameSuffixHash: true
+    files:
+      - values.yaml=values.yaml
