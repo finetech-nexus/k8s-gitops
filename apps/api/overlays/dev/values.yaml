@@ -253,6 +253,9 @@ produit-api:
     OFFERS_ACTIONS_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer"
     OFFERS_ACTIONS_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/customer/protocol/openid-connect/certs"
     OFFERS_ACTIONS_TLS_VERIFY: "false"
+    # Live Fineract charge catalog for Product Studio fee selectors.
+    CORE_BANKING_API_URL: "http://core-api-core-banking-api/api"
+    FINERACT_TENANT: "nexusbank"
   service:
     type: ClusterIP
     port: 80
