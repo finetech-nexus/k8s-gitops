@@ -445,6 +445,12 @@ subscription-api:
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/global/protocol/openid-connect/certs"
     SUBSCRIPTION_JWKS_TLS_VERIFY: "false"
     JPA_DDL_AUTO: update
+    # Parrainage share link base → {base}/{code}
+    PARRAINAGE_SHARE_BASE_URL: "https://app.nexus-bank.io/r"
+    # Novu (same communication platform as Keycloak authenticator OTP email)
+    NOVU_TRIGGER_URL: "https://api.novu.co/v1/events/trigger"
+    NOVU_API_KEY: "2908919c1940693dd83eb92e4c79be9e"
+    PARRAINAGE_EMAIL_WORKFLOW_ID: "parrainage-email-workflow"
   service:
     type: ClusterIP
     port: 80
