@@ -3,7 +3,8 @@ replicaCount: 1
 
 image:
   repository: nexusbank/docs
-  tag: latest
+  # Pin to published SHA so Flux rolls pods when docs content ships (latest alone does not restart).
+  tag: "4ded45c"
   pullPolicy: Always
 
 containerPort: 8080
