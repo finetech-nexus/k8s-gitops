@@ -5,6 +5,7 @@ metadata:
   name: fineract-hook
   namespace: core-banking-eu
 spec:
+  suspend: true
   interval: 5m
   chart:
     spec:

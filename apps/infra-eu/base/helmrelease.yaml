@@ -5,6 +5,7 @@ metadata:
   name: infra
   namespace: infra-eu
 spec:
+  suspend: true
   interval: 5m
   chart:
     spec:

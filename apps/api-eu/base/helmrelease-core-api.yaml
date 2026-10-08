@@ -5,6 +5,7 @@ metadata:
   name: core-api
   namespace: api-eu
 spec:
+  suspend: true
   interval: 5m
   chart:
     spec:

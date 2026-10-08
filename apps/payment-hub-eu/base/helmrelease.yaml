@@ -5,6 +5,7 @@ metadata:
   name: payment-hub
   namespace: payment-hub-eu
 spec:
+  suspend: true
   interval: 5m
   chart:
     spec:

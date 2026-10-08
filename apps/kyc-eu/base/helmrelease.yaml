@@ -5,6 +5,7 @@ metadata:
   name: kyc
   namespace: kyc-eu
 spec:
+  suspend: true
   interval: 5m
   chart:
     spec:
