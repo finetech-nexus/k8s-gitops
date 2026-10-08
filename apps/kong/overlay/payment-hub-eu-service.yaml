@@ -111,3 +111,70 @@ spec:
     - port: 443
       targetPort: 443
       name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: simulator.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swift-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: swift.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sibtel-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: sibtel.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mt-ph-eu-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: mt.payment-hub.dev1.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

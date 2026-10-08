@@ -768,5 +768,80 @@ account_mapper:
       url: jdbc:mysql:thin://operationsmysql:3306/identity_account_mapper
       username: mifos
       password: password
- 
-  
+
+  ph_ee_connector_swift:
+    enabled: true
+    image: docker.io/nexusbank/ph-ee-connector-swift:latest
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - swift.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: swift-ph-eu-dev-tls
+      hosts:
+        - host: swift.payment-hub.dev1.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+
+  ph_ee_connector_sibtel:
+    enabled: true
+    image: docker.io/nexusbank/ph-ee-connector-sibtel:latest
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - sibtel.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: sibtel-ph-eu-dev-tls
+      hosts:
+        - host: sibtel.payment-hub.dev1.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+
+  ph_ee_connector_mt:
+    enabled: true
+    image: docker.io/nexusbank/ph-ee-connector-mt:latest
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - mt.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: mt-ph-eu-dev-tls
+      hosts:
+        - host: mt.payment-hub.dev1.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+
+  ph_ee_simulator:
+    enabled: true
+    image: docker.io/nexusbank/ph-ee-simulator:latest
+    paymentHub:
+      enabled: "true"
+      tenant: nexusbank
+      channelBaseUrl: http://ph-ee-connector-channel:8080
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - simulator.payment-hub.dev1.sandbox.internal.nbank.fr
+          secretName: simulator-ph-eu-dev-tls
+      hosts:
+        - host: simulator.payment-hub.dev1.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+

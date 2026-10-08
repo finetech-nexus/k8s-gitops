@@ -71,3 +71,54 @@ subsets:
     ports:
       - port: 443
         name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: simulator-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: swift-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: sibtel-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: mt-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

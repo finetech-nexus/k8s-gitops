@@ -114,3 +114,82 @@ spec:
     - backendRefs:
         - name: ops-bk-ph-internal
           port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: simulator-ph-internal-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - simulator.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: simulator-ph-internal
+          port: 443
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: swift-ph-internal-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - swift.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: swift-ph-internal
+          port: 443
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sibtel-ph-internal-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - sibtel.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: sibtel-ph-internal
+          port: 443
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mt-ph-internal-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - mt.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: mt-ph-internal
+          port: 443
