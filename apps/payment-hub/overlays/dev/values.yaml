@@ -61,6 +61,10 @@ ph-ee-engine:
           value: "false"
         - name: ZEEBE_BROKER_EXECUTION_METRICS_EXPORTER_ENABLED
           value: "true"
+        # - name: ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME
+        #   value: "hu.dpc.rt.kafkastreamer.exporter.NoOpExporter"
+        - name: ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_JARPATH
+          value: "/exporters/ph-ee-kafka-exporter.jar"
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_JARPATH
           value: "/exporters/ph-ee-kafka-exporter.jar"
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_CLASSNAME
@@ -82,7 +86,7 @@ ph-ee-engine:
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_INCIDENT
           value: 'true'
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_DEPLOYMENT
-          value: 'true'
+          value: 'false'
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_ERROR
           value: 'false'
         - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_JOB
@@ -454,7 +458,7 @@ ph-ee-engine:
         host: mysql.infra.svc.cluster.local
   channel:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-channel:latest
+    image: docker.io/nexusbank/ph-ee-connector-channel:1.17.0
     tenantPrimary:
       clientId: "mifos"
       clientSecret: "password"

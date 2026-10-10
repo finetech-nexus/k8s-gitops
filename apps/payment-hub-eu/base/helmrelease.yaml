@@ -5,13 +5,11 @@ metadata:
   name: payment-hub
   namespace: payment-hub-eu
 spec:
-  suspend: true
   interval: 5m
   chart:
     spec:
       chart: payment-hub
       version: "1.0.0-SNAPSHOT"
-      reconcileStrategy: Revision
       sourceRef:
         kind: HelmRepository
         name: payment-hub-helm-chart-oci

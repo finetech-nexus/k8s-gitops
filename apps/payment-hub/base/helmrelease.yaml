@@ -10,7 +10,6 @@ spec:
     spec:
       chart: payment-hub
       version: "1.0.0-SNAPSHOT"
-      reconcileStrategy: Revision
       sourceRef:
         kind: HelmRepository
         name: payment-hub-helm-chart-oci
