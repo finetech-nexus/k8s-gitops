@@ -458,7 +458,7 @@ ph-ee-engine:
         host: mysql.infra.svc.cluster.local
   channel:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-channel:1.17.0
+    image: docker.io/nexusbank/ph-ee-connector-channel:latest
     tenantPrimary:
       clientId: "mifos"
       clientSecret: "password"
