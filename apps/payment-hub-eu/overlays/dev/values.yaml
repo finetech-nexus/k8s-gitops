@@ -752,6 +752,10 @@ ph-ee-engine:
     imagePullPolicy: Always
     apiBaseUrl: https://sibtel-api.payment-hub.dev1.sandbox.internal.nbank.fr
     simulationEnabled: "true"
+    authDisabled: "false"
+    keycloakUrl: https://iam.dev1.sandbox.internal.nbank.fr/auth
+    keycloakRealm: internal
+    keycloakClientId: web-app
     ingress:
       enabled: true
       className: nginx
