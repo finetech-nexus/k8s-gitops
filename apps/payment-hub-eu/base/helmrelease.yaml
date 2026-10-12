@@ -6,6 +6,33 @@ metadata:
   namespace: payment-hub-eu
 spec:
   interval: 5m
+  # Scale every workload to 0. Values cannot do this for every chart
+  # (MinIO standalone hardcodes replicas: 1; Zeebe uses clusterSize).
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: scale-to-zero
+              spec:
+                replicas: 0
+          - target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+            patch: |-
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: scale-to-zero
+              spec:
+                replicas: 0
   chart:
     spec:
       chart: payment-hub
