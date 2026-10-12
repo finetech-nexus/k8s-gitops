@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: payment-hub
-      version: "1.0.2"
+      version: "1.0.3"
       reconcileStrategy: Revision
       sourceRef:
         kind: HelmRepository

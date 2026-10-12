@@ -730,7 +730,7 @@ ph-ee-engine:
     enabled: true
     image: docker.io/nexusbank/sibtel-app:latest
     imagePullPolicy: Always
-    apiBaseUrl: http://sibtel-api:8095
+    apiBaseUrl: https://sibtel-api.payment-hub.dev.sandbox.internal.nbank.fr
     simulationEnabled: "true"
     authDisabled: "false"
     keycloakUrl: https://iam.dev.sandbox.internal.nbank.fr/auth
