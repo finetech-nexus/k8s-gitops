@@ -768,7 +768,8 @@ account_mapper:
 
   ph_ee_connector_sibtel:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-sibtel:latest
+    image: docker.io/nexusbank/ph-ee-connector-sibtel:552b1b1
+    imagePullPolicy: Always
     ingress:
       enabled: true
       className: nginx
