@@ -720,6 +720,7 @@ ph-ee-engine:
     gateway:
       baseUrl: http://sibtel-api:8095
     apiBaseUrl: http://sibtel-api:8095
+    memberBankCode: "30"
 
   sibtel_api:
     enabled: true
@@ -750,7 +751,7 @@ ph-ee-engine:
     enabled: true
     image: docker.io/nexusbank/sibtel-app:latest
     imagePullPolicy: Always
-    apiBaseUrl: https://sibtel-api.payment-hub.dev1.sandbox.internal.nbank.fr
+    apiBaseUrl: http://sibtel-api:8095
     simulationEnabled: "true"
     authDisabled: "false"
     keycloakUrl: https://iam.dev1.sandbox.internal.nbank.fr/auth
