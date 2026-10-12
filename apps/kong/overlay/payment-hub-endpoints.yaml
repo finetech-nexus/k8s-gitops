@@ -122,3 +122,27 @@ subsets:
     ports:
       - port: 443
         name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: sibtel-app-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: sibtel-api-ph-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https
