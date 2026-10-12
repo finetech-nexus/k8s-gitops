@@ -40,6 +40,7 @@ backoffice:
     protocol: TCP
   applicationConfig:
     VITE_DOMAIN: https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr
+    VITE_API_URL: https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr/api/v1/internal
     VITE_API_KEY: secret
     VITE_AUTH_ENABLED: "true"
     VITE_MOCK_SERVER: "false"
