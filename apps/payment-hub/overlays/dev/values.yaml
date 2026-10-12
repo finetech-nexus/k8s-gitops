@@ -751,6 +751,7 @@ account_mapper:
   ph_ee_connector_swift:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-swift:latest
+    imagePullPolicy: Always
     ingress:
       enabled: true
       className: nginx
@@ -768,7 +769,7 @@ account_mapper:
 
   ph_ee_connector_sibtel:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-sibtel:552b1b1
+    image: docker.io/nexusbank/ph-ee-connector-sibtel:latest
     imagePullPolicy: Always
     ingress:
       enabled: true
@@ -806,6 +807,7 @@ account_mapper:
   ph_ee_simulator:
     enabled: true
     image: docker.io/nexusbank/ph-ee-simulator:latest
+    imagePullPolicy: Always
     paymentHub:
       enabled: "true"
       tenant: nexusbank
