@@ -695,7 +695,56 @@ ph-ee-engine:
     # identity:
     #   hostname: "ops-bk.sandbox.nexus-bank.io
 
+  ph_ee_connector_sibtel:
+    gateway:
+      baseUrl: http://sibtel-api:8095
+    apiBaseUrl: http://sibtel-api:8095
 
+  sibtel_api:
+    enabled: true
+    image: docker.io/nexusbank/sibtel-api:latest
+    imagePullPolicy: Always
+    channelBaseUrl: http://ph-ee-connector-channel:8080
+    channelTenant: nexusbank
+    memberBankCode: "30"
+    memberAgency: "000"
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+        nginx.ingress.kubernetes.io/enable-cors: "true"
+        nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+      tls:
+        - hosts:
+            - sibtel-api.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: sibtel-api-ph-dev-tls
+      hosts:
+        - host: sibtel-api.payment-hub.dev.sandbox.internal.nbank.fr
+          paths:
+            - path: /
+
+  sibtel_app:
+    enabled: true
+    image: docker.io/nexusbank/sibtel-app:latest
+    imagePullPolicy: Always
+    apiBaseUrl: https://sibtel-api.payment-hub.dev.sandbox.internal.nbank.fr
+    simulationEnabled: "true"
+    ingress:
+      enabled: true
+      className: nginx
+      pathtype: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
+      tls:
+        - hosts:
+            - sibtel-app.payment-hub.dev.sandbox.internal.nbank.fr
+          secretName: sibtel-app-ph-dev-tls
+      hosts:
+        - host: sibtel-app.payment-hub.dev.sandbox.internal.nbank.fr
+          paths:
+            - path: /
 
 account_mapper:
   #TODO
