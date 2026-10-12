@@ -15,6 +15,22 @@ spec:
         name: core-banking-helm-chart-oci
         namespace: flux-system
       interval: 1m
+  # Chart hook is post-upgrade only. This makes the tenant job run on install too.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: batch
+              version: v1
+              kind: Job
+              name: post-installation-job
+            patch: |-
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: post-installation-job
+                annotations:
+                  helm.sh/hook: post-install,post-upgrade
   install:
     createNamespace: true
   upgrade:
