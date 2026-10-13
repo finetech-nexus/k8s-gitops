@@ -315,9 +315,14 @@ notification-app:
         paths:
           - path: /
             pathType: ImplementationSpecific
+      - host: notification-app.payment-hub.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
     tls:
       - hosts:
           - notification-app.dev.sandbox.internal.nbank.fr
+          - notification-app.payment-hub.dev.sandbox.internal.nbank.fr
         secretName: notification-app-dev-tls
   resources: {}
   livenessProbe:
@@ -364,9 +369,14 @@ notification-api:
         paths:
           - path: /
             pathType: ImplementationSpecific
+      - host: notification-api.payment-hub.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
     tls:
       - hosts:
           - notification-api.api.dev.sandbox.internal.nbank.fr
+          - notification-api.payment-hub.dev.sandbox.internal.nbank.fr
         secretName: notification-api-dev-tls
   resources: {}
   livenessProbe:

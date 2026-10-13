@@ -25,6 +25,14 @@ resources:
   - produit-api-endpoints.yaml
   - produit-app-service.yaml
   - produit-app-endpoints.yaml
+  - notification-app-service.yaml
+  - notification-app-endpoints.yaml
+  - notification-api-service.yaml
+  - notification-api-endpoints.yaml
+  - notification-app-eu-service.yaml
+  - notification-app-eu-endpoints.yaml
+  - notification-api-eu-service.yaml
+  - notification-api-eu-endpoints.yaml
   - card-management-api-service.yaml
   - card-management-api-endpoints.yaml
   - invest-api-service.yaml
@@ -56,6 +64,10 @@ resources:
   - ai-api-route.yaml
   - produit-api-route.yaml
   - produit-app-route.yaml
+  - notification-app-route.yaml
+  - notification-api-route.yaml
+  - notification-app-eu-route.yaml
+  - notification-api-eu-route.yaml
   - card-management-api-route.yaml
   - invest-api-route.yaml
   # EU routes
