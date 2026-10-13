@@ -31,6 +31,12 @@ extraEnv: |
     value: fineract-producer
   - name: FINERACT_TENANT
     value: tn
+  - name: FINERACT_LOOKUP_JDBC_URL
+    value: jdbc:mysql://fineract-mysql:3306/nexusbank
+  - name: FINERACT_LOOKUP_USERNAME
+    value: mifos
+  - name: FINERACT_LOOKUP_PASSWORD
+    value: password
   - name: DEPLOYED_AT
     value: "2026-10-13T18:10:00Z"
   
