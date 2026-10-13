@@ -876,6 +876,8 @@ account_mapper:
           value: http://core-api-mt-api.api.svc.cluster.local
         - name: SWIFT_API_BASE_URL
           value: http://core-api-swift-api.api.svc.cluster.local
+        - name: DEPLOYED_AT
+          value: "2026-10-14T00:28:00Z"
     imagePullPolicy: Always
     paymentHub:
       enabled: "true"

@@ -422,7 +422,7 @@ mt-app:
     pullPolicy: Always
   env:
     MT_UPSTREAM_URL: "http://core-api-mt-api"
-    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+    DEPLOYED_AT: "2026-10-14T00:28:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -472,7 +472,7 @@ mt-api:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
     MT_CALLBACK_BASE_URL: "http://core-api-mt-api.api.svc.cluster.local"
     MT_EXTERNAL_ENABLED: "true"
-    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+    DEPLOYED_AT: "2026-10-14T00:28:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -523,7 +523,7 @@ swift-app:
     pullPolicy: Always
   env:
     SWIFT_UPSTREAM_URL: "http://core-api-swift-api"
-    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+    DEPLOYED_AT: "2026-10-14T00:28:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -573,7 +573,7 @@ swift-api:
     SWIFT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
     SWIFT_CALLBACK_BASE_URL: "http://core-api-swift-api.api.svc.cluster.local"
     SWIFT_EXTERNAL_ENABLED: "true"
-    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+    DEPLOYED_AT: "2026-10-14T00:28:00Z"
   service:
     type: ClusterIP
     port: 80
