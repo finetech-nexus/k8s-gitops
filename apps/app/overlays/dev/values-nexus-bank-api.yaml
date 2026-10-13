@@ -40,6 +40,21 @@ extraEnv: |
     value: mobile-app-group
   - name: SUBSCRIPTION_API_URL
     value: http://core-api-subscription-api.api.svc.cluster.local
+  - name: NOTIFICATION_API_URL
+    value: http://core-api-notification-api.api.svc.cluster.local
+  - name: APNS_TEAM_ID
+    value: "5GA8M3M44L"
+  - name: APNS_KEY_ID
+    value: "DR87HJDF7P"
+  - name: APNS_BUNDLE_ID
+    value: "com.deepmind.fintech.nexusbank"
+  - name: APNS_PRODUCTION
+    value: "false"
+  - name: APNS_PRIVATE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: notification-push
+        key: apns.p8
   - name: FIREBASE_SERVICE_ACCOUNT
     value: '{"type": "service_account","project_id": "nexus-bank-7c301","private_key_id": "c0313e72965c45d063f99e48a1608dd125a749b0","private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDfo2ocIt3QX1bL\ngCG/tBkNzj4oreXFFeDKFMb7uHncDeruF70UEYxYSgT3nQEzAMaLKOxTps1ANXU7\nedRRlN4ovoqrHEqkwGLXk91kijHLHYgviuajJDfmSvvqUN06ewqq8piMmISrR2eb\n86xdUmWtNgTopVxYOZWdVgB8j3b9L8QC/NpgO5kmtITEALm9cNjTlEArEHiARkFm\nFZxUkxuCgSFfGicZDmRhKWvXCFvEwYAJsXOYT2l1c+lBRcVKy3F8FO83lfqBZiGJ\nsz25fT80rgHdUTki9DMeacae0d7/8v1pDfhsf3QFRfXumkiiEQjmuM3Y3Mx6HS1o\ni0Kyc77tAgMBAAECggEALUDmkGH3y5n3OL+pVJ7vcO06g8XImGx4a7vvlfE6623/\ni4VPM/fnE9iKj8Z7/yOZiYBS7gxzPRp0KgBZl9aNa+Y+rihP7G2nsqLPqnASal0D\n+Ubcq8eA7j9fIYeSdKqAOp5TgyO7uOL+kr6ossuhGn8zWBZaDNo+LbPA7nOjatD2\nHV5ELDpVk9/v71uEbrNVVDar7LovtdVYGp/r0EedKbdttYLqBAfLRynr5p8uvqnM\nuFYE7A4HC4hzzR+WFpQ8/NssW0gs3HjQWmYxusbx7rRU/o74TARELC+tvWCfdzm+\naBwMr/euR0YE2FCL1l+CDxtGgHGLIX9WPMy0KfF7IQKBgQD7xgTB6HBoO9P1w7E2\nQaUzMS9Oihxa2Rc2r46aZGpikDe2ZClMd/Aol8HoVVO/3f0CMRVwpK+S5L6PntG5\nUlUE+8E3YprFe8mok83EcQHm+bznxGeYCLeBxEYdsOFcU+dc/00p2szA7/NlwkJG\nk2gfT40s76xekLm4HfzMbYJOXQKBgQDjZHyY8iH3YLzKvcyxx68deQGrnXUYwlVy\nyA4PPo3UCIEBVKJuVcJK00s2eSR/X4NhpmedkMxrNuzwb5vWfsr248wkWaqtfs7Z\ng9jxZx+glqF1nqRKyO/jXqPXAcva7FfOqxagc5iTlH3Ur7MwAxIcZXwxFB7Smb2m\nzakmhYqJ0QKBgQCh3rr6TE3Qxf5NeQZ7QpNKqWmnziXSxtYk45QEcWDwg5Y+HoFq\n14XBI2iYzhstNTTQbuxA4rC6+XQG9G4T/voIXS/pQu0M4LxTNMvLa3h0nsW0INMV\nrS0GMkF+H1WUvaD3anCa40BXHy5WkyF3LJh54PR8Go+wsM2msSjx6cooRQKBgEh5\nhpzYz6qg0otr4wnmsxGZt8aS8PdrOQDUcma5cUrbSwK5juvLuZlPrvE1u0Q9lQpS\nl0PJGt4xK2OWrvy2fMoj4LTVP2j8ucDqHQMT8yij2eI7JfIQCSVWzLGCiQ7FtVbR\ngOyy6zZeZZycQ2hSEjuqvOKHnytQhPndIsR8W6OBAoGBAMrP9rjbGCndbifVw1am\nzgRaAySGvNyEfLsyd9pv5dPdKlT/KjUmqm5Cg20DVm5w63ibX+nUsGx5lhUnkjs3\nlu8OiJ3/8HB1I6gJPnTU/hcN0nKGTMwK3vW0poC6xf0cOWDx0enck3R8d3P0dvQJ\njAAor09ibMZfKgQW202TonIA\n-----END PRIVATE KEY-----\n","client_email": "firebase-adminsdk-fbsvc@nexus-bank-7c301.iam.gserviceaccount.com","client_id": "112947218875345405965","auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token","auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40nexus-bank-7c301.iam.gserviceaccount.com","universe_domain": "googleapis.com"}'
   - name: TENANTS
