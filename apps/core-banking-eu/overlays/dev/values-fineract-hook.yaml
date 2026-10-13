@@ -29,6 +29,8 @@ extraEnv: |
     value: kafka.infra.svc.cluster.local:9092
   - name: KAFKA_CLIENT_ID
     value: fineract-producer
+  - name: DEPLOYED_AT
+    value: "2026-10-13T17:51:00Z"
   - name: FINERACT_TENANT
     value: eu
   
