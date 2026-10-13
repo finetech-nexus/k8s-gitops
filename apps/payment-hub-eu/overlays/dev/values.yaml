@@ -831,6 +831,8 @@ account_mapper:
   ph_ee_connector_swift:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-swift:latest
+    gateway:
+      baseUrl: http://core-api-swift-api.api-eu.svc.cluster.local
     ingress:
       enabled: true
       className: nginx
@@ -867,6 +869,8 @@ account_mapper:
   ph_ee_connector_mt:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-mt:latest
+    gateway:
+      baseUrl: http://core-api-mt-api.api-eu.svc.cluster.local
     ingress:
       enabled: true
       className: nginx
@@ -885,6 +889,12 @@ account_mapper:
   ph_ee_simulator:
     enabled: true
     image: docker.io/nexusbank/ph-ee-simulator:latest
+    deployment:
+      extraEnvs:
+        - name: MT_API_BASE_URL
+          value: http://core-api-mt-api.api-eu.svc.cluster.local
+        - name: SWIFT_API_BASE_URL
+          value: http://core-api-swift-api.api-eu.svc.cluster.local
     paymentHub:
       enabled: "true"
       tenant: nexusbank

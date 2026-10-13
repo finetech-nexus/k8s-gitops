@@ -1,0 +1,13 @@
+# Kong -> ingress-nginx: Monétique Tunisie API backend.
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: mt-api-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

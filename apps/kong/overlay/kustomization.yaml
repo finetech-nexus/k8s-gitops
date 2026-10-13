@@ -33,6 +33,22 @@ resources:
   - notification-app-eu-endpoints.yaml
   - notification-api-eu-service.yaml
   - notification-api-eu-endpoints.yaml
+  - mt-app-service.yaml
+  - mt-app-endpoints.yaml
+  - mt-api-service.yaml
+  - mt-api-endpoints.yaml
+  - swift-app-service.yaml
+  - swift-app-endpoints.yaml
+  - swift-api-service.yaml
+  - swift-api-endpoints.yaml
+  - mt-app-eu-service.yaml
+  - mt-app-eu-endpoints.yaml
+  - mt-api-eu-service.yaml
+  - mt-api-eu-endpoints.yaml
+  - swift-app-eu-service.yaml
+  - swift-app-eu-endpoints.yaml
+  - swift-api-eu-service.yaml
+  - swift-api-eu-endpoints.yaml
   - card-management-api-service.yaml
   - card-management-api-endpoints.yaml
   - invest-api-service.yaml
@@ -68,6 +84,14 @@ resources:
   - notification-api-route.yaml
   - notification-app-eu-route.yaml
   - notification-api-eu-route.yaml
+  - mt-app-route.yaml
+  - mt-api-route.yaml
+  - swift-app-route.yaml
+  - swift-api-route.yaml
+  - mt-app-eu-route.yaml
+  - mt-api-eu-route.yaml
+  - swift-app-eu-route.yaml
+  - swift-api-eu-route.yaml
   - card-management-api-route.yaml
   - invest-api-route.yaml
   # EU routes

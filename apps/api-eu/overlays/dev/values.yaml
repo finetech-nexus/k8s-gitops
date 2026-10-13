@@ -316,6 +316,209 @@ notification-api:
     initialDelaySeconds: 20
     periodSeconds: 10
 
+mt-app:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nexusbank/mt-app
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    MT_UPSTREAM_URL: "http://core-api-mt-api"
+    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: mt-app.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+      - host: mt-app.payment-hub.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - mt-app.dev1.sandbox.internal.nbank.fr
+          - mt-app.payment-hub.dev1.sandbox.internal.nbank.fr
+        secretName: mt-app-dev1-tls
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 30
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+mt-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/mt-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub-eu.svc.cluster.local:8090"
+    MT_CALLBACK_BASE_URL: "http://core-api-mt-api.api-eu.svc.cluster.local"
+    MT_EXTERNAL_ENABLED: "true"
+    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: mt-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+      - host: mt-api.payment-hub.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - mt-api.api.dev1.sandbox.internal.nbank.fr
+          - mt-api.payment-hub.dev1.sandbox.internal.nbank.fr
+        secretName: mt-api-dev1-tls
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 10
+  postgresql:
+    enabled: true
+
+swift-app:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nexusbank/swift-app
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    SWIFT_UPSTREAM_URL: "http://core-api-swift-api"
+    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: swift-app.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+      - host: swift-app.payment-hub.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - swift-app.dev1.sandbox.internal.nbank.fr
+          - swift-app.payment-hub.dev1.sandbox.internal.nbank.fr
+        secretName: swift-app-dev1-tls
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 30
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+swift-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/swift-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    SWIFT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub-eu.svc.cluster.local:8090"
+    SWIFT_CALLBACK_BASE_URL: "http://core-api-swift-api.api-eu.svc.cluster.local"
+    SWIFT_EXTERNAL_ENABLED: "true"
+    DEPLOYED_AT: "2026-10-14T00:10:00Z"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: swift-api.api.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+      - host: swift-api.payment-hub.dev1.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - swift-api.api.dev1.sandbox.internal.nbank.fr
+          - swift-api.payment-hub.dev1.sandbox.internal.nbank.fr
+        secretName: swift-api-dev1-tls
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /actuator/health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 10
+  postgresql:
+    enabled: true
+
+
 produit-api:
   replicaCount: 1
   image:

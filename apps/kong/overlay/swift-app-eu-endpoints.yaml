@@ -1,0 +1,13 @@
+# Kong -> ingress-nginx: Europe SWIFT console backend.
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: swift-app-eu-internal
+  namespace: apim
+subsets:
+  - addresses:
+      - ip: 95.217.169.62
+    ports:
+      - port: 443
+        name: https

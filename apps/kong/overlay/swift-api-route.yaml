@@ -1,0 +1,21 @@
+# SWIFT API: HTTPRoute -> Kong -> ingress-nginx.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: swift-api-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - swift-api.api.dev.sandbox.internal.nbank.fr
+    - swift-api.payment-hub.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: swift-api-internal
+          port: 443
