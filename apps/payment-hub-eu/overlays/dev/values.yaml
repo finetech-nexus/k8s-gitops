@@ -717,6 +717,8 @@ ph-ee-engine:
     #   hostname: "ops-bk.sandbox.nexus-bank.io
 
   ph_ee_connector_sibtel:
+    image: docker.io/nexusbank/ph-ee-connector-sibtel:4b3435a
+    imagePullPolicy: Always
     gateway:
       baseUrl: http://sibtel-api:8095
     apiBaseUrl: http://sibtel-api:8095
