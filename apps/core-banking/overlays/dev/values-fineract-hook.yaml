@@ -32,7 +32,7 @@ extraEnv: |
   - name: FINERACT_TENANT
     value: tn
   - name: DEPLOYED_AT
-    value: "2026-10-13T17:51:00Z"
+    value: "2026-10-13T18:10:00Z"
   
   
 

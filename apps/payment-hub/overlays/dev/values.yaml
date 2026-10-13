@@ -707,7 +707,7 @@ ph-ee-engine:
     enabled: true
     image: docker.io/nexusbank/sibtel-api:latest
     imagePullPolicy: Always
-    restartedAt: "2026-10-13T17:51:00Z"
+    restartedAt: "2026-10-13T18:10:00Z"
     channelBaseUrl: http://ph-ee-connector-channel:82
     channelTenant: nexusbank
     memberBankCode: "30"
@@ -733,7 +733,7 @@ ph-ee-engine:
     enabled: true
     image: docker.io/nexusbank/sibtel-app:latest
     imagePullPolicy: Always
-    restartedAt: "2026-10-13T17:51:00Z"
+    restartedAt: "2026-10-13T18:10:00Z"
     apiBaseUrl: https://sibtel-api.payment-hub.dev.sandbox.internal.nbank.fr
     upstreamUrl: http://sibtel-api:8095
     simulationEnabled: "true"

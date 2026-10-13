@@ -300,7 +300,7 @@ notification-app:
     pullPolicy: Always
   env:
     API_UPSTREAM: "http://core-api-notification-api"
-    DEPLOYED_AT: "2026-10-13T17:51:00Z"
+    DEPLOYED_AT: "2026-10-13T18:10:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -353,7 +353,7 @@ notification-api:
     KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
     KAFKA_BOOTSTRAP_SERVERS: "kafka.infra.svc.cluster.local:9092"
     KAFKA_GROUP_ID: "notification"
-    DEPLOYED_AT: "2026-10-13T17:51:00Z"
+    DEPLOYED_AT: "2026-10-13T18:10:00Z"
     KAFKA_LISTENER_AUTO_STARTUP: "true"
     NOVU_API_URL: "https://api.novu.co"
     FCM_PROJECT_ID: "nexus-bank-7c301"
