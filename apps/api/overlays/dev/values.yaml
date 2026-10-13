@@ -291,6 +291,99 @@ produit-api:
     initialDelaySeconds: 20
     periodSeconds: 10
 
+notification-app:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nexusbank/notification-app
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    API_UPSTREAM: "http://core-api-notification-api"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: notification-app.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - notification-app.dev.sandbox.internal.nbank.fr
+        secretName: notification-app-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 30
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+notification-api:
+  replicaCount: 1
+  image:
+    repository: nexusbank/notification-api
+    tag: "latest"
+    pullPolicy: Always
+  env:
+    PORT: "8080"
+    KEYCLOAK_ISSUER_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal"
+    KEYCLOAK_JWK_SET_URI: "https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/certs"
+    KAFKA_BOOTSTRAP_SERVERS: "kafka.infra.svc.cluster.local:9092"
+    KAFKA_GROUP_ID: "notification"
+    KAFKA_LISTENER_AUTO_STARTUP: "true"
+    NOVU_API_URL: "https://api.novu.co"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      cert-manager.io/cluster-issuer: nbank-dev
+    hosts:
+      - host: notification-api.api.dev.sandbox.internal.nbank.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - hosts:
+          - notification-api.api.dev.sandbox.internal.nbank.fr
+        secretName: notification-api-dev-tls
+  resources: {}
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
 card-management-api:
   replicaCount: 1
   image:

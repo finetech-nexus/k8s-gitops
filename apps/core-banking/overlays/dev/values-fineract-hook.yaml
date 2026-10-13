@@ -17,6 +17,14 @@ env:
 extraEnv: |
   - name: BROKER_TOPIC_TRANSACTIONS
     value: "transactions"
+  - name: BROKER_TOPIC_NOTIFICATION_TRANSACTION
+    value: "notification.transaction"
+  - name: BROKER_TOPIC_NOTIFICATION_PAYMENT_CONFIRMATION
+    value: "notification.payment-confirmation"
+  - name: BROKER_TOPIC_NOTIFICATION_ACCOUNT
+    value: "notification.account"
+  - name: BROKER_TOPIC_NOTIFICATION_CARD
+    value: "notification.card"
   - name: BROKER_SERVER
     value: kafka.infra.svc.cluster.local:9092
   - name: KAFKA_CLIENT_ID
