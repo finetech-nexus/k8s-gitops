@@ -478,7 +478,7 @@ mt-api:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
     MT_CALLBACK_BASE_URL: "http://core-api-mt-api.api.svc.cluster.local"
     MT_EXTERNAL_ENABLED: "true"
-    DEPLOYED_AT: "2026-10-14T00:28:00Z"
+    DEPLOYED_AT: "2026-10-14T20:10:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -632,8 +632,9 @@ card-management-api:
     NODE_ENV: production
     LOG_LEVEL: info
     PRODUIT_API_URL: "http://core-api-produit-api"
+    MT_API_URL: "http://core-api-mt-api"
     PROCESSOR: mock
-    DEPLOYED_AT: "2026-10-14T09:22:00Z"
+    DEPLOYED_AT: "2026-10-14T20:10:00Z"
   service:
     type: ClusterIP
     port: 80
