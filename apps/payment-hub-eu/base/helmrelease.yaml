@@ -44,9 +44,13 @@ spec:
       interval: 1m
   install:
     createNamespace: true
+    disableWait: true
   upgrade:
+    disableWait: true
     remediation:
       retries: 3
+  rollback:
+    disableWait: true
   valuesFrom:
     - kind: ConfigMap
       name: payment-hub-values
