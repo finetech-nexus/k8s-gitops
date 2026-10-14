@@ -22,7 +22,8 @@ jobs:
             SIBTEL_API_BASE_URL=http://sibtel-api:8095 \
             MT_API_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             SWIFT_API_BASE_URL=http://core-api-swift-api.api.svc.cluster.local
-          kubectl patch deployment ph-ee-simulator -n payment-hub --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"ph-ee-simulator","imagePullPolicy":"Always"}]}}}}'
+          ROLLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          kubectl patch deployment ph-ee-simulator -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"simulator.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-simulator\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl rollout status deployment/ph-ee-simulator -n payment-hub --timeout=180s
           echo "===== simulator env"
           kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
