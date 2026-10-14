@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: fin-engine
-      version: "1.4.1-SNAPSHOT"
+      version: "1.4.2"
       sourceRef:
         kind: HelmRepository
         name: core-banking-helm-chart-oci
