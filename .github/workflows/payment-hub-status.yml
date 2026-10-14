@@ -14,12 +14,13 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Simulator rollout status
+      - name: Roll the Tunisia simulator onto the published image
         run: |
-          for ns in payment-hub payment-hub-eu; do
-            echo "===== $ns helmrelease"
-            kubectl get helmrelease payment-hub -n "$ns" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{" "}{.status.conditions[?(@.type=="Ready")].message}{"\n"}' || true
-            echo "===== $ns simulator"
-            kubectl get deploy ph-ee-simulator -n "$ns" -o jsonpath='image={.spec.template.spec.containers[0].image}{"\n"}pull={.spec.template.spec.containers[0].imagePullPolicy}{"\n"}' || true
-            kubectl get pods -n "$ns" -l app=ph-ee-simulator -o wide || true
-          done
+          echo "===== helm"
+          kubectl get helmrelease payment-hub -n payment-hub -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}{"\n"}' || true
+          echo "===== minio"
+          kubectl get deploy minio -n payment-hub -o jsonpath='ready={.status.readyReplicas}/{.status.replicas} updated={.status.updatedReplicas}{"\n"}' || true
+          kubectl patch deployment ph-ee-simulator -n payment-hub --type=strategic -p '{"spec":{"template":{"metadata":{"annotations":{"deployed-at":"2026-10-14T13:45:00Z"}},"spec":{"containers":[{"name":"ph-ee-simulator","imagePullPolicy":"Always"}]}}}}'
+          kubectl rollout status deployment/ph-ee-simulator -n payment-hub --timeout=180s
+          kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='pull={.spec.template.spec.containers[0].imagePullPolicy}{"\n"}'
+          kubectl get pods -n payment-hub -l app=ph-ee-simulator -o wide
