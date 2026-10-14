@@ -888,6 +888,7 @@ account_mapper:
   ph_ee_simulator:
     enabled: true
     image: docker.io/nexusbank/ph-ee-simulator:latest
+    imagePullPolicy: Always
     deployment:
       extraEnvs:
         - name: MT_API_BASE_URL
@@ -897,7 +898,7 @@ account_mapper:
         - name: SIBTEL_API_BASE_URL
           value: http://sibtel-api:8095
         - name: DEPLOYED_AT
-          value: "2026-10-14T07:00:00Z"
+          value: "2026-10-14T13:30:00Z"
     paymentHub:
       enabled: "true"
       tenant: nexusbank
