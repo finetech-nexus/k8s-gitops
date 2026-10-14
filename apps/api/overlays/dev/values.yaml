@@ -63,7 +63,7 @@ core-banking-api:
     - name: PRODUIT_API_URL
       value: "http://core-api-produit-api"
     - name: DEPLOYED_AT
-      value: "2026-10-14T09:10:00Z" 
+      value: "2026-10-14T09:22:00Z" 
 #generate another client or kafka client for best resilience
   extraVolumes:
     - name: certificate
@@ -208,7 +208,7 @@ produit-app:
     pullPolicy: Always
   env:
     API_UPSTREAM: "http://core-api-produit-api"
-    DEPLOYED_AT: "2026-10-14T09:10:00Z"
+    DEPLOYED_AT: "2026-10-14T09:22:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -261,7 +261,7 @@ produit-api:
     # Live Fineract charge catalog for Product Studio fee selectors.
     CORE_BANKING_API_URL: "http://core-api-core-banking-api/api"
     FINERACT_TENANT: "nexusbank"
-    DEPLOYED_AT: "2026-10-14T09:10:00Z"
+    DEPLOYED_AT: "2026-10-14T09:22:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -633,7 +633,7 @@ card-management-api:
     LOG_LEVEL: info
     PRODUIT_API_URL: "http://core-api-produit-api"
     PROCESSOR: mock
-    DEPLOYED_AT: "2026-10-14T09:10:00Z"
+    DEPLOYED_AT: "2026-10-14T09:22:00Z"
   service:
     type: ClusterIP
     port: 80
