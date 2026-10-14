@@ -896,7 +896,7 @@ account_mapper:
         - name: SWIFT_API_BASE_URL
           value: http://core-api-swift-api.api-eu.svc.cluster.local
         - name: DEPLOYED_AT
-          value: "2026-10-14T00:28:00Z"
+          value: "2026-10-14T07:00:00Z"
     paymentHub:
       enabled: "true"
       tenant: nexusbank

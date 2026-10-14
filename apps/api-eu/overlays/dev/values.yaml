@@ -325,7 +325,7 @@ mt-app:
     pullPolicy: Always
   env:
     MT_UPSTREAM_URL: "http://core-api-mt-api"
-    DEPLOYED_AT: "2026-10-14T00:28:00Z"
+    DEPLOYED_AT: "2026-10-14T07:00:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -426,7 +426,7 @@ swift-app:
     pullPolicy: Always
   env:
     SWIFT_UPSTREAM_URL: "http://core-api-swift-api"
-    DEPLOYED_AT: "2026-10-14T00:28:00Z"
+    DEPLOYED_AT: "2026-10-14T07:00:00Z"
   service:
     type: ClusterIP
     port: 80
