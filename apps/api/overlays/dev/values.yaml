@@ -478,6 +478,8 @@ mt-api:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
     MT_CALLBACK_BASE_URL: "http://core-api-mt-api.api.svc.cluster.local"
     MT_EXTERNAL_ENABLED: "true"
+    CHANNEL_BASE_URL: "http://ph-ee-connector-channel.payment-hub.svc.cluster.local:82"
+    CHANNEL_TENANT: "nexusbank"
     DEPLOYED_AT: "2026-10-14T20:10:00Z"
   service:
     type: ClusterIP

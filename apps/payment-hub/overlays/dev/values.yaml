@@ -849,8 +849,15 @@ account_mapper:
   ph_ee_connector_mt:
     enabled: true
     image: docker.io/nexusbank/ph-ee-connector-mt:latest
+    imagePullPolicy: Always
     gateway:
       baseUrl: http://core-api-mt-api.api.svc.cluster.local
+    deployment:
+      extraEnvs:
+        - name: CARD_API_BASE_URL
+          value: http://core-api-card-management-api.api.svc.cluster.local
+        - name: NOTIFICATION_API_BASE_URL
+          value: http://core-api-notification-api.api.svc.cluster.local
     ingress:
       enabled: true
       className: nginx

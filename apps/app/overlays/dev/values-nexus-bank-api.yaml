@@ -42,6 +42,8 @@ extraEnv: |
     value: http://core-api-subscription-api.api.svc.cluster.local
   - name: NOTIFICATION_API_URL
     value: http://core-api-notification-api.api.svc.cluster.local
+  - name: MT_API_URL
+    value: http://core-api-mt-api.api.svc.cluster.local
   - name: APNS_TEAM_ID
     value: "5GA8M3M44L"
   - name: APNS_KEY_ID
