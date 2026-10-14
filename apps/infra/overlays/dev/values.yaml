@@ -279,8 +279,11 @@ elasticsearch:
   master:
     masterOnly: false
     replicaCount: 1
+    # UUID lives in this data dir. An empty master volume bootstraps a new
+    # cluster, and persistent data nodes then refuse to join.
     persistence:
-      enabled: false
+      enabled: true
+      size: 10Gi
     env:
       - name: ES_JAVA_OPTS
         value: "-Xms2g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError" 
