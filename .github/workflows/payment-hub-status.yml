@@ -1,0 +1,25 @@
+name: Payment Hub status
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/payment-hub-status.yml'
+  workflow_dispatch:
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Simulator rollout status
+        run: |
+          for ns in payment-hub payment-hub-eu; do
+            echo "===== $ns helmrelease"
+            kubectl get helmrelease payment-hub -n "$ns" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{" "}{.status.conditions[?(@.type=="Ready")].message}{"\n"}' || true
+            echo "===== $ns simulator"
+            kubectl get deploy ph-ee-simulator -n "$ns" -o jsonpath='image={.spec.template.spec.containers[0].image}{"\n"}pull={.spec.template.spec.containers[0].imagePullPolicy}{"\n"}' || true
+            kubectl get pods -n "$ns" -l app=ph-ee-simulator -o wide || true
+          done
