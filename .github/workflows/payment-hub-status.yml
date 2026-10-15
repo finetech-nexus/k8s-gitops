@@ -11,6 +11,7 @@ jobs:
   status:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
@@ -31,27 +32,30 @@ jobs:
           kubectl set image deployment/ph-ee-simulator -n payment-hub \
             ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:fbc2ac4
           kubectl set image deployment/core-api-card-management-api -n api \
-            card-management-api=docker.io/nexusbank/card-management-api:fc0f90e
+            card-management-api=docker.io/nexusbank/card-management-api:b9928ef
           kubectl set image deployment/core-api-mt-api -n api \
-            mt-api=docker.io/nexusbank/mt-api:31b7e22 \
+            mt-api=docker.io/nexusbank/mt-api:c4a0102 \
             wait-for-postgresql=docker.io/library/postgres:16-alpine
           kubectl set image deployment/core-api-swift-api -n api \
             swift-api=docker.io/nexusbank/swift-api:8d862fb \
             wait-for-postgresql=docker.io/library/postgres:16-alpine
           kubectl set image deployment/core-api-core-banking-api -n api \
-            core-banking=docker.io/nexusbank/core-banking-api:c2c2ff1
+            core-banking=docker.io/nexusbank/core-banking-api:e6afbf3
           kubectl set image deployment/nexus-bank-app -n app \
-            nexus-bank-app=docker.io/nexusbank/nexus-bank-api:cba2619
+            nexus-bank-app=docker.io/nexusbank/nexus-bank-api:6f2ee78
           kubectl set image deployment/ph-ee-connector-swift -n payment-hub \
             ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
           kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
-            ph-ee-connector-channel=docker.io/nexusbank/ph-ee-connector-channel:456ef43
+            ph-ee-connector-channel=docker.io/nexusbank/ph-ee-connector-channel:cb2f32a
           kubectl set image deployment/ph-ee-connector-mt -n payment-hub \
-            ph-ee-connector-mt=docker.io/nexusbank/ph-ee-connector-mt:b5b12f7
+            ph-ee-connector-mt=docker.io/nexusbank/ph-ee-connector-mt:595702a
           kubectl set env deployment/ph-ee-connector-mt -n payment-hub \
             MT_GATEWAY_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             CARD_API_BASE_URL=http://core-api-card-management-api.api.svc.cluster.local \
-            NOTIFICATION_API_BASE_URL=http://core-api-notification-api.api.svc.cluster.local
+            NOTIFICATION_API_BASE_URL=http://core-api-notification-api.api.svc.cluster.local \
+            CORE_BANKING_BASE_URL=http://core-api-core-banking-api.api.svc.cluster.local \
+            AMS_BASE_URL=http://ph-ee-connector-ams-mifos:70 \
+            KAFKA_BOOTSTRAP_SERVERS=kafka.infra.svc.cluster.local:9092
           ROLLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           kubectl patch deployment ph-ee-simulator -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"simulator.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-simulator\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl patch deployment ph-ee-connector-mt -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"connector.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-connector-mt\",\"imagePullPolicy\":\"Always\"}]}}}}"
@@ -59,6 +63,20 @@ jobs:
           kubectl patch deployment ph-ee-connector-swift -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"connector.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-connector-swift\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl rollout status deployment/ph-ee-simulator -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-mt -n payment-hub --timeout=180s
+          echo "===== authorization bpmn"
+          kubectl port-forward -n payment-hub svc/ph-ee-zeebe-ops 5000:80 >/tmp/zeebe-ops-port-forward.log 2>&1 &
+          pf_pid=$!
+          trap 'kill "$pf_pid" >/dev/null 2>&1 || true' EXIT
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf -m 2 http://127.0.0.1:5000/actuator/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail-with-body -m 60 \
+            -H "Platform-TenantId: nexusbank" \
+            -F "file=@bpmn/mt_inbound_authorization-DFSPID.bpmn" \
+            http://127.0.0.1:5000/zeebe/upload
+          echo
+          kill "$pf_pid" >/dev/null 2>&1 || true
           kubectl rollout status deployment/ph-ee-connector-channel -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-swift -n payment-hub --timeout=180s
           kubectl rollout status deployment/core-api-card-management-api -n api --timeout=180s

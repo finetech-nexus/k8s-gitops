@@ -41,7 +41,7 @@ spec:
                   spec:
                     containers:
                       - name: ph-ee-connector-mt
-                        image: docker.io/nexusbank/ph-ee-connector-mt:b5b12f7
+                        image: docker.io/nexusbank/ph-ee-connector-mt:595702a
                         imagePullPolicy: Always
                         env:
                           - name: MT_GATEWAY_BASE_URL
@@ -50,6 +50,12 @@ spec:
                             value: http://core-api-card-management-api.api.svc.cluster.local
                           - name: NOTIFICATION_API_BASE_URL
                             value: http://core-api-notification-api.api.svc.cluster.local
+                          - name: CORE_BANKING_BASE_URL
+                            value: http://core-api-core-banking-api.api.svc.cluster.local
+                          - name: AMS_BASE_URL
+                            value: http://ph-ee-connector-ams-mifos:70
+                          - name: KAFKA_BOOTSTRAP_SERVERS
+                            value: kafka.infra.svc.cluster.local:9092
   chart:
     spec:
       chart: payment-hub
