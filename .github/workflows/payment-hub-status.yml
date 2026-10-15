@@ -31,15 +31,17 @@ jobs:
           kubectl set image deployment/ph-ee-simulator -n payment-hub \
             ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:e3d1f72
           kubectl set image deployment/core-api-card-management-api -n api \
-            *=docker.io/nexusbank/card-management-api:fc0f90e
+            card-management-api=docker.io/nexusbank/card-management-api:fc0f90e
           kubectl set image deployment/core-api-mt-api -n api \
-            *=docker.io/nexusbank/mt-api:8692b9a
+            mt-api=docker.io/nexusbank/mt-api:8692b9a \
+            wait-for-postgresql=docker.io/library/postgres:16-alpine
           kubectl set image deployment/core-api-swift-api -n api \
-            *=docker.io/nexusbank/swift-api:8d862fb
+            swift-api=docker.io/nexusbank/swift-api:8d862fb \
+            wait-for-postgresql=docker.io/library/postgres:16-alpine
           kubectl set image deployment/core-api-core-banking-api -n api \
-            *=docker.io/nexusbank/core-banking-api:c2c2ff1
+            core-banking=docker.io/nexusbank/core-banking-api:c2c2ff1
           kubectl set image deployment/nexus-bank-app -n app \
-            *=docker.io/nexusbank/nexus-bank-api:cba2619
+            nexus-bank-app=docker.io/nexusbank/nexus-bank-api:cba2619
           kubectl set image deployment/ph-ee-connector-swift -n payment-hub \
             ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
           kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
@@ -57,7 +59,7 @@ jobs:
           kubectl rollout status deployment/ph-ee-connector-channel -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-swift -n payment-hub --timeout=180s
           kubectl rollout status deployment/core-api-card-management-api -n api --timeout=180s
-          if ! kubectl rollout status deployment/core-api-mt-api -n api --timeout=45s; then
+          if ! kubectl rollout status deployment/core-api-mt-api -n api --timeout=180s; then
             echo "===== mt-api stuck"
             kubectl get pods -n api -o wide
             kubectl describe deploy core-api-mt-api -n api | tail -50
