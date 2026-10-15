@@ -875,7 +875,7 @@ account_mapper:
 
   ph_ee_simulator:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-simulator:7a74091
+    image: docker.io/nexusbank/ph-ee-simulator:fbc2ac4
     deployment:
       extraEnvs:
         - name: MT_API_BASE_URL
