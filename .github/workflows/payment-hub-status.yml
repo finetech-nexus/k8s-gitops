@@ -29,7 +29,11 @@ jobs:
             MT_API_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             SWIFT_API_BASE_URL=http://core-api-swift-api.api.svc.cluster.local
           kubectl set image deployment/ph-ee-simulator -n payment-hub \
-            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:bd86e51
+            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:c38086e
+          kubectl set image deployment/ph-ee-connector-swift -n payment-hub \
+            ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
+          kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
+            ph-ee-connector-channel=docker.io/nexusbank/ph-ee-connector-channel:b76297e
           kubectl set env deployment/ph-ee-connector-mt -n payment-hub \
             CARD_API_BASE_URL=http://core-api-card-management-api.api.svc.cluster.local \
             NOTIFICATION_API_BASE_URL=http://core-api-notification-api.api.svc.cluster.local
@@ -37,9 +41,11 @@ jobs:
           kubectl patch deployment ph-ee-simulator -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"simulator.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-simulator\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl patch deployment ph-ee-connector-mt -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"connector.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-connector-mt\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl patch deployment ph-ee-connector-channel -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"channel.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-connector-channel\",\"imagePullPolicy\":\"Always\"}]}}}}"
+          kubectl patch deployment ph-ee-connector-swift -n payment-hub --type=strategic -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"connector.nbank.fr/rolled-at\":\"${ROLLED_AT}\"}},\"spec\":{\"containers\":[{\"name\":\"ph-ee-connector-swift\",\"imagePullPolicy\":\"Always\"}]}}}}"
           kubectl rollout status deployment/ph-ee-simulator -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-mt -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-channel -n payment-hub --timeout=180s
+          kubectl rollout status deployment/ph-ee-connector-swift -n payment-hub --timeout=180s
           echo "===== simulator env"
           kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
           echo "===== files"
