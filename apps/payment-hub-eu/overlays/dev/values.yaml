@@ -894,7 +894,7 @@ account_mapper:
 
   ph_ee_simulator:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-simulator:latest
+    image: docker.io/nexusbank/ph-ee-simulator:bd86e51
     imagePullPolicy: Always
     deployment:
       extraEnvs:

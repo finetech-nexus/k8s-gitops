@@ -18,10 +18,16 @@ jobs:
         run: |
           echo "===== sibtel-api"
           kubectl get svc,endpoints,pods -n payment-hub -l app=sibtel-api
+          echo "===== simulator image before"
+          kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+          echo "===== minio"
+          kubectl get pods -n payment-hub -o wide | grep -i minio || true
           kubectl set env deployment/ph-ee-simulator -n payment-hub \
             SIBTEL_API_BASE_URL=http://sibtel-api:8095 \
             MT_API_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             SWIFT_API_BASE_URL=http://core-api-swift-api.api.svc.cluster.local
+          kubectl set image deployment/ph-ee-simulator -n payment-hub \
+            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:bd86e51
           kubectl set env deployment/ph-ee-connector-mt -n payment-hub \
             CARD_API_BASE_URL=http://core-api-card-management-api.api.svc.cluster.local \
             NOTIFICATION_API_BASE_URL=http://core-api-notification-api.api.svc.cluster.local
@@ -36,3 +42,7 @@ jobs:
           kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
           echo "===== files"
           kubectl run sibtel-files --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- curl -sS -m 15 -w "\nhttp %{http_code}\n" http://sibtel-api:8095/api/files || true
+          echo "===== card issue route"
+          kubectl run sim-cards --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- curl -sS -m 20 -o /dev/null -w "simulate/mt/cards http %{http_code}\n" -X POST http://ph-ee-simulator:8090/simulate/mt/cards -H 'Content-Type: application/json' -d '{"holderName":"Probe","scheme":"VISA","tenantId":"tn","productId":"probe"}' || true
+          echo "===== zeebe exporter mapping"
+          kubectl run es-mapping --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- curl -sS -m 20 -X PUT 'http://infra-elasticsearch.infra.svc.cluster.local:9200/zeebe-record*/_settings' -H 'Content-Type: application/json' -d '{"index.mapping.ignore_malformed":true}' || true
