@@ -6,6 +6,26 @@ metadata:
   namespace: payment-hub
 spec:
   interval: 5m
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: ph-ee-simulator
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ph-ee-simulator
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: ph-ee-simulator
+                        image: docker.io/nexusbank/ph-ee-simulator:fbc2ac4
+                        imagePullPolicy: Always
   chart:
     spec:
       chart: payment-hub
@@ -22,7 +42,7 @@ spec:
   upgrade:
     disableWait: true
     remediation:
-      retries: 3
+      retries: 0
   rollback:
     disableWait: true
   valuesFrom:
