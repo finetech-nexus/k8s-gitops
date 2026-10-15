@@ -57,7 +57,17 @@ jobs:
           kubectl rollout status deployment/ph-ee-connector-channel -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-swift -n payment-hub --timeout=180s
           kubectl rollout status deployment/core-api-card-management-api -n api --timeout=180s
-          kubectl rollout status deployment/core-api-mt-api -n api --timeout=180s
+          if ! kubectl rollout status deployment/core-api-mt-api -n api --timeout=45s; then
+            echo "===== mt-api stuck"
+            kubectl get pods -n api -o wide
+            kubectl describe deploy core-api-mt-api -n api | tail -50
+            for p in $(kubectl get pods -n api -o name | grep core-api-mt-api); do
+              echo "-- $p"
+              kubectl describe -n api "$p" | tail -40
+              kubectl logs -n api "$p" --all-containers --tail=60 || true
+            done
+            exit 1
+          fi
           kubectl rollout status deployment/core-api-swift-api -n api --timeout=180s
           kubectl rollout status deployment/core-api-core-banking-api -n api --timeout=180s
           kubectl rollout status deployment/nexus-bank-app -n app --timeout=180s
