@@ -46,7 +46,10 @@ jobs:
             ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
           kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
             ph-ee-connector-channel=docker.io/nexusbank/ph-ee-connector-channel:456ef43
+          kubectl set image deployment/ph-ee-connector-mt -n payment-hub \
+            ph-ee-connector-mt=docker.io/nexusbank/ph-ee-connector-mt:b5b12f7
           kubectl set env deployment/ph-ee-connector-mt -n payment-hub \
+            MT_GATEWAY_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             CARD_API_BASE_URL=http://core-api-card-management-api.api.svc.cluster.local \
             NOTIFICATION_API_BASE_URL=http://core-api-notification-api.api.svc.cluster.local
           ROLLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)

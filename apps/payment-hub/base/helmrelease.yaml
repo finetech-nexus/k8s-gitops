@@ -26,6 +26,30 @@ spec:
                       - name: ph-ee-simulator
                         image: docker.io/nexusbank/ph-ee-simulator:fbc2ac4
                         imagePullPolicy: Always
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: ph-ee-connector-mt
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ph-ee-connector-mt
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: ph-ee-connector-mt
+                        image: docker.io/nexusbank/ph-ee-connector-mt:b5b12f7
+                        imagePullPolicy: Always
+                        env:
+                          - name: MT_GATEWAY_BASE_URL
+                            value: http://core-api-mt-api.api.svc.cluster.local
+                          - name: CARD_API_BASE_URL
+                            value: http://core-api-card-management-api.api.svc.cluster.local
+                          - name: NOTIFICATION_API_BASE_URL
+                            value: http://core-api-notification-api.api.svc.cluster.local
   chart:
     spec:
       chart: payment-hub
