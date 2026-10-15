@@ -29,7 +29,7 @@ jobs:
             MT_API_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             SWIFT_API_BASE_URL=http://core-api-swift-api.api.svc.cluster.local
           kubectl set image deployment/ph-ee-simulator -n payment-hub \
-            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:5394546
+            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:d88bf8a
           kubectl set image deployment/core-api-card-management-api -n api \
             card-management-api=docker.io/nexusbank/card-management-api:fc0f90e
           kubectl set image deployment/core-api-mt-api -n api \
