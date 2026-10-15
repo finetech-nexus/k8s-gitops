@@ -482,6 +482,8 @@ swift-api:
     SWIFT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub-eu.svc.cluster.local:8090"
     SWIFT_CALLBACK_BASE_URL: "http://core-api-swift-api.api-eu.svc.cluster.local"
     SWIFT_EXTERNAL_ENABLED: "true"
+    CHANNEL_BASE_URL: "http://ph-ee-connector-channel.payment-hub-eu.svc.cluster.local:82"
+    CHANNEL_TENANT: "nexusbank"
     DEPLOYED_AT: "2026-10-14T00:28:00Z"
   service:
     type: ClusterIP
