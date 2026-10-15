@@ -29,7 +29,17 @@ jobs:
             MT_API_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             SWIFT_API_BASE_URL=http://core-api-swift-api.api.svc.cluster.local
           kubectl set image deployment/ph-ee-simulator -n payment-hub \
-            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:c38086e
+            ph-ee-simulator=docker.io/nexusbank/ph-ee-simulator:e3d1f72
+          kubectl set image deployment/core-api-card-management-api -n api \
+            *=docker.io/nexusbank/card-management-api:fc0f90e
+          kubectl set image deployment/core-api-mt-api -n api \
+            *=docker.io/nexusbank/mt-api:8692b9a
+          kubectl set image deployment/core-api-swift-api -n api \
+            *=docker.io/nexusbank/swift-api:8d862fb
+          kubectl set image deployment/core-api-core-banking-api -n api \
+            *=docker.io/nexusbank/core-banking-api:c2c2ff1
+          kubectl set image deployment/nexus-bank-api -n app \
+            *=docker.io/nexusbank/nexus-bank-api:cba2619
           kubectl set image deployment/ph-ee-connector-swift -n payment-hub \
             ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
           kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
@@ -46,6 +56,11 @@ jobs:
           kubectl rollout status deployment/ph-ee-connector-mt -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-channel -n payment-hub --timeout=180s
           kubectl rollout status deployment/ph-ee-connector-swift -n payment-hub --timeout=180s
+          kubectl rollout status deployment/core-api-card-management-api -n api --timeout=180s
+          kubectl rollout status deployment/core-api-mt-api -n api --timeout=180s
+          kubectl rollout status deployment/core-api-swift-api -n api --timeout=180s
+          kubectl rollout status deployment/core-api-core-banking-api -n api --timeout=180s
+          kubectl rollout status deployment/nexus-bank-api -n app --timeout=180s
           echo "===== simulator env"
           kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
           echo "===== files"
