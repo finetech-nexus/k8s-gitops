@@ -41,7 +41,7 @@ spec:
                   spec:
                     containers:
                       - name: ph-ee-connector-mt
-                        image: docker.io/nexusbank/ph-ee-connector-mt:595702a
+                        image: docker.io/nexusbank/ph-ee-connector-mt:4bb0c70
                         imagePullPolicy: Always
                         env:
                           - name: MT_GATEWAY_BASE_URL

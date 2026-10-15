@@ -34,7 +34,7 @@ jobs:
           kubectl set image deployment/core-api-card-management-api -n api \
             card-management-api=docker.io/nexusbank/card-management-api:b9928ef
           kubectl set image deployment/core-api-mt-api -n api \
-            mt-api=docker.io/nexusbank/mt-api:c4a0102 \
+            mt-api=docker.io/nexusbank/mt-api:e629a3e \
             wait-for-postgresql=docker.io/library/postgres:16-alpine
           kubectl set image deployment/core-api-swift-api -n api \
             swift-api=docker.io/nexusbank/swift-api:8d862fb \
@@ -42,13 +42,15 @@ jobs:
           kubectl set image deployment/core-api-core-banking-api -n api \
             core-banking=docker.io/nexusbank/core-banking-api:e6afbf3
           kubectl set image deployment/nexus-bank-app -n app \
-            nexus-bank-app=docker.io/nexusbank/nexus-bank-api:6f2ee78
+            nexus-bank-app=docker.io/nexusbank/nexus-bank-api:2d23609
+          kubectl set image deployment/core-api-notification-api -n api \
+            notification-api=docker.io/nexusbank/notification-api:fe7a271
           kubectl set image deployment/ph-ee-connector-swift -n payment-hub \
             ph-ee-connector-swift=docker.io/nexusbank/ph-ee-connector-swift:49c385a
           kubectl set image deployment/ph-ee-connector-channel -n payment-hub \
             ph-ee-connector-channel=docker.io/nexusbank/ph-ee-connector-channel:cb2f32a
           kubectl set image deployment/ph-ee-connector-mt -n payment-hub \
-            ph-ee-connector-mt=docker.io/nexusbank/ph-ee-connector-mt:595702a
+            ph-ee-connector-mt=docker.io/nexusbank/ph-ee-connector-mt:4bb0c70
           kubectl set env deployment/ph-ee-connector-mt -n payment-hub \
             MT_GATEWAY_BASE_URL=http://core-api-mt-api.api.svc.cluster.local \
             CARD_API_BASE_URL=http://core-api-card-management-api.api.svc.cluster.local \
@@ -94,6 +96,7 @@ jobs:
           kubectl rollout status deployment/core-api-swift-api -n api --timeout=180s
           kubectl rollout status deployment/core-api-core-banking-api -n api --timeout=180s
           kubectl rollout status deployment/nexus-bank-app -n app --timeout=180s
+          kubectl rollout status deployment/core-api-notification-api -n api --timeout=180s
           echo "===== simulator env"
           kubectl get deploy ph-ee-simulator -n payment-hub -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
           echo "===== files"
