@@ -1,14 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_mt_in_auth" targetNamespace="http://nbank.fr/payment-hub">
+<bpmn:definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_mt_in_auth" targetNamespace="http://nbank.fr/payment-hub">
   <bpmn:process id="mt_inbound_authorization-DFSPID" name="mt_inbound_authorization-DFSPID" isExecutable="true">
     <bpmn:startEvent id="start" name="Authorization from Monétique Tunisie">
       <bpmn:outgoing>f1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:serviceTask id="find" name="Identify the account">
+    <bpmn:serviceTask id="find" name="Resolve the card">
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="mtFindAccountByPan" />
       </bpmn:extensionElements>
       <bpmn:incoming>f1</bpmn:incoming>
+      <bpmn:outgoing>fCard</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="gCard" name="Card found" default="fLookup">
+      <bpmn:incoming>fCard</bpmn:incoming>
+      <bpmn:outgoing>fLookup</bpmn:outgoing>
+      <bpmn:outgoing>fCardMissing</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="fCard" sourceRef="find" targetRef="gCard" />
+    <bpmn:sequenceFlow id="fLookup" sourceRef="gCard" targetRef="lookup" />
+    <bpmn:sequenceFlow id="fCardMissing" name="Account not found" sourceRef="gCard" targetRef="reply">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=partyLookupFailed = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="lookup" name="lookupThirdparty">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="party-lookup-local-DFSPID" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>fCard</bpmn:incoming>
       <bpmn:outgoing>f2</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="gAccount" name="Account found" default="fReady">
@@ -122,6 +139,7 @@
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="mtReplyToNetwork" />
       </bpmn:extensionElements>
+      <bpmn:incoming>fCardMissing</bpmn:incoming>
       <bpmn:incoming>fMissing</bpmn:incoming>
       <bpmn:incoming>fCancel</bpmn:incoming>
       <bpmn:incoming>fCancelled</bpmn:incoming>
@@ -134,7 +152,7 @@
       <bpmn:incoming>fEnd</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="f1" sourceRef="start" targetRef="find" />
-    <bpmn:sequenceFlow id="f2" sourceRef="find" targetRef="gAccount" />
+    <bpmn:sequenceFlow id="f2" sourceRef="lookup" targetRef="gAccount" />
     <bpmn:sequenceFlow id="fReady" sourceRef="gAccount" targetRef="balance" />
     <bpmn:sequenceFlow id="fMissing" name="Account not found" sourceRef="gAccount" targetRef="reply">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=partyLookupFailed = true</bpmn:conditionExpression>
@@ -183,239 +201,253 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="mt_inbound_authorization-DFSPID">
-    <bpmndi:BPMNShape id="start_di" bpmnElement="start">
-      <dc:Bounds x="80" y="80" width="36" height="36" />
+    <bpmndi:BPMNShape id="start_di" bpmnElement="start" bioc:stroke="rgb(67, 160, 71)" bioc:fill="rgb(200, 230, 201)">
+      <dc:Bounds x="60" y="102" width="36" height="36" />
+      <bpmndi:BPMNLabel><dc:Bounds x="-17" y="144" width="190" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="find_di" bpmnElement="find">
-      <dc:Bounds x="280" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="find_di" bpmnElement="find" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="170" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gAccount_di" bpmnElement="gAccount">
-      <dc:Bounds x="480" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="gCard_di" bpmnElement="gCard" isMarkerVisible="true">
+      <dc:Bounds x="400" y="95" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="385" y="151" width="80" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="balance_di" bpmnElement="balance">
-      <dc:Bounds x="680" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="lookup_di" bpmnElement="lookup" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="600" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gDecision_di" bpmnElement="gDecision">
-      <dc:Bounds x="880" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="gAccount_di" bpmnElement="gAccount" isMarkerVisible="true">
+      <dc:Bounds x="880" y="95" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="860" y="151" width="90" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="decide_di" bpmnElement="decide">
-      <dc:Bounds x="1080" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="balance_di" bpmnElement="balance" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="1000" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gUser_di" bpmnElement="gUser">
-      <dc:Bounds x="1280" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="gDecision_di" bpmnElement="gDecision" isMarkerVisible="true">
+      <dc:Bounds x="1250" y="95" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1209" y="151" width="132" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gResumeBal_di" bpmnElement="gResumeBal">
-      <dc:Bounds x="1480" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="decide_di" bpmnElement="decide" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="1370" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gConfirm_di" bpmnElement="gConfirm">
-      <dc:Bounds x="1080" y="220" width="50" height="50" />
+    <bpmndi:BPMNShape id="gUser_di" bpmnElement="gUser" isMarkerVisible="true">
+      <dc:Bounds x="2140" y="95" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="2117" y="151" width="96" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gEcomBal_di" bpmnElement="gEcomBal">
-      <dc:Bounds x="1280" y="220" width="50" height="50" />
+    <bpmndi:BPMNShape id="gResumeBal_di" bpmnElement="gResumeBal" isMarkerVisible="true">
+      <dc:Bounds x="2280" y="95" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="2221" y="151" width="168" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gPosBal_di" bpmnElement="gPosBal">
-      <dc:Bounds x="1280" y="360" width="50" height="50" />
+    <bpmndi:BPMNShape id="claim_di" bpmnElement="claim" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="2420" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="ask_di" bpmnElement="ask">
-      <dc:Bounds x="1480" y="220" width="120" height="80" />
+    <bpmndi:BPMNShape id="gClaim_di" bpmnElement="gClaim" isMarkerVisible="true">
+      <dc:Bounds x="2670" y="95" width="50" height="50" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="endWait_di" bpmnElement="endWait">
-      <dc:Bounds x="1680" y="220" width="36" height="36" />
+    <bpmndi:BPMNShape id="block_di" bpmnElement="block" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="2790" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="insufficient_di" bpmnElement="insufficient">
-      <dc:Bounds x="1680" y="360" width="120" height="80" />
+    <bpmndi:BPMNShape id="gBlock_di" bpmnElement="gBlock" isMarkerVisible="true">
+      <dc:Bounds x="3040" y="95" width="50" height="50" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="cancelledLine_di" bpmnElement="cancelledLine">
-      <dc:Bounds x="1880" y="220" width="120" height="80" />
+    <bpmndi:BPMNShape id="marked_di" bpmnElement="marked" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="3160" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="claim_di" bpmnElement="claim">
-      <dc:Bounds x="1680" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="reply_di" bpmnElement="reply" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="3410" y="80" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gClaim_di" bpmnElement="gClaim">
-      <dc:Bounds x="1880" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="end_di" bpmnElement="end" bioc:stroke="rgb(67, 160, 71)" bioc:fill="rgb(200, 230, 201)">
+      <dc:Bounds x="3660" y="102" width="36" height="36" />
+      <bpmndi:BPMNLabel><dc:Bounds x="3612" y="144" width="132" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="block_di" bpmnElement="block">
-      <dc:Bounds x="2080" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="gConfirm_di" bpmnElement="gConfirm" isMarkerVisible="true">
+      <dc:Bounds x="1250" y="395" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1206" y="451" width="138" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="gBlock_di" bpmnElement="gBlock">
-      <dc:Bounds x="2280" y="80" width="50" height="50" />
+    <bpmndi:BPMNShape id="gEcomBal_di" bpmnElement="gEcomBal" isMarkerVisible="true">
+      <dc:Bounds x="1420" y="395" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1376" y="451" width="138" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="marked_di" bpmnElement="marked">
-      <dc:Bounds x="2480" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="ask_di" bpmnElement="ask" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="1560" y="380" width="180" height="80" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="reply_di" bpmnElement="reply">
-      <dc:Bounds x="2680" y="80" width="120" height="80" />
+    <bpmndi:BPMNShape id="endWait_di" bpmnElement="endWait" bioc:stroke="rgb(67, 160, 71)" bioc:fill="rgb(200, 230, 201)">
+      <dc:Bounds x="1820" y="402" width="36" height="36" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1754" y="444" width="168" height="27" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="end_di" bpmnElement="end">
-      <dc:Bounds x="2880" y="80" width="36" height="36" />
+    <bpmndi:BPMNShape id="gPosBal_di" bpmnElement="gPosBal" isMarkerVisible="true">
+      <dc:Bounds x="1420" y="695" width="50" height="50" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1355" y="751" width="180" height="27" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="insufficient_di" bpmnElement="insufficient" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="1620" y="680" width="180" height="80" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="cancelledLine_di" bpmnElement="cancelledLine" bioc:stroke="rgb(142, 36, 170)" bioc:fill="rgb(225, 190, 231)">
+      <dc:Bounds x="1880" y="680" width="180" height="80" />
     </bpmndi:BPMNShape>
     <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1">
-      <di:waypoint x="116" y="98" />
-      <di:waypoint x="198" y="98" />
-      <di:waypoint x="198" y="120" />
-      <di:waypoint x="280" y="120" />
+      <di:waypoint x="96" y="120" />
+      <di:waypoint x="170" y="120" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fCard_di" bpmnElement="fCard">
+      <di:waypoint x="350" y="120" />
+      <di:waypoint x="400" y="120" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fLookup_di" bpmnElement="fLookup">
+      <di:waypoint x="450" y="120" />
+      <di:waypoint x="600" y="120" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fCardMissing_di" bpmnElement="fCardMissing">
+      <di:waypoint x="425" y="145" />
+      <di:waypoint x="425" y="1180" />
+      <di:waypoint x="3500" y="1180" />
+      <di:waypoint x="3500" y="160" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2">
-      <di:waypoint x="400" y="120" />
-      <di:waypoint x="440" y="120" />
-      <di:waypoint x="440" y="105" />
-      <di:waypoint x="480" y="105" />
+      <di:waypoint x="780" y="120" />
+      <di:waypoint x="880" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fReady_di" bpmnElement="fReady">
-      <di:waypoint x="530" y="105" />
-      <di:waypoint x="605" y="105" />
-      <di:waypoint x="605" y="120" />
-      <di:waypoint x="680" y="120" />
+      <di:waypoint x="930" y="120" />
+      <di:waypoint x="1000" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fMissing_di" bpmnElement="fMissing">
-      <di:waypoint x="530" y="105" />
-      <di:waypoint x="1605" y="105" />
-      <di:waypoint x="1605" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="905" y="145" />
+      <di:waypoint x="905" y="1040" />
+      <di:waypoint x="3500" y="1040" />
+      <di:waypoint x="3500" y="160" />
+      <bpmndi:BPMNLabel><dc:Bounds x="915" y="115" width="118" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3">
-      <di:waypoint x="800" y="120" />
-      <di:waypoint x="840" y="120" />
-      <di:waypoint x="840" y="105" />
-      <di:waypoint x="880" y="105" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fFirst_di" bpmnElement="fFirst">
-      <di:waypoint x="930" y="105" />
-      <di:waypoint x="1005" y="105" />
-      <di:waypoint x="1005" y="245" />
-      <di:waypoint x="1080" y="245" />
+      <di:waypoint x="1180" y="120" />
+      <di:waypoint x="1250" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fResume_di" bpmnElement="fResume">
-      <di:waypoint x="930" y="105" />
-      <di:waypoint x="1005" y="105" />
-      <di:waypoint x="1005" y="120" />
-      <di:waypoint x="1080" y="120" />
+      <di:waypoint x="1300" y="120" />
+      <di:waypoint x="1370" y="120" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1310" y="90" width="148" height="20" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fFirst_di" bpmnElement="fFirst">
+      <di:waypoint x="1275" y="145" />
+      <di:waypoint x="1275" y="395" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4">
-      <di:waypoint x="1200" y="120" />
-      <di:waypoint x="1240" y="120" />
-      <di:waypoint x="1240" y="105" />
-      <di:waypoint x="1280" y="105" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fCancel_di" bpmnElement="fCancel">
-      <di:waypoint x="1330" y="105" />
-      <di:waypoint x="2005" y="105" />
-      <di:waypoint x="2005" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="1550" y="120" />
+      <di:waypoint x="1590" y="120" />
+      <di:waypoint x="1590" y="40" />
+      <di:waypoint x="2100" y="40" />
+      <di:waypoint x="2100" y="120" />
+      <di:waypoint x="2140" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fYes_di" bpmnElement="fYes">
-      <di:waypoint x="1330" y="105" />
-      <di:waypoint x="1480" y="105" />
+      <di:waypoint x="2190" y="120" />
+      <di:waypoint x="2280" y="120" />
+      <bpmndi:BPMNLabel><dc:Bounds x="2200" y="90" width="90" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fResumeLow_di" bpmnElement="fResumeLow">
-      <di:waypoint x="1530" y="105" />
-      <di:waypoint x="1605" y="105" />
-      <di:waypoint x="1605" y="400" />
-      <di:waypoint x="1680" y="400" />
+    <bpmndi:BPMNEdge id="fCancel_di" bpmnElement="fCancel">
+      <di:waypoint x="2165" y="145" />
+      <di:waypoint x="2220" y="145" />
+      <di:waypoint x="2220" y="1100" />
+      <di:waypoint x="3500" y="1100" />
+      <di:waypoint x="3500" y="160" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fResumeOk_di" bpmnElement="fResumeOk">
-      <di:waypoint x="1530" y="105" />
-      <di:waypoint x="1605" y="105" />
-      <di:waypoint x="1605" y="120" />
-      <di:waypoint x="1680" y="120" />
+      <di:waypoint x="2330" y="120" />
+      <di:waypoint x="2420" y="120" />
+      <bpmndi:BPMNLabel><dc:Bounds x="2340" y="90" width="172" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fNoConfirm_di" bpmnElement="fNoConfirm">
-      <di:waypoint x="1130" y="245" />
-      <di:waypoint x="1205" y="245" />
-      <di:waypoint x="1205" y="385" />
-      <di:waypoint x="1280" y="385" />
+    <bpmndi:BPMNEdge id="fResumeLow_di" bpmnElement="fResumeLow">
+      <di:waypoint x="2305" y="145" />
+      <di:waypoint x="2305" y="1100" />
+      <di:waypoint x="1520" y="1100" />
+      <di:waypoint x="1520" y="660" />
+      <di:waypoint x="1710" y="660" />
+      <di:waypoint x="1710" y="680" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fNeed_di" bpmnElement="fNeed">
-      <di:waypoint x="1130" y="245" />
-      <di:waypoint x="1280" y="245" />
+      <di:waypoint x="1300" y="420" />
+      <di:waypoint x="1420" y="420" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1310" y="390" width="172" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fEcomLow_di" bpmnElement="fEcomLow">
-      <di:waypoint x="1330" y="245" />
-      <di:waypoint x="1505" y="245" />
-      <di:waypoint x="1505" y="400" />
-      <di:waypoint x="1680" y="400" />
+    <bpmndi:BPMNEdge id="fNoConfirm_di" bpmnElement="fNoConfirm">
+      <di:waypoint x="1275" y="445" />
+      <di:waypoint x="1275" y="570" />
+      <di:waypoint x="1445" y="570" />
+      <di:waypoint x="1445" y="695" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fEcomOk_di" bpmnElement="fEcomOk">
-      <di:waypoint x="1330" y="245" />
-      <di:waypoint x="1405" y="245" />
-      <di:waypoint x="1405" y="260" />
-      <di:waypoint x="1480" y="260" />
+      <di:waypoint x="1470" y="420" />
+      <di:waypoint x="1560" y="420" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1480" y="390" width="172" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fPosLow_di" bpmnElement="fPosLow">
-      <di:waypoint x="1330" y="385" />
-      <di:waypoint x="1505" y="385" />
-      <di:waypoint x="1505" y="400" />
-      <di:waypoint x="1680" y="400" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fPosOk_di" bpmnElement="fPosOk">
-      <di:waypoint x="1330" y="385" />
-      <di:waypoint x="1505" y="385" />
-      <di:waypoint x="1505" y="120" />
-      <di:waypoint x="1680" y="120" />
+    <bpmndi:BPMNEdge id="fEcomLow_di" bpmnElement="fEcomLow">
+      <di:waypoint x="1445" y="445" />
+      <di:waypoint x="1445" y="562" />
+      <di:waypoint x="1710" y="562" />
+      <di:waypoint x="1710" y="680" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fAsk_di" bpmnElement="fAsk">
-      <di:waypoint x="1600" y="260" />
-      <di:waypoint x="1640" y="260" />
-      <di:waypoint x="1640" y="238" />
-      <di:waypoint x="1680" y="238" />
+      <di:waypoint x="1740" y="420" />
+      <di:waypoint x="1820" y="420" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fPosOk_di" bpmnElement="fPosOk">
+      <di:waypoint x="1445" y="745" />
+      <di:waypoint x="1445" y="980" />
+      <di:waypoint x="2390" y="980" />
+      <di:waypoint x="2390" y="120" />
+      <di:waypoint x="2420" y="120" />
+      <bpmndi:BPMNLabel><dc:Bounds x="1455" y="715" width="172" height="20" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fPosLow_di" bpmnElement="fPosLow">
+      <di:waypoint x="1470" y="720" />
+      <di:waypoint x="1620" y="720" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fLow_di" bpmnElement="fLow">
-      <di:waypoint x="1800" y="400" />
-      <di:waypoint x="1840" y="400" />
-      <di:waypoint x="1840" y="260" />
-      <di:waypoint x="1880" y="260" />
+      <di:waypoint x="1800" y="720" />
+      <di:waypoint x="1880" y="720" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fCancelled_di" bpmnElement="fCancelled">
-      <di:waypoint x="2000" y="260" />
-      <di:waypoint x="2340" y="260" />
-      <di:waypoint x="2340" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="1970" y="760" />
+      <di:waypoint x="1970" y="1160" />
+      <di:waypoint x="3500" y="1160" />
+      <di:waypoint x="3500" y="160" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fClaim_di" bpmnElement="fClaim">
-      <di:waypoint x="1800" y="120" />
-      <di:waypoint x="1840" y="120" />
-      <di:waypoint x="1840" y="105" />
-      <di:waypoint x="1880" y="105" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="fSkip_di" bpmnElement="fSkip">
-      <di:waypoint x="1930" y="105" />
-      <di:waypoint x="2305" y="105" />
-      <di:waypoint x="2305" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="2600" y="120" />
+      <di:waypoint x="2670" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fDoBlock_di" bpmnElement="fDoBlock">
-      <di:waypoint x="1930" y="105" />
-      <di:waypoint x="2005" y="105" />
-      <di:waypoint x="2005" y="120" />
-      <di:waypoint x="2080" y="120" />
+      <di:waypoint x="2720" y="120" />
+      <di:waypoint x="2790" y="120" />
+      <bpmndi:BPMNLabel><dc:Bounds x="2730" y="90" width="90" height="20" /></bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="fSkip_di" bpmnElement="fSkip">
+      <di:waypoint x="2695" y="145" />
+      <di:waypoint x="2695" y="1000" />
+      <di:waypoint x="3500" y="1000" />
+      <di:waypoint x="3500" y="160" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fBlocked_di" bpmnElement="fBlocked">
-      <di:waypoint x="2200" y="120" />
-      <di:waypoint x="2240" y="120" />
-      <di:waypoint x="2240" y="105" />
-      <di:waypoint x="2280" y="105" />
+      <di:waypoint x="2970" y="120" />
+      <di:waypoint x="3040" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fHeld_di" bpmnElement="fHeld">
-      <di:waypoint x="2330" y="105" />
-      <di:waypoint x="2405" y="105" />
-      <di:waypoint x="2405" y="120" />
-      <di:waypoint x="2480" y="120" />
+      <di:waypoint x="3090" y="120" />
+      <di:waypoint x="3160" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fBlockKo_di" bpmnElement="fBlockKo">
-      <di:waypoint x="2330" y="105" />
-      <di:waypoint x="2505" y="105" />
-      <di:waypoint x="2505" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="3065" y="145" />
+      <di:waypoint x="3065" y="960" />
+      <di:waypoint x="3500" y="960" />
+      <di:waypoint x="3500" y="160" />
+      <bpmndi:BPMNLabel><dc:Bounds x="3075" y="115" width="90" height="20" /></bpmndi:BPMNLabel>
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fMarked_di" bpmnElement="fMarked">
-      <di:waypoint x="2600" y="120" />
-      <di:waypoint x="2680" y="120" />
+      <di:waypoint x="3340" y="120" />
+      <di:waypoint x="3410" y="120" />
     </bpmndi:BPMNEdge>
     <bpmndi:BPMNEdge id="fEnd_di" bpmnElement="fEnd">
-      <di:waypoint x="2800" y="120" />
-      <di:waypoint x="2840" y="120" />
-      <di:waypoint x="2840" y="98" />
-      <di:waypoint x="2880" y="98" />
+      <di:waypoint x="3590" y="120" />
+      <di:waypoint x="3660" y="120" />
     </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
