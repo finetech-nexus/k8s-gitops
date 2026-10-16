@@ -444,7 +444,7 @@ ph-ee-engine:
             -Xmx1024m
   ph_ee_connector_ams_mifos:
     enabled: true
-    image: docker.io/nexusbank/ph-ee-connector-ams-mifos:a3f83a1
+    image: docker.io/nexusbank/ph-ee-connector-ams-mifos:a8e64ff
     SPRING_PROFILES_ACTIVE: "fin12, bb"
     ams_local_enabled: true
     ams_local_interop_host: https://fynams.dev.sandbox.internal.nbank.fr
