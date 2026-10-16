@@ -12,7 +12,7 @@ core-banking-api:
   #       - "fynams.dev.sandbox.internal.nbank.fr"
   image:
     repository: nexusbank/core-banking-api
-    tag: "7734b79"
+    tag: "f91853e"
     pullPolicy: Always
 
   env:
@@ -41,6 +41,7 @@ core-banking-api:
     BANK_CODE: "30000000"
     COUNTRY_CODE: "TN"
     SUBSCRIPTION_API_URL: "http://core-api-subscription-api"
+    MT_API_URL: "http://core-api-mt-api"
 
 
   extraEnv: |
