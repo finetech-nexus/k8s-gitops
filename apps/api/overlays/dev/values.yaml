@@ -12,7 +12,7 @@ core-banking-api:
   #       - "fynams.dev.sandbox.internal.nbank.fr"
   image:
     repository: nexusbank/core-banking-api
-    tag: "latest"
+    tag: "aa17c4f"
     pullPolicy: Always
 
   env:
@@ -472,7 +472,7 @@ mt-api:
   replicaCount: 1
   image:
     repository: nexusbank/mt-api
-    tag: "latest"
+    tag: "a9edce6"
     pullPolicy: Always
   env:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
