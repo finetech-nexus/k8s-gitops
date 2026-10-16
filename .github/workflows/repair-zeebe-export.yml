@@ -1,0 +1,32 @@
+name: Repair Zeebe export
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/repair-zeebe-export.yml
+      - scripts/repair-zeebe-export.sh
+  workflow_dispatch:
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Reopen Operate data and unblock the exporter
+        run: |
+          chmod +x scripts/repair-zeebe-export.sh
+          kubectl delete pod repair-zeebe -n payment-hub --ignore-not-found --wait=true || true
+          kubectl run repair-zeebe --rm -i --restart=Never -n payment-hub \
+            --image=curlimages/curl:8.10.1 \
+            --command -- sh -s < scripts/repair-zeebe-export.sh
+          echo "===== zeebe exporter"
+          sleep 20
+          kubectl logs -n payment-hub payment-hub-zeebe-0 --tail=40 || true
+          if kubectl get deploy payment-hub-operate -n payment-hub >/dev/null 2>&1; then
+            kubectl rollout restart deployment/payment-hub-operate -n payment-hub
+            kubectl rollout status deployment/payment-hub-operate -n payment-hub --timeout=180s
+          fi

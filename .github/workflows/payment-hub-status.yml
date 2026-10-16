@@ -103,5 +103,6 @@ jobs:
           kubectl run sibtel-files --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- curl -sS -m 15 -w "\nhttp %{http_code}\n" http://sibtel-api:8095/api/files || true
           echo "===== card issue route"
           kubectl run sim-cards --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- curl -sS -m 20 -o /dev/null -w "simulate/mt/cards http %{http_code}\n" -X POST http://ph-ee-simulator:8090/simulate/mt/cards -H 'Content-Type: application/json' -d '{"holderName":"Probe","scheme":"VISA","tenantId":"tn","productId":"probe"}' || true
-          echo "===== zeebe exporter mapping"
-          kubectl run es-mapping --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- sh -c 'es=http://infra-elasticsearch.infra.svc.cluster.local:9200; curl -sS -m 20 "$es/_cat/indices/zeebe-record*?h=index" | while read -r idx; do [ -z "$idx" ] && continue; echo "-- $idx"; curl -sS -m 20 -X POST "$es/$idx/_close"; echo; curl -sS -m 20 -X PUT "$es/$idx/_settings" -H "Content-Type: application/json" -d "{\"index.mapping.ignore_malformed\":true}"; echo; curl -sS -m 20 -X POST "$es/$idx/_open"; echo; done' || true
+          echo "===== reopen zeebe indices"
+          kubectl delete pod repair-zeebe -n payment-hub --ignore-not-found --wait=true
+          kubectl run repair-zeebe --rm -i --restart=Never -n payment-hub --image=curlimages/curl:8.10.1 --command -- sh -s < scripts/repair-zeebe-export.sh
