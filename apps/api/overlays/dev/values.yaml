@@ -472,7 +472,7 @@ mt-api:
   replicaCount: 1
   image:
     repository: nexusbank/mt-api
-    tag: "4eb9031"
+    tag: "d02f7d4"
     pullPolicy: Always
   env:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub.svc.cluster.local:8090"
