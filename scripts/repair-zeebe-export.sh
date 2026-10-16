@@ -63,6 +63,37 @@ else
   echo none
 fi
 
+echo "===== operate aliases"
+# Operate 8.2 reads alias zeebe-record-<type>. This broker writes zeebe-record_<type>_8.2.12_<date>.
+for pair in \
+  "process:zeebe-record_process_*" \
+  "process-instance:zeebe-record_process-instance_*" \
+  "job:zeebe-record_job_*" \
+  "variable:zeebe-record_variable_*" \
+  "incident:zeebe-record_incident_*" \
+  "variable-document:zeebe-record_variable-document_*" \
+  "decision:zeebe-record_decision_*" \
+  "decision-requirements:zeebe-record_decision-requirements_*" \
+  "decision-evaluation:zeebe-record_decision-evaluation_*" \
+  "process-message-subscription:zeebe-record_process-message-subscription_*" \
+  "deployment:zeebe-record_deployment_*"
+do
+  type=${pair%%:*}
+  pattern=${pair#*:}
+  alias="zeebe-record-${type}"
+  echo -n "template $alias "
+  curl -sS -m 20 -X PUT "$es/_index_template/operate-alias-${type}" \
+    -H "Content-Type: application/json" \
+    -d "{\"index_patterns\":[\"${pattern}\"],\"priority\":310,\"template\":{\"aliases\":{\"${alias}\":{}}}}" \
+    || echo "template $alias" >> /tmp/repair-fail
+  echo
+  echo -n "alias $alias "
+  curl -sS -m 20 -X POST "$es/_aliases" -H "Content-Type: application/json" \
+    -d "{\"actions\":[{\"add\":{\"index\":\"${pattern}\",\"alias\":\"${alias}\"}}]}" \
+    || echo "alias $alias" >> /tmp/repair-fail
+  echo
+done
+
 echo "===== counts"
 curl -sS -m 20 "$es/zeebe-record_process_*/_count?expand_wildcards=all" || true
 echo

@@ -45,7 +45,7 @@ ph-ee-engine:
         disableExporter: false
         host: "infra-elasticsearch.infra.svc.cluster.local"
         port: 9200
-        clusterName: "fred"
+        clusterName: "elastic"
       identity:
         auth:
           enabled: false
