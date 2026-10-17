@@ -30,6 +30,24 @@ spec:
               group: apps
               version: v1
               kind: Deployment
+              name: ph-ee-connector-swift
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ph-ee-connector-swift
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: ph-ee-connector-swift
+                        env:
+                          - name: SWIFT_GATEWAY_BASE_URL
+                            value: http://core-api-swift-api.api.svc.cluster.local
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
               name: ph-ee-connector-mt
             patch: |-
               apiVersion: apps/v1
