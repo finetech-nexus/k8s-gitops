@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reconciliation-app
+  namespace: reconciliation
+  labels:
+    app: reconciliation-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reconciliation-app
+  template:
+    metadata:
+      labels:
+        app: reconciliation-app
+    spec:
+      containers:
+        - name: reconciliation-app
+          image: nexusbank/reconciliation-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8111
+          env:
+            - name: API_UPSTREAM
+              value: http://reconciliation-api:8110
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "500m"
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reconciliation-app
+  namespace: reconciliation
+  labels:
+    app: reconciliation-app
+spec:
+  type: ClusterIP
+  selector:
+    app: reconciliation-app
+  ports:
+    - name: http
+      port: 8111
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reconciliation-app
+  namespace: reconciliation
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - reconciliation-app.dev.sandbox.internal.nbank.fr
+      secretName: reconciliation-app-dev-tls
+  rules:
+    - host: reconciliation-app.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: reconciliation-app
+                port:
+                  number: 8111

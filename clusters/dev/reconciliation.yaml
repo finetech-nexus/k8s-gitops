@@ -1,0 +1,20 @@
+# Reconcilia: app, API and PostgreSQL in namespace reconciliation.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: reconciliation
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 5m0s
+  path: ./apps/reconciliation/base
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: ingress-nginx
+      namespace: flux-system
+    - name: cert-manager-issuers
+      namespace: flux-system
+  timeout: 10m0s

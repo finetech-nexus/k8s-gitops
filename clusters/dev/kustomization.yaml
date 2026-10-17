@@ -27,3 +27,4 @@ resources:
   - api-eu.yaml
   - kyc-eu.yaml
   - treasury.yaml
+  - reconciliation.yaml

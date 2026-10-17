@@ -1,0 +1,20 @@
+# Reconcilia console: HTTPRoute -> Kong -> ingress-nginx.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reconciliation-app-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - reconciliation-app.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: reconciliation-app-internal
+          port: 443

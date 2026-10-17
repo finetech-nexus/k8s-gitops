@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reconciliation-api
+  namespace: reconciliation
+  labels:
+    app: reconciliation-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reconciliation-api
+  template:
+    metadata:
+      labels:
+        app: reconciliation-api
+    spec:
+      initContainers:
+        - name: wait-for-postgresql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h reconciliation-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
+      containers:
+        - name: reconciliation-api
+          image: nexusbank/reconciliation-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8110
+          env:
+            - name: SERVER_PORT
+              value: "8110"
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://reconciliation-postgresql:5432/reconciliation
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: reconciliation-postgresql
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reconciliation-postgresql
+                  key: password
+            - name: FINERACT_BASE_URL
+              value: ""
+            - name: FINERACT_ACCOUNTS_PATH
+              value: ""
+            - name: FINERACT_ENTRIES_PATH
+              value: ""
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 50
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reconciliation-api
+  namespace: reconciliation
+  labels:
+    app: reconciliation-api
+spec:
+  type: ClusterIP
+  selector:
+    app: reconciliation-api
+  ports:
+    - name: http
+      port: 8110
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reconciliation-api
+  namespace: reconciliation
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - reconciliation-api.api.dev.sandbox.internal.nbank.fr
+      secretName: reconciliation-api-dev-tls
+  rules:
+    - host: reconciliation-api.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: reconciliation-api
+                port:
+                  number: 8110
