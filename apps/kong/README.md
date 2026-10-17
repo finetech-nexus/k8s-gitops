@@ -15,8 +15,8 @@ Kong API Gateway. TLS via cert-manager (nbank-dev). Routes in `overlay/` are app
 | workflowsvc.kyc.dev.sandbox.nbank.fr | workflowsvc-kyc-route | workflowsvc.kyc.dev.sandbox.internal.nbank.fr |
 | iam.dev.sandbox.nbank.fr | iam-route | iam.dev.sandbox.internal.nbank.fr |
 | docs.nbank.fr | docs-route | docs.nbank.fr (ingress-nginx → docs service) |
-| reconciliation-api.api.dev.sandbox.internal.nbank.fr | reconciliation-api-route | reconciliation-api.api.dev.sandbox.internal.nbank.fr |
-| reconciliation-app.dev.sandbox.internal.nbank.fr | reconciliation-app-route | reconciliation-app.dev.sandbox.internal.nbank.fr |
+| reconciliation-api.api.dev.sandbox.nbank.fr | reconciliation-api-route | reconciliation-api.api.dev.sandbox.internal.nbank.fr |
+| reconciliation-app.dev.sandbox.nbank.fr | reconciliation-app-route | reconciliation-app.dev.sandbox.internal.nbank.fr |
 
 ## KongPlugins
 

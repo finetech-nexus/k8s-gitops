@@ -13,6 +13,7 @@ spec:
     - name: kong
       namespace: apim
   hostnames:
+    - reconciliation-api.api.dev.sandbox.nbank.fr
     - reconciliation-api.api.dev.sandbox.internal.nbank.fr
   rules:
     - backendRefs:
