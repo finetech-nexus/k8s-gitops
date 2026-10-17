@@ -15,7 +15,7 @@ spec:
       labels:
         app: treasoryflow-app
       annotations:
-        treasoryflow.nbank.fr/restarted-at: "2026-10-17T19:07:14Z"
+        treasoryflow.nbank.fr/restarted-at: "2026-10-17T20:12:00Z"
     spec:
       containers:
         - name: treasoryflow-app
