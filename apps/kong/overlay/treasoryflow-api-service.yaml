@@ -1,0 +1,17 @@
+# Kong -> ingress-nginx: TreasoryFlow API.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: treasoryflow-api-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: treasoryflow-api.api.dev.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

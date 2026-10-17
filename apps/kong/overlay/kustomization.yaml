@@ -70,6 +70,10 @@ resources:
   - card-management-api-eu-endpoints.yaml
   - invest-api-eu-service.yaml
   - invest-api-eu-endpoints.yaml
+  - treasoryflow-api-service.yaml
+  - treasoryflow-api-endpoints.yaml
+  - treasoryflow-app-service.yaml
+  - treasoryflow-app-endpoints.yaml
   - webapp-route.yaml
   - docs-route.yaml
   - fynams-route.yaml
@@ -103,3 +107,5 @@ resources:
   - produit-api-eu-route.yaml
   - card-management-api-eu-route.yaml
   - invest-api-eu-route.yaml
+  - treasoryflow-api-route.yaml
+  - treasoryflow-app-route.yaml

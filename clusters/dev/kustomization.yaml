@@ -26,3 +26,4 @@ resources:
   - payment-hub-eu.yaml
   - api-eu.yaml
   - kyc-eu.yaml
+  - treasury.yaml

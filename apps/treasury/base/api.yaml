@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: treasoryflow-api
+  namespace: treasury
+  labels:
+    app: treasoryflow-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: treasoryflow-api
+  template:
+    metadata:
+      labels:
+        app: treasoryflow-api
+    spec:
+      initContainers:
+        - name: wait-for-postgresql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h treasoryflow-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
+      containers:
+        - name: treasoryflow-api
+          image: nexusbank/treasoryflow-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8108
+          env:
+            - name: SERVER_PORT
+              value: "8108"
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://treasoryflow-postgresql:5432/treasoryflow
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: treasoryflow-postgresql
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: treasoryflow-postgresql
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 50
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: treasoryflow-api
+  namespace: treasury
+  labels:
+    app: treasoryflow-api
+spec:
+  type: ClusterIP
+  selector:
+    app: treasoryflow-api
+  ports:
+    - name: http
+      port: 8108
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: treasoryflow-api
+  namespace: treasury
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - treasoryflow-api.api.dev.sandbox.internal.nbank.fr
+      secretName: treasoryflow-api-dev-tls
+  rules:
+    - host: treasoryflow-api.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: treasoryflow-api
+                port:
+                  number: 8108

@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: treasoryflow-app
+  namespace: treasury
+  labels:
+    app: treasoryflow-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: treasoryflow-app
+  template:
+    metadata:
+      labels:
+        app: treasoryflow-app
+    spec:
+      containers:
+        - name: treasoryflow-app
+          image: nexusbank/treasoryflow-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8109
+          env:
+            - name: SERVER_PORT
+              value: "8109"
+            - name: TREASORYFLOW_UPSTREAM_URL
+              value: http://treasoryflow-api:8108
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: treasoryflow-app
+  namespace: treasury
+  labels:
+    app: treasoryflow-app
+spec:
+  type: ClusterIP
+  selector:
+    app: treasoryflow-app
+  ports:
+    - name: http
+      port: 8109
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: treasoryflow-app
+  namespace: treasury
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - treasoryflow-app.dev.sandbox.internal.nbank.fr
+      secretName: treasoryflow-app-dev-tls
+  rules:
+    - host: treasoryflow-app.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: treasoryflow-app
+                port:
+                  number: 8109
