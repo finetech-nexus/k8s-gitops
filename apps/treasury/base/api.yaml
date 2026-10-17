@@ -15,7 +15,7 @@ spec:
       labels:
         app: treasoryflow-api
       annotations:
-        treasoryflow.nbank.fr/restarted-at: "2026-10-17T17:12:00Z"
+        treasoryflow.nbank.fr/restarted-at: "2026-10-17T18:14:00Z"
     spec:
       initContainers:
         - name: wait-for-postgresql
