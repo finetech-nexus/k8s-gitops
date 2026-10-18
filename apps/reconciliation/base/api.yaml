@@ -15,7 +15,7 @@ spec:
       labels:
         app: reconciliation-api
       annotations:
-        reconcilia.nbank.fr/restarted-at: "2026-10-18T09:13:00Z"
+        reconcilia.nbank.fr/restarted-at: "2026-10-18T09:57:00Z"
     spec:
       initContainers:
         - name: wait-for-postgresql
@@ -45,11 +45,13 @@ spec:
                   name: reconciliation-postgresql
                   key: password
             - name: FINERACT_BASE_URL
-              value: ""
+              value: https://fineract-server.core-banking.svc.cluster.local:8443
+            - name: FINERACT_TENANT
+              value: nexusbank
             - name: FINERACT_ACCOUNTS_PATH
-              value: ""
+              value: /fineract-provider/api/v1/glaccounts
             - name: FINERACT_ENTRIES_PATH
-              value: ""
+              value: /fineract-provider/api/v1/journalentries
           readinessProbe:
             httpGet:
               path: /actuator/health

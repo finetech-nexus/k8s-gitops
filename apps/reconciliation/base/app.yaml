@@ -15,7 +15,7 @@ spec:
       labels:
         app: reconciliation-app
       annotations:
-        reconcilia.nbank.fr/restarted-at: "2026-10-18T09:13:00Z"
+        reconcilia.nbank.fr/restarted-at: "2026-10-18T09:57:00Z"
     spec:
       containers:
         - name: reconciliation-app
