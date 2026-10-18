@@ -15,7 +15,7 @@ spec:
       labels:
         app: reconciliation-api
       annotations:
-        reconcilia.nbank.fr/restarted-at: "2026-10-18T09:57:00Z"
+        reconcilia.nbank.fr/restarted-at: "2026-10-18T10:12:00Z"
     spec:
       initContainers:
         - name: wait-for-postgresql
@@ -52,6 +52,16 @@ spec:
               value: /fineract-provider/api/v1/glaccounts
             - name: FINERACT_ENTRIES_PATH
               value: /fineract-provider/api/v1/journalentries
+            - name: FINERACT_TOKEN_URL
+              value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token
+            - name: FINERACT_CLIENT_ID
+              value: cbanking-api-oidc
+            - name: FINERACT_CLIENT_SECRET
+              value: Iu8NODQxGQgPP0cYtDK3ZF3vEBzJ6nRs
+            - name: FINERACT_USERNAME
+              value: mifos
+            - name: FINERACT_PASSWORD
+              value: password
           readinessProbe:
             httpGet:
               path: /actuator/health
