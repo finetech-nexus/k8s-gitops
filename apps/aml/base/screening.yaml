@@ -1,0 +1,225 @@
+# Reduced OpenSanctions index used by Marble's own dev compose (US sanctions).
+# Screening is configured against whatever datasets this index actually exposes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marble-datasets
+  namespace: aml
+data:
+  datasets.yml: |
+    catalogs:
+      - url: "https://data.opensanctions.org/datasets/latest/index.json"
+        scope: us_sanctions
+        resource_name: entities.ftm.json
+    datasets: []
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-elasticsearch
+  namespace: aml
+  labels:
+    app: marble-elasticsearch
+spec:
+  selector:
+    app: marble-elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: marble-elasticsearch
+  namespace: aml
+  labels:
+    app: marble-elasticsearch
+spec:
+  serviceName: marble-elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-elasticsearch
+  template:
+    metadata:
+      labels:
+        app: marble-elasticsearch
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:9.3.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 9200
+          env:
+            - name: node.name
+              value: marble-es
+            - name: cluster.name
+              value: marble-es
+            - name: discovery.type
+              value: single-node
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.ml.enabled
+              value: "false"
+            - name: ingest.geoip.downloader.enabled
+              value: "false"
+            - name: bootstrap.memory_lock
+              value: "false"
+            - name: node.store.allow_mmap
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-yente-reindex
+  namespace: aml
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-elasticsearch
+          image: curlimages/curl:8.11.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until curl -sf http://marble-elasticsearch:9200/_cluster/health; do echo waiting for elasticsearch; sleep 5; done
+      containers:
+        - name: yente
+          image: ghcr.io/opensanctions/yente:5.4.0
+          imagePullPolicy: IfNotPresent
+          command: ["yente", "reindex"]
+          env:
+            - name: YENTE_INDEX_TYPE
+              value: elasticsearch
+            - name: YENTE_INDEX_URL
+              value: http://marble-elasticsearch:9200
+          volumeMounts:
+            - name: datasets
+              mountPath: /app/manifests/default.yml
+              subPath: datasets.yml
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: datasets
+          configMap:
+            name: marble-datasets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-motiva
+  namespace: aml
+  labels:
+    app: marble-motiva
+spec:
+  selector:
+    app: marble-motiva
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-motiva
+  namespace: aml
+  labels:
+    app: marble-motiva
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-motiva
+  template:
+    metadata:
+      labels:
+        app: marble-motiva
+    spec:
+      initContainers:
+        - name: wait-for-elasticsearch
+          image: curlimages/curl:8.11.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until curl -sf http://marble-elasticsearch:9200/_cluster/health; do echo waiting for elasticsearch; sleep 5; done
+      containers:
+        - name: motiva
+          image: ghcr.io/apognu/motiva:v0.11.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: MANIFEST_URL
+              value: /app/manifests/default.yml
+            - name: INDEX_URL
+              value: http://marble-elasticsearch:9200
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: datasets
+              mountPath: /app/manifests/default.yml
+              subPath: datasets.yml
+      volumes:
+        - name: datasets
+          configMap:
+            name: marble-datasets

@@ -1,0 +1,370 @@
+# Runs after the API is up. Creates the org, the client screening scenario, and the transaction scenario.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marble-init
+  namespace: aml
+data:
+  init.py: |
+    import json
+    import os
+    import time
+    import urllib.error
+    import urllib.request
+
+    API = os.environ["MARBLE_API"].rstrip("/")
+    FIREBASE = os.environ["FIREBASE_AUTH"].rstrip("/")
+    EMAIL = os.environ["ADMIN_EMAIL"]
+    PASSWORD = os.environ["ADMIN_PASSWORD"]
+    SCREENING = "AML screening"
+    TRANSACTION = "AML transaction check"
+
+
+    def call(method, url, body=None, token=None, ok=(200, 201)):
+        data = None if body is None else json.dumps(body).encode()
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = "Bearer " + token
+        request = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                raw = response.read().decode()
+                parsed = json.loads(raw) if raw else None
+                return response.status, parsed
+        except urllib.error.HTTPError as error:
+            raw = error.read().decode()
+            if error.code not in ok:
+                raise SystemExit(f"{method} {url} -> {error.code} {raw}")
+            try:
+                parsed = json.loads(raw) if raw else None
+            except json.JSONDecodeError:
+                parsed = raw
+            return error.code, parsed
+
+
+    def payload(field):
+        return {"name": "Payload", "children": [{"constant": field}]}
+
+
+
+
+    def field(name, alias, data_type, nullable):
+        return {
+            "name": name,
+            "description": alias,
+            "type": data_type,
+            "alias": alias,
+            "nullable": nullable,
+            "is_enum": False,
+            "is_unique": False,
+        }
+
+
+    def table(name, alias, semantic_type, ordering, fields, links=None):
+        body = {
+            "name": name,
+            "description": alias,
+            "alias": alias,
+            "semantic_type": semantic_type,
+            "primary_ordering_field": ordering,
+            "fields": fields,
+            "links": links or [],
+            "lifecycle": {"enabled": False},
+        }
+        return body
+
+
+    print("creating organization")
+    call(
+        "POST",
+        API + "/admin/onboard",
+        {
+            "organization": "Nexus Bank",
+            "email": EMAIL,
+            "password": PASSWORD,
+            "firstname": "AML",
+            "lastname": "Admin",
+        },
+        ok=(201, 409),
+    )
+
+    token = None
+    for attempt in range(15):
+        try:
+            _, firebase = call(
+                "POST",
+                FIREBASE + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=placeholder",
+                {"email": EMAIL, "password": PASSWORD, "returnSecureToken": True},
+            )
+            _, marble = call("POST", API + "/token", token=firebase["idToken"])
+            token = marble["access_token"]
+            break
+        except SystemExit as error:
+            print(f"login not ready ({attempt + 1}/15): {error}")
+            time.sleep(3)
+    if not token:
+        raise SystemExit("could not sign in to Marble")
+
+
+    def api(method, path, body=None, ok=(200, 201)):
+        return call(method, API + path, body, token, ok)
+
+
+    def tables():
+        _, model = api("GET", "/data-model")
+        return (model or {}).get("tables") or {}
+
+
+    def ensure_table(spec):
+        current = tables()
+        for item in current.values():
+            if item.get("name") == spec["name"]:
+                print(f"table {spec['name']} already exists")
+                return item["id"]
+        print(f"creating table {spec['name']}")
+        _, created = api("POST", "/data-model/tables", spec, ok=(201,))
+        return created["id"]
+
+
+    def datasets():
+        try:
+            _, catalog = api("GET", "/screenings/datasets")
+        except SystemExit as error:
+            print(f"dataset catalog unavailable, using us_sanctions: {error}")
+            return ["us_sanctions"]
+        names = []
+        items = catalog
+        if isinstance(catalog, dict):
+            items = catalog.get("datasets") or catalog.get("items") or []
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, str):
+                    names.append(item)
+                elif isinstance(item, dict):
+                    value = item.get("name") or item.get("id") or ""
+                    if value:
+                        names.append(value)
+        picked = [name for name in names if "sanction" in name.lower() or "pep" in name.lower()]
+        return picked or names[:3] or ["us_sanctions"]
+
+
+    def publish(iteration_id):
+        api(
+            "POST",
+            f"/scenario-iterations/{iteration_id}/commit",
+            ok=(200, 201, 204, 400, 404, 409),
+        )
+        api(
+            "POST",
+            "/scenario-publications",
+            {"scenario_iteration_id": iteration_id, "publication_action": "publish"},
+        )
+
+
+    _, scenarios = api("GET", "/scenarios")
+    existing = {item.get("name") for item in (scenarios or [])}
+
+    if SCREENING not in existing:
+        ensure_table(
+            table(
+                "clients",
+                "Clients",
+                "person",
+                "full_name",
+                [
+                    field("full_name", "Full name", "String", False),
+                    field("birth_date", "Birth date", "String", True),
+                    field("nationality", "Nationality", "String", True),
+                ],
+            )
+        )
+        print("creating AML screening scenario")
+        _, scenario = api(
+            "POST",
+            "/scenarios",
+            {
+                "name": SCREENING,
+                "description": "Screen a customer against sanctions and PEP lists.",
+                "trigger_object_type": "clients",
+            },
+        )
+        _, iteration = api(
+            "POST",
+            "/scenario-iterations",
+            {
+                "scenario_id": scenario["id"],
+                "body": {
+                    "trigger_condition_ast_expression": None,
+                    "score_review_threshold": 50,
+                    "score_block_and_review_threshold": 80,
+                    "score_decline_threshold": 100,
+                    "schedule": "",
+                    "rules": [
+                        {
+                            "display_order": 1,
+                            "name": "Customer name is present",
+                            "description": "Keeps the scenario valid. A screening hit forces review.",
+                            "formula_ast_expression": {"name": "IsNotEmpty", "children": [payload("full_name")]},
+                            "score_modifier": 1,
+                            "rule_group": "screening",
+                        }
+                    ],
+                },
+            },
+        )
+        chosen = datasets()
+        print(f"screening datasets: {chosen}")
+        screening_body = {
+            "name": "AML person screening",
+            "description": "Sanctions and PEP screening of the customer name.",
+            "datasets": chosen,
+            "threshold": 70,
+            "forced_outcome": "review",
+            "entity_type": "Person",
+            "query": {"name": payload("full_name")},
+        }
+        try:
+            api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
+        except SystemExit as error:
+            print(f"dataset filter rejected, retrying without a dataset list: {error}")
+            screening_body.pop("datasets")
+            api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
+        publish(iteration["id"])
+    else:
+        print("AML screening already present")
+
+    if TRANSACTION not in existing:
+        current = tables()
+        clients_id = next(item["id"] for item in current.values() if item.get("name") == "clients")
+        ensure_table(
+            table(
+                "transactions",
+                "Transactions",
+                "transaction",
+                "amount",
+                [
+                    field("amount", "Amount", "Float", False),
+                    field("currency", "Currency", "String", True),
+                    field("country", "Country", "String", False),
+                    field("client_id", "Client", "String", True),
+                ],
+                [
+                    {
+                        "name": "client",
+                        "link_type": "belongs_to",
+                        "child_field_name": "client_id",
+                        "parent_table_id": clients_id,
+                    }
+                ],
+            )
+        )
+        print("creating AML transaction check scenario")
+        _, scenario = api(
+            "POST",
+            "/scenarios",
+            {
+                "name": TRANSACTION,
+                "description": "Review large payments and decline payments involving a high-risk country.",
+                "trigger_object_type": "transactions",
+            },
+        )
+        _, iteration = api(
+            "POST",
+            "/scenario-iterations",
+            {
+                "scenario_id": scenario["id"],
+                "body": {
+                    "trigger_condition_ast_expression": None,
+                    "score_review_threshold": 30,
+                    "score_block_and_review_threshold": 80,
+                    "score_decline_threshold": 100,
+                    "schedule": "",
+                    "rules": [
+                        {
+                            "display_order": 1,
+                            "name": "Large amount",
+                            "description": "Amount is at least 10000.",
+                            "formula_ast_expression": {
+                                "name": ">=",
+                                "children": [payload("amount"), {"constant": 10000}],
+                            },
+                            "score_modifier": 40,
+                            "rule_group": "transaction",
+                        },
+                        {
+                            "display_order": 2,
+                            "name": "High-risk country",
+                            "description": "Counterparty country is KP or IR.",
+                            "formula_ast_expression": {
+                                "name": "Or",
+                                "children": [
+                                    {"name": "=", "children": [payload("country"), {"constant": "KP"}]},
+                                    {"name": "=", "children": [payload("country"), {"constant": "IR"}]},
+                                ],
+                            },
+                            "score_modifier": 100,
+                            "rule_group": "transaction",
+                        },
+                    ],
+                },
+            },
+        )
+        publish(iteration["id"])
+    else:
+        print("AML transaction check already present")
+
+    print("Marble AML configuration is ready")
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-init
+  namespace: aml
+spec:
+  backoffLimit: 8
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-api
+          image: curlimages/curl:8.11.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until curl -sf http://marble-api:8080/liveness; do echo waiting for Marble API; sleep 5; done
+      containers:
+        - name: init
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/config/init.py"]
+          env:
+            - name: MARBLE_API
+              value: http://marble-api:8080
+            - name: FIREBASE_AUTH
+              value: http://marble-firebase:9099
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: admin-email
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: admin-password
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: marble-init

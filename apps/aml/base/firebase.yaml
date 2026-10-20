@@ -1,0 +1,51 @@
+# Auth emulator used by the Marble dev images. The init job signs in here; it is not exposed outside the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-firebase
+  namespace: aml
+  labels:
+    app: marble-firebase
+spec:
+  selector:
+    app: marble-firebase
+  ports:
+    - name: auth
+      port: 9099
+      targetPort: auth
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-firebase
+  namespace: aml
+  labels:
+    app: marble-firebase
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-firebase
+  template:
+    metadata:
+      labels:
+        app: marble-firebase
+    spec:
+      containers:
+        - name: firebase
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/firebase-emulator:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: auth
+              containerPort: 9099
+          readinessProbe:
+            tcpSocket:
+              port: auth
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

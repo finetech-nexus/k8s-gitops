@@ -78,6 +78,10 @@ resources:
   - reconciliation-api-endpoints.yaml
   - reconciliation-app-service.yaml
   - reconciliation-app-endpoints.yaml
+  - aml-api-service.yaml
+  - aml-api-endpoints.yaml
+  - aml-app-service.yaml
+  - aml-app-endpoints.yaml
   - webapp-route.yaml
   - docs-route.yaml
   - fynams-route.yaml
@@ -115,3 +119,5 @@ resources:
   - treasoryflow-app-route.yaml
   - reconciliation-api-route.yaml
   - reconciliation-app-route.yaml
+  - aml-api-route.yaml
+  - aml-app-route.yaml

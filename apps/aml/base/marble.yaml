@@ -1,0 +1,380 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marble-env
+  namespace: aml
+data:
+  ENV: production
+  DISABLE_SEGMENT: "true"
+  DISABLE_TELEMETRY: "true"
+  LOGGING_FORMAT: json
+  PG_HOSTNAME: marble-postgresql
+  PG_PORT: "5432"
+  PG_SSL_MODE: disable
+  PG_DATABASE: marble
+  FIREBASE_AUTH_EMULATOR_HOST: marble-firebase:9099
+  FIREBASE_API_KEY: placeholder
+  FIREBASE_PROJECT_ID: test-project
+  REDIS_HOST: marble-redis:6379
+  OPENSANCTIONS_API_HOST: http://marble-motiva:8000
+  INGESTION_BUCKET_URL: file:///data/ingestion?create_dir=true
+  CASE_MANAGER_BUCKET_URL: file:///data/cases?create_dir=true
+  ANALYTICS_BUCKET_URL: file:///data/analytics?create_dir=true
+  MARBLE_APP_URL: https://aml-app.dev.sandbox.nbank.fr
+  MARBLE_API_URL: http://marble-api:8080
+  TEST_FIREBASE_AUTH_EMULATOR_HOST: marble-firebase:9099
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-migrations
+  namespace: aml
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgresql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
+      containers:
+        - name: migrations
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
+          imagePullPolicy: IfNotPresent
+          command: ["./app", "--migrations"]
+          envFrom:
+            - configMapRef:
+                name: marble-env
+          env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-api
+  namespace: aml
+  labels:
+    app: marble-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-api
+  template:
+    metadata:
+      labels:
+        app: marble-api
+    spec:
+      initContainers:
+        - name: wait-for-postgresql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
+      containers:
+        - name: api
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
+          imagePullPolicy: IfNotPresent
+          command: ["./app", "--server"]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: marble-env
+          env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /liveness
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-api
+  namespace: aml
+  labels:
+    app: marble-api
+spec:
+  selector:
+    app: marble-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-worker
+  namespace: aml
+  labels:
+    app: marble-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-worker
+  template:
+    metadata:
+      labels:
+        app: marble-worker
+    spec:
+      initContainers:
+        - name: wait-for-postgresql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
+      containers:
+        - name: worker
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
+          imagePullPolicy: IfNotPresent
+          command: ["./app", "--worker"]
+          envFrom:
+            - configMapRef:
+                name: marble-env
+          env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-app
+  namespace: aml
+  labels:
+    app: marble-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-app
+  template:
+    metadata:
+      labels:
+        app: marble-app
+    spec:
+      containers:
+        - name: app
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-frontend:v1.11.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: marble-env
+          env:
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: session-secret
+            - name: SESSION_MAX_AGE
+              value: "43200"
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-app
+  namespace: aml
+  labels:
+    app: marble-app
+spec:
+  selector:
+    app: marble-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-api
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-api.api.dev.sandbox.internal.nbank.fr
+      secretName: marble-api-dev-tls
+  rules:
+    - host: aml-api.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-api
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-api-public
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-api.api.dev.sandbox.nbank.fr
+      secretName: marble-api-dev-tls
+  rules:
+    - host: aml-api.api.dev.sandbox.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-api
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-app
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-app.dev.sandbox.internal.nbank.fr
+      secretName: marble-app-dev-tls
+  rules:
+    - host: aml-app.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-app
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-app-public
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-app.dev.sandbox.nbank.fr
+      secretName: marble-app-dev-tls
+  rules:
+    - host: aml-app.dev.sandbox.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-app
+                port:
+                  number: 8080
