@@ -12,17 +12,18 @@ data:
   PG_PORT: "5432"
   PG_SSL_MODE: disable
   PG_DATABASE: marble
-  FIREBASE_AUTH_EMULATOR_HOST: marble-firebase:9099
-  FIREBASE_API_KEY: placeholder
-  FIREBASE_PROJECT_ID: test-project
+  AUTH_PROVIDER: oidc
+  AUTH_OIDC_ISSUER: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
+  AUTH_OIDC_CLIENT_ID: aml
+  AUTH_OIDC_SCOPE: openid,email,profile
+  CREATE_ORG_NAME: Nexus Bank
   REDIS_HOST: marble-redis:6379
   OPENSANCTIONS_API_HOST: http://marble-motiva:8000
   INGESTION_BUCKET_URL: file:///data/ingestion?create_dir=true
   CASE_MANAGER_BUCKET_URL: file:///data/cases?create_dir=true
   ANALYTICS_BUCKET_URL: file:///data/analytics?create_dir=true
-  MARBLE_APP_URL: https://aml-app.dev.sandbox.nbank.fr
+  MARBLE_APP_URL: https://aml-app.dev.sandbox.internal.nbank.fr
   MARBLE_API_URL: http://marble-api:8080
-  TEST_FIREBASE_AUTH_EMULATOR_HOST: marble-firebase:9099
 ---
 apiVersion: batch/v1
 kind: Job
@@ -85,6 +86,16 @@ spec:
         app: marble-api
     spec:
       initContainers:
+        - name: trust-internal-ca
+          image: alpine:3.20
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "cat /etc/ssl/certs/ca-certificates.crt /ca/internal-ca.crt > /trust/ca-certificates.crt"]
+          volumeMounts:
+            - name: internal-ca
+              mountPath: /ca
+              readOnly: true
+            - name: trust-bundle
+              mountPath: /trust
         - name: wait-for-postgresql
           image: postgres:16-alpine
           imagePullPolicy: IfNotPresent
@@ -111,6 +122,21 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: password
+            - name: CREATE_ORG_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: admin-email
+            - name: AUTH_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: oidc-client-secret
+            - name: LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: license-key
           readinessProbe:
             httpGet:
               path: /liveness
@@ -133,9 +159,17 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: trust-bundle
+              mountPath: /etc/ssl/certs
+              readOnly: true
       volumes:
         - name: data
           emptyDir: {}
+        - name: trust-bundle
+          emptyDir: {}
+        - name: internal-ca
+          configMap:
+            name: marble-internal-ca
 ---
 apiVersion: v1
 kind: Service
@@ -242,6 +276,12 @@ spec:
                   key: session-secret
             - name: SESSION_MAX_AGE
               value: "43200"
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/certificate/internal-ca.crt
+          volumeMounts:
+            - name: internal-ca
+              mountPath: /etc/certificate
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /healthcheck
@@ -261,6 +301,10 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+      volumes:
+        - name: internal-ca
+          configMap:
+            name: marble-internal-ca
 ---
 apiVersion: v1
 kind: Service
