@@ -12,9 +12,10 @@ data:
   PG_PORT: "5432"
   PG_SSL_MODE: disable
   PG_DATABASE: marble
-  FIREBASE_AUTH_EMULATOR_HOST: marble-firebase:9099
-  FIREBASE_API_KEY: placeholder
-  FIREBASE_PROJECT_ID: test-project
+  FIREBASE_API_KEY: AIzaSyA4AnXx9RrDpAzl4D0msERm629zVgS8GOM
+  FIREBASE_AUTH_DOMAIN: marble-a1227.firebaseapp.com
+  FIREBASE_PROJECT_ID: marble-a1227
+  GOOGLE_CLOUD_PROJECT: marble-a1227
   REDIS_HOST: marble-redis:6379
   OPENSANCTIONS_API_HOST: http://marble-motiva:8000
   INGESTION_BUCKET_URL: file:///data/ingestion?create_dir=true
@@ -22,7 +23,6 @@ data:
   ANALYTICS_BUCKET_URL: file:///data/analytics?create_dir=true
   MARBLE_APP_URL: https://aml-app.dev.sandbox.nbank.fr
   MARBLE_API_URL: http://marble-api:8080
-  TEST_FIREBASE_AUTH_EMULATOR_HOST: aml-app.dev.sandbox.internal.nbank.fr
 ---
 apiVersion: batch/v1
 kind: Job
@@ -111,6 +111,8 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: password
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /etc/firebase/service-account.json
           readinessProbe:
             httpGet:
               path: /liveness
@@ -133,9 +135,18 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: firebase-credentials
+              mountPath: /etc/firebase
+              readOnly: true
       volumes:
         - name: data
           emptyDir: {}
+        - name: firebase-credentials
+          secret:
+            secretName: marble
+            items:
+              - key: firebase-service-account.json
+                path: service-account.json
 ---
 apiVersion: v1
 kind: Service
@@ -193,6 +204,8 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: password
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /etc/firebase/service-account.json
           resources:
             requests:
               cpu: 100m
@@ -203,9 +216,18 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: firebase-credentials
+              mountPath: /etc/firebase
+              readOnly: true
       volumes:
         - name: data
           emptyDir: {}
+        - name: firebase-credentials
+          secret:
+            secretName: marble
+            items:
+              - key: firebase-service-account.json
+                path: service-account.json
 ---
 apiVersion: apps/v1
 kind: Deployment

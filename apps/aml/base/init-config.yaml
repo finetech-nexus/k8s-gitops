@@ -13,16 +13,19 @@ data:
     import urllib.request
 
     API = os.environ["MARBLE_API"].rstrip("/")
-    FIREBASE = os.environ["FIREBASE_AUTH"].rstrip("/")
+    API_KEY = os.environ["FIREBASE_API_KEY"]
+    PROJECT = os.environ["FIREBASE_PROJECT_ID"]
     EMAIL = os.environ["ADMIN_EMAIL"]
     PASSWORD = os.environ["ADMIN_PASSWORD"]
     SCREENING = "AML screening"
     TRANSACTION = "AML transaction check"
 
 
-    def call(method, url, body=None, token=None, ok=(200, 201)):
+    def call(method, url, body=None, token=None, ok=(200, 201), extra_headers=None):
         data = None if body is None else json.dumps(body).encode()
         headers = {"Content-Type": "application/json"}
+        if extra_headers:
+            headers.update(extra_headers)
         if token:
             headers["Authorization"] = "Bearer " + token
         request = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -74,6 +77,66 @@ data:
         return body
 
 
+    def google_token():
+        import google.auth.transport.requests
+        from google.oauth2 import service_account
+
+        creds = service_account.Credentials.from_service_account_file(
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"],
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        creds.refresh(google.auth.transport.requests.Request())
+        return creds.token
+
+
+    def ensure_firebase_user():
+        access = google_token()
+        config_url = f"https://identitytoolkit.googleapis.com/v2/projects/{PROJECT}/config"
+        _, current = call("GET", config_url, token=access, ok=(200, 404))
+        domains = set()
+        if isinstance(current, dict):
+            domains.update(current.get("authorizedDomains") or [])
+        domains.update(
+            [
+                "localhost",
+                f"{PROJECT}.firebaseapp.com",
+                f"{PROJECT}.web.app",
+                "aml-app.dev.sandbox.nbank.fr",
+                "aml-app.dev.sandbox.internal.nbank.fr",
+            ]
+        )
+        call(
+            "PATCH",
+            config_url
+            + "?updateMask=signIn.email.enabled,signIn.email.passwordRequired,authorizedDomains",
+            {
+                "signIn": {"email": {"enabled": True, "passwordRequired": True}},
+                "authorizedDomains": sorted(domains),
+            },
+            token=access,
+        )
+        try:
+            call(
+                "POST",
+                f"https://identitytoolkit.googleapis.com/v1/projects/{PROJECT}/accounts",
+                {
+                    "email": EMAIL,
+                    "password": PASSWORD,
+                    "emailVerified": True,
+                    "displayName": "AML Admin",
+                },
+                token=access,
+            )
+            print("firebase user created")
+        except SystemExit as error:
+            if "EMAIL_EXISTS" not in str(error):
+                raise
+            print("firebase user already exists")
+
+
+    print("configuring firebase")
+    ensure_firebase_user()
+
     print("creating organization")
     call(
         "POST",
@@ -93,8 +156,9 @@ data:
         try:
             _, firebase = call(
                 "POST",
-                FIREBASE + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=placeholder",
+                "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + API_KEY,
                 {"email": EMAIL, "password": PASSWORD, "returnSecureToken": True},
+                extra_headers={"Referer": "https://aml-app.dev.sandbox.internal.nbank.fr"},
             )
             _, marble = call("POST", API + "/token", token=firebase["idToken"])
             token = marble["access_token"]
@@ -318,7 +382,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init
+  name: marble-init-firebase
   namespace: aml
 spec:
   backoffLimit: 8
@@ -338,12 +402,16 @@ spec:
         - name: init
           image: python:3.12-alpine
           imagePullPolicy: IfNotPresent
-          command: ["python", "/config/init.py"]
+          command: ["sh", "-c", "pip install -q google-auth && python /config/init.py"]
           env:
             - name: MARBLE_API
               value: http://marble-api:8080
-            - name: FIREBASE_AUTH
-              value: http://marble-firebase:9099
+            - name: FIREBASE_API_KEY
+              value: AIzaSyA4AnXx9RrDpAzl4D0msERm629zVgS8GOM
+            - name: FIREBASE_PROJECT_ID
+              value: marble-a1227
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /etc/firebase/service-account.json
             - name: ADMIN_EMAIL
               valueFrom:
                 secretKeyRef:
@@ -357,6 +425,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+            - name: firebase-credentials
+              mountPath: /etc/firebase
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -368,3 +439,9 @@ spec:
         - name: config
           configMap:
             name: marble-init
+        - name: firebase-credentials
+          secret:
+            secretName: marble
+            items:
+              - key: firebase-service-account.json
+                path: service-account.json

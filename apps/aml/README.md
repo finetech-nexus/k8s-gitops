@@ -16,7 +16,7 @@ API:
 
 ## Login
 
-Sign in with email and password. The browser calls the console host (`/identitytoolkit.googleapis.com` and `/emulator`), which is proxied to the in-cluster Firebase emulator. The API uses the Service `marble-firebase` directly.
+Sign in with email and password. Authentication uses the Firebase project `marble-a1227`. In that project, enable Email/Password and allow the console hosts as authorized domains.
 
 | | |
 | --- | --- |
