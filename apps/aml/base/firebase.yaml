@@ -1,5 +1,5 @@
 # Auth emulator used by the Marble dev images. The API uses the in-cluster Service.
-# Browsers use https://aml-auth.dev.sandbox.internal.nbank.fr (the console rewrites the http URL).
+# Browsers call the console host, which already resolves. These paths are proxied to the emulator.
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,19 +59,32 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
     nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
-    cert-manager.io/cluster-issuer: nbank-dev
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - aml-auth.dev.sandbox.internal.nbank.fr
-      secretName: marble-firebase-dev-tls
+        - aml-app.dev.sandbox.internal.nbank.fr
+      secretName: marble-app-dev-tls
   rules:
-    - host: aml-auth.dev.sandbox.internal.nbank.fr
+    - host: aml-app.dev.sandbox.internal.nbank.fr
       http:
         paths:
-          - path: /
-            pathType: ImplementationSpecific
+          - path: /identitytoolkit.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /securetoken.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /emulator
+            pathType: Prefix
             backend:
               service:
                 name: marble-firebase
@@ -90,14 +103,28 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - aml-auth.dev.sandbox.nbank.fr
-      secretName: marble-firebase-dev-tls
+        - aml-app.dev.sandbox.nbank.fr
+      secretName: marble-app-dev-tls
   rules:
-    - host: aml-auth.dev.sandbox.nbank.fr
+    - host: aml-app.dev.sandbox.nbank.fr
       http:
         paths:
-          - path: /
-            pathType: ImplementationSpecific
+          - path: /identitytoolkit.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /securetoken.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /emulator
+            pathType: Prefix
             backend:
               service:
                 name: marble-firebase

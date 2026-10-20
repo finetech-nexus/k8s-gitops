@@ -16,7 +16,7 @@ API:
 
 ## Login
 
-Sign in with email and password. The browser talks to the Firebase emulator at `https://aml-auth.dev.sandbox.internal.nbank.fr`. The API keeps using the in-cluster Service `marble-firebase`.
+Sign in with email and password. The browser calls the console host (`/identitytoolkit.googleapis.com` and `/emulator`), which is proxied to the in-cluster Firebase emulator. The API uses the Service `marble-firebase` directly.
 
 | | |
 | --- | --- |

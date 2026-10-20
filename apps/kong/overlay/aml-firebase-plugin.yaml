@@ -1,5 +1,5 @@
-# The console embeds http://marble-firebase:9099. Browsers cannot resolve that name, and the
-# page CSP does not allow it. Rewrite the address to the public emulator and allow that origin.
+# The console embeds the in-cluster emulator name. Browsers cannot resolve it.
+# Send those calls to the console host, which already resolves, and allow that origin in CSP.
 ---
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
@@ -13,7 +13,7 @@ config:
       kong.service.request.set_header("Accept-Encoding", "identity")
   header_filter:
     - |
-      local origin = "https://aml-auth.dev.sandbox.internal.nbank.fr"
+      local origin = "https://aml-app.dev.sandbox.internal.nbank.fr 'self'"
       local csp = kong.response.get_header("Content-Security-Policy")
       if type(csp) == "table" then
         csp = csp[1]
@@ -42,9 +42,13 @@ config:
       if err or not body or body == "" then
         return
       end
-      local https = "https://aml-auth.dev.sandbox.internal.nbank.fr"
+      local https = "https://aml-app.dev.sandbox.internal.nbank.fr"
+      local host = "aml-app.dev.sandbox.internal.nbank.fr"
       body = body:gsub("http://marble%-firebase:9099", https)
       body = body:gsub("http:\\/\\/marble%-firebase:9099", https)
-      body = body:gsub("marble%-firebase:9099", "aml-auth.dev.sandbox.internal.nbank.fr")
+      body = body:gsub("https://aml%-auth%.dev%.sandbox%.internal%.nbank%.fr", https)
       body = body:gsub("http://aml%-auth%.dev%.sandbox%.internal%.nbank%.fr", https)
+      body = body:gsub("marble%-firebase:9099", host)
+      body = body:gsub("aml%-auth%.dev%.sandbox%.internal%.nbank%.fr", host)
+      body = body:gsub("http://" .. host:gsub("%.", "%%."), https)
       kong.response.set_raw_body(body)
