@@ -24,7 +24,7 @@ jobs:
         run: |
           set +e
           flux reconcile source git flux-system -n flux-system --timeout=2m
-          flux reconcile kustomization aml -n flux-system --with-source --timeout=3m
+          flux reconcile kustomization aml -n flux-system --with-source --timeout=8m
           echo "===== kustomization ====="
           kubectl -n flux-system get kustomization aml -o yaml
           echo "===== pods ====="
