@@ -1,0 +1,35 @@
+# Firebase auth paths on the console host. Kong forwards them to the emulator ingress.
+# Kept off the console route so the response rewriter does not alter emulator pages.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aml-app-auth-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - aml-app.dev.sandbox.nbank.fr
+    - aml-app.dev.sandbox.internal.nbank.fr
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /emulator
+        - path:
+            type: PathPrefix
+            value: /identitytoolkit.googleapis.com
+        - path:
+            type: PathPrefix
+            value: /securetoken.googleapis.com
+        - path:
+            type: PathPrefix
+            value: /__/auth
+      backendRefs:
+        - name: aml-auth-internal
+          port: 443

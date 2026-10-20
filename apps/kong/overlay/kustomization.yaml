@@ -124,4 +124,5 @@ resources:
   - reconciliation-app-route.yaml
   - aml-api-route.yaml
   - aml-app-route.yaml
+  - aml-app-auth-route.yaml
   - aml-auth-route.yaml

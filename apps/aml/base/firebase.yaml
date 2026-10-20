@@ -1,5 +1,5 @@
 # Auth emulator used by the Marble dev images. The API uses the in-cluster Service.
-# Browsers call the console host, which already resolves. These paths are proxied to the emulator.
+# Browsers call the console host. Kong forwards /emulator and the identity toolkit paths here.
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,72 +59,19 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
     nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
+    cert-manager.io/cluster-issuer: nbank-dev
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - aml-app.dev.sandbox.internal.nbank.fr
-      secretName: marble-app-dev-tls
+        - aml-auth.dev.sandbox.internal.nbank.fr
+      secretName: marble-firebase-dev-tls
   rules:
-    - host: aml-app.dev.sandbox.internal.nbank.fr
+    - host: aml-auth.dev.sandbox.internal.nbank.fr
       http:
         paths:
-          - path: /identitytoolkit.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /securetoken.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /emulator
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: marble-firebase-public
-  namespace: aml
-  annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: HTTP
-    nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
-spec:
-  ingressClassName: nginx
-  tls:
-    - hosts:
-        - aml-app.dev.sandbox.nbank.fr
-      secretName: marble-app-dev-tls
-  rules:
-    - host: aml-app.dev.sandbox.nbank.fr
-      http:
-        paths:
-          - path: /identitytoolkit.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /securetoken.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /emulator
-            pathType: Prefix
+          - path: /
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: marble-firebase

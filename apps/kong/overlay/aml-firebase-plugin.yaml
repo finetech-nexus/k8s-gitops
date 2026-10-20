@@ -27,7 +27,9 @@ config:
         if csp:find("connect-src", 1, true) then
           csp = csp:gsub("connect%-src", "connect-src " .. origin, 1)
         end
+        csp = csp:gsub("frame%-ancestors 'none'", "frame-ancestors 'self'", 1)
         kong.response.set_header("Content-Security-Policy", csp)
+        kong.response.set_header("X-Frame-Options", "SAMEORIGIN")
       end
   body_filter:
     - |
