@@ -1,0 +1,50 @@
+# The console embeds http://marble-firebase:9099. Browsers cannot resolve that name, and the
+# page CSP does not allow it. Rewrite the address to the public emulator and allow that origin.
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: aml-app-firebase
+  namespace: apim
+plugin: post-function
+config:
+  access:
+    - |
+      kong.service.request.set_header("Accept-Encoding", "identity")
+  header_filter:
+    - |
+      local origin = "https://aml-auth.dev.sandbox.internal.nbank.fr"
+      local csp = kong.response.get_header("Content-Security-Policy")
+      if type(csp) == "table" then
+        csp = csp[1]
+      end
+      if type(csp) == "string" then
+        if csp:find("frame-src 'none'", 1, true) then
+          csp = csp:gsub("frame%-src 'none'", "frame-src " .. origin, 1)
+        elseif csp:find("frame-src", 1, true) then
+          csp = csp:gsub("frame%-src", "frame-src " .. origin, 1)
+        end
+        if csp:find("connect-src", 1, true) then
+          csp = csp:gsub("connect%-src", "connect-src " .. origin, 1)
+        end
+        kong.response.set_header("Content-Security-Policy", csp)
+      end
+  body_filter:
+    - |
+      local ctype = kong.response.get_header("Content-Type") or ""
+      if type(ctype) == "table" then
+        ctype = ctype[1]
+      end
+      if not (ctype:find("text/html", 1, true) or ctype:find("application/json", 1, true) or ctype:find("javascript", 1, true)) then
+        return
+      end
+      local body, err = kong.response.get_raw_body()
+      if err or not body or body == "" then
+        return
+      end
+      local https = "https://aml-auth.dev.sandbox.internal.nbank.fr"
+      body = body:gsub("http://marble%-firebase:9099", https)
+      body = body:gsub("http:\\/\\/marble%-firebase:9099", https)
+      body = body:gsub("marble%-firebase:9099", "aml-auth.dev.sandbox.internal.nbank.fr")
+      body = body:gsub("http://aml%-auth%.dev%.sandbox%.internal%.nbank%.fr", https)
+      kong.response.set_raw_body(body)
