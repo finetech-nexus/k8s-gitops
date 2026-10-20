@@ -382,7 +382,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-firebase
+  name: marble-init-firebase-2
   namespace: aml
 spec:
   backoffLimit: 8
@@ -402,7 +402,7 @@ spec:
         - name: init
           image: python:3.12-alpine
           imagePullPolicy: IfNotPresent
-          command: ["sh", "-c", "pip install -q google-auth && python /config/init.py"]
+          command: ["sh", "-c", "pip install -q google-auth requests && python /config/init.py"]
           env:
             - name: MARBLE_API
               value: http://marble-api:8080
