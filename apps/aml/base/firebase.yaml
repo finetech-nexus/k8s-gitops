@@ -1,5 +1,5 @@
 # Auth emulator used by the Marble dev images. The API uses the in-cluster Service.
-# Browsers call the console host. Kong forwards /emulator and the identity toolkit paths here.
+# Browsers call the console host. The console proxy forwards the identity toolkit paths here.
 apiVersion: v1
 kind: Service
 metadata:

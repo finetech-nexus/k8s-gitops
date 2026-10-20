@@ -7,5 +7,6 @@ resources:
   - redis.yaml
   - firebase.yaml
   - screening.yaml
+  - app-proxy.yaml
   - marble.yaml
   - init-config.yaml

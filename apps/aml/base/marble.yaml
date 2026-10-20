@@ -22,7 +22,7 @@ data:
   ANALYTICS_BUCKET_URL: file:///data/analytics?create_dir=true
   MARBLE_APP_URL: https://aml-app.dev.sandbox.nbank.fr
   MARBLE_API_URL: http://marble-api:8080
-  TEST_FIREBASE_AUTH_EMULATOR_HOST: aml-auth.dev.sandbox.internal.nbank.fr
+  TEST_FIREBASE_AUTH_EMULATOR_HOST: aml-app.dev.sandbox.internal.nbank.fr
 ---
 apiVersion: batch/v1
 kind: Job
@@ -261,6 +261,39 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+        - name: proxy
+          image: nginxinc/nginx-unprivileged:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              resolver=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+              sed "s/__RESOLVER__/${resolver}/" /etc/nginx/nginx.conf.template > /tmp/nginx.conf
+              exec nginx -c /tmp/nginx.conf -g 'daemon off;'
+          ports:
+            - name: proxy
+              containerPort: 8081
+          volumeMounts:
+            - name: proxy-config
+              mountPath: /etc/nginx/nginx.conf.template
+              subPath: nginx.conf
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: proxy
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: proxy-config
+          configMap:
+            name: marble-app-proxy
 ---
 apiVersion: v1
 kind: Service
@@ -275,7 +308,7 @@ spec:
   ports:
     - name: http
       port: 8080
-      targetPort: http
+      targetPort: proxy
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -344,7 +377,7 @@ metadata:
       sub_filter 'aml-auth.dev.sandbox.internal.nbank.fr' 'aml-app.dev.sandbox.internal.nbank.fr';
       sub_filter 'http://aml-app.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
       sub_filter_once off;
-      sub_filter_types text/html application/json text/javascript application/javascript;
+      sub_filter_types text/html text/javascript application/javascript;
 spec:
   ingressClassName: nginx
   tls:
@@ -355,34 +388,6 @@ spec:
     - host: aml-app.dev.sandbox.internal.nbank.fr
       http:
         paths:
-          - path: /identitytoolkit.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /securetoken.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /emulator
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /__/auth
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
           - path: /
             pathType: ImplementationSpecific
             backend:
@@ -406,7 +411,7 @@ metadata:
       sub_filter 'aml-auth.dev.sandbox.internal.nbank.fr' 'aml-app.dev.sandbox.internal.nbank.fr';
       sub_filter 'http://aml-app.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
       sub_filter_once off;
-      sub_filter_types text/html application/json text/javascript application/javascript;
+      sub_filter_types text/html text/javascript application/javascript;
 spec:
   ingressClassName: nginx
   tls:
@@ -417,34 +422,6 @@ spec:
     - host: aml-app.dev.sandbox.nbank.fr
       http:
         paths:
-          - path: /identitytoolkit.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /securetoken.googleapis.com
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /emulator
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
-          - path: /__/auth
-            pathType: Prefix
-            backend:
-              service:
-                name: marble-firebase
-                port:
-                  number: 9099
           - path: /
             pathType: ImplementationSpecific
             backend:

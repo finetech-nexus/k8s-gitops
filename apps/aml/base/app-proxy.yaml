@@ -1,0 +1,82 @@
+# Sits in front of the Marble console. Auth emulator paths stay on the console
+# host; everything else is the frontend.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marble-app-proxy
+  namespace: aml
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+
+    events {
+      worker_connections 256;
+    }
+
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+      access_log /dev/stdout;
+      sendfile on;
+      keepalive_timeout 65;
+      client_body_temp_path /tmp/client_body;
+      proxy_temp_path /tmp/proxy;
+      fastcgi_temp_path /tmp/fastcgi;
+      uwsgi_temp_path /tmp/uwsgi;
+      scgi_temp_path /tmp/scgi;
+
+      # __RESOLVER__ is the pod nameserver, filled in at start. A fixed upstream
+      # name would stop nginx from booting whenever that name cannot be resolved yet.
+      resolver __RESOLVER__ valid=10s ipv6=off;
+
+      server {
+        listen 8081;
+        server_name _;
+
+        location ^~ /identitytoolkit.googleapis.com/ {
+          set $firebase marble-firebase.aml.svc.cluster.local:9099;
+          proxy_pass http://$firebase;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location ^~ /securetoken.googleapis.com/ {
+          set $firebase marble-firebase.aml.svc.cluster.local:9099;
+          proxy_pass http://$firebase;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location ^~ /emulator/ {
+          set $firebase marble-firebase.aml.svc.cluster.local:9099;
+          proxy_pass http://$firebase;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location ^~ /__/auth/ {
+          set $firebase marble-firebase.aml.svc.cluster.local:9099;
+          proxy_pass http://$firebase;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location / {
+          proxy_pass http://127.0.0.1:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+      }
+    }

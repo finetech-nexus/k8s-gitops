@@ -1,5 +1,7 @@
-# Firebase auth paths on the console host. Kong forwards them to the emulator ingress.
-# Kept off the console route so the response rewriter does not alter emulator pages.
+# Firebase auth paths on the console host. Same ingress as the console, so the
+# request keeps a host the browser can use. The console proxy sends these paths
+# to the emulator. Kept off the console route so the response rewriter does not
+# alter emulator pages.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -32,5 +34,5 @@ spec:
             type: PathPrefix
             value: /__/auth
       backendRefs:
-        - name: aml-auth-internal
+        - name: aml-app-internal
           port: 443
