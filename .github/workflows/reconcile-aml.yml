@@ -1,0 +1,30 @@
+name: Reconcile — aml
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/aml/**'
+      - 'clusters/dev/aml.yaml'
+      - '.github/workflows/reconcile-aml.yml'
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Flux CLI
+        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile Git source and Marble
+        run: |
+          flux reconcile source git flux-system -n flux-system --timeout=2m
+          flux reconcile kustomization aml -n flux-system --with-source --timeout=10m
+          kubectl -n aml rollout status deploy/marble-api --timeout=180s
+          kubectl -n aml rollout status deploy/marble-app --timeout=180s
+          kubectl -n aml get pods,jobs
+          kubectl -n flux-system get kustomization aml
