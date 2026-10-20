@@ -1,0 +1,105 @@
+# Auth emulator used by the Marble dev images. The API uses the in-cluster Service.
+# Browsers use https://aml-auth.dev.sandbox.internal.nbank.fr (the console rewrites the http URL).
+apiVersion: v1
+kind: Service
+metadata:
+  name: marble-firebase
+  namespace: aml
+  labels:
+    app: marble-firebase
+spec:
+  selector:
+    app: marble-firebase
+  ports:
+    - name: auth
+      port: 9099
+      targetPort: auth
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marble-firebase
+  namespace: aml
+  labels:
+    app: marble-firebase
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marble-firebase
+  template:
+    metadata:
+      labels:
+        app: marble-firebase
+    spec:
+      containers:
+        - name: firebase
+          image: europe-west1-docker.pkg.dev/marble-infra/marble/firebase-emulator:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: auth
+              containerPort: 9099
+          readinessProbe:
+            tcpSocket:
+              port: auth
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-firebase
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-auth.dev.sandbox.internal.nbank.fr
+      secretName: marble-firebase-dev-tls
+  rules:
+    - host: aml-auth.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marble-firebase-public
+  namespace: aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aml-auth.dev.sandbox.nbank.fr
+      secretName: marble-firebase-dev-tls
+  rules:
+    - host: aml-auth.dev.sandbox.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099

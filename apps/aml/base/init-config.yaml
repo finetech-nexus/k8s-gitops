@@ -8,18 +8,12 @@ data:
   init.py: |
     import json
     import os
-    import ssl
     import time
     import urllib.error
-    import urllib.parse
     import urllib.request
 
-    SSL = ssl.create_default_context(cafile=os.environ["SSL_CERT_FILE"])
-
     API = os.environ["MARBLE_API"].rstrip("/")
-    IAM_TOKEN = os.environ["IAM_TOKEN_URL"]
-    CLIENT_ID = os.environ["OIDC_CLIENT_ID"]
-    CLIENT_SECRET = os.environ["OIDC_CLIENT_SECRET"]
+    FIREBASE = os.environ["FIREBASE_AUTH"].rstrip("/")
     EMAIL = os.environ["ADMIN_EMAIL"]
     PASSWORD = os.environ["ADMIN_PASSWORD"]
     SCREENING = "AML screening"
@@ -94,35 +88,20 @@ data:
         ok=(201, 409),
     )
 
-    def keycloak_id_token():
-        body = urllib.parse.urlencode(
-            {
-                "grant_type": "password",
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
-                "username": EMAIL,
-                "password": PASSWORD,
-                "scope": "openid email profile",
-            }
-        ).encode()
-        request = urllib.request.Request(
-            IAM_TOKEN,
-            data=body,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=30, context=SSL) as response:
-            return json.loads(response.read().decode())["id_token"]
-
     token = None
-    for attempt in range(40):
+    for attempt in range(15):
         try:
-            _, marble = call("POST", API + "/token", token=keycloak_id_token())
+            _, firebase = call(
+                "POST",
+                FIREBASE + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=placeholder",
+                {"email": EMAIL, "password": PASSWORD, "returnSecureToken": True},
+            )
+            _, marble = call("POST", API + "/token", token=firebase["idToken"])
             token = marble["access_token"]
             break
-        except (SystemExit, urllib.error.URLError, KeyError) as error:
-            print(f"login not ready ({attempt + 1}/40): {error}")
-            time.sleep(5)
+        except SystemExit as error:
+            print(f"login not ready ({attempt + 1}/15): {error}")
+            time.sleep(3)
     if not token:
         raise SystemExit("could not sign in to Marble")
 
@@ -335,144 +314,11 @@ data:
         print("AML transaction check already present")
 
     print("Marble AML configuration is ready")
-  iam_client.py: |
-    import json
-    import os
-    import ssl
-    import urllib.error
-    import urllib.parse
-    import urllib.request
-
-    BASE = os.environ["KEYCLOAK_URL"].rstrip("/")
-    REALM = os.environ["KEYCLOAK_REALM"]
-    CTX = ssl.create_default_context(cafile=os.environ["SSL_CERT_FILE"])
-
-
-    def call(method, url, body=None, token=None, form=False, ok=(200, 201, 204)):
-        data = None
-        headers = {}
-        if body is not None:
-            if form:
-                data = urllib.parse.urlencode(body).encode()
-                headers["Content-Type"] = "application/x-www-form-urlencoded"
-            else:
-                data = json.dumps(body).encode()
-                headers["Content-Type"] = "application/json"
-        if token:
-            headers["Authorization"] = "Bearer " + token
-        request = urllib.request.Request(url, data=data, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(request, timeout=60, context=CTX) as response:
-                raw = response.read().decode()
-                return response.status, json.loads(raw) if raw else None
-        except urllib.error.HTTPError as error:
-            raw = error.read().decode()
-            if error.code not in ok:
-                raise SystemExit(f"{method} {url} -> {error.code} {raw}")
-            try:
-                parsed = json.loads(raw) if raw else None
-            except json.JSONDecodeError:
-                parsed = raw
-            return error.code, parsed
-
-
-    print("signing in to Keycloak admin")
-    _, admin = call(
-        "POST",
-        BASE + "/realms/master/protocol/openid-connect/token",
-        {
-            "grant_type": "password",
-            "client_id": "admin-cli",
-            "username": os.environ["KEYCLOAK_ADMIN"],
-            "password": os.environ["KEYCLOAK_ADMIN_PASSWORD"],
-        },
-        form=True,
-    )
-    token = admin["access_token"]
-    clients = BASE + "/admin/realms/" + REALM + "/clients"
-    users = BASE + "/admin/realms/" + REALM + "/users"
-    client = {
-        "clientId": os.environ["OIDC_CLIENT_ID"],
-        "name": "Marble AML",
-        "protocol": "openid-connect",
-        "publicClient": False,
-        "secret": os.environ["OIDC_CLIENT_SECRET"],
-        "standardFlowEnabled": True,
-        "implicitFlowEnabled": False,
-        "directAccessGrantsEnabled": True,
-        "serviceAccountsEnabled": False,
-        "frontchannelLogout": True,
-        "redirectUris": [
-            "https://aml-app.dev.sandbox.internal.nbank.fr/oidc/callback",
-            "https://aml-app.dev.sandbox.nbank.fr/oidc/callback",
-        ],
-        "webOrigins": [
-            "https://aml-app.dev.sandbox.internal.nbank.fr",
-            "https://aml-app.dev.sandbox.nbank.fr",
-        ],
-        "attributes": {
-            "pkce.code.challenge.method": "S256",
-            "post.logout.redirect.uris": "https://aml-app.dev.sandbox.internal.nbank.fr/*##https://aml-app.dev.sandbox.nbank.fr/*",
-        },
-    }
-    _, existing = call("GET", clients + "?clientId=" + client["clientId"], token=token)
-    if existing:
-        client["id"] = existing[0]["id"]
-        call("PUT", clients + "/" + client["id"], client, token)
-        print("updated Keycloak client", client["clientId"])
-    else:
-        call("POST", clients, client, token, ok=(201, 409))
-        print("created Keycloak client", client["clientId"])
-
-    email = os.environ["ADMIN_EMAIL"]
-    _, found = call("GET", users + "?" + urllib.parse.urlencode({"email": email, "exact": "true"}), token=token)
-    if found:
-        user_id = found[0]["id"]
-        print("Keycloak user already exists")
-    else:
-        call(
-            "POST",
-            users,
-            {
-                "username": email,
-                "email": email,
-                "emailVerified": True,
-                "enabled": True,
-                "firstName": "AML",
-                "lastName": "Admin",
-            },
-            token,
-            ok=(201, 409),
-        )
-        _, found = call("GET", users + "?" + urllib.parse.urlencode({"email": email, "exact": "true"}), token=token)
-        if not found:
-            raise SystemExit("Keycloak user was not created")
-        user_id = found[0]["id"]
-        print("created Keycloak user")
-    call(
-        "PUT",
-        users + "/" + user_id,
-        {
-            "email": email,
-            "emailVerified": True,
-            "enabled": True,
-            "firstName": "AML",
-            "lastName": "Admin",
-        },
-        token,
-    )
-    call(
-        "PUT",
-        users + "/" + user_id + "/reset-password",
-        {"type": "password", "value": os.environ["ADMIN_PASSWORD"], "temporary": False},
-        token,
-    )
-    print("Keycloak client aml is ready in realm", REALM)
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-iam
+  name: marble-init
   namespace: aml
 spec:
   backoffLimit: 8
@@ -481,44 +327,6 @@ spec:
     spec:
       restartPolicy: Never
       initContainers:
-        - name: ensure-iam-client
-          image: python:3.12-alpine
-          imagePullPolicy: IfNotPresent
-          command: ["python", "/config/iam_client.py"]
-          env:
-            - name: SSL_CERT_FILE
-              value: /ca/internal-ca.crt
-            - name: KEYCLOAK_URL
-              value: https://iam.dev.sandbox.internal.nbank.fr/auth
-            - name: KEYCLOAK_REALM
-              value: internal
-            - name: KEYCLOAK_ADMIN
-              value: admin
-            - name: KEYCLOAK_ADMIN_PASSWORD
-              value: admin
-            - name: OIDC_CLIENT_ID
-              value: aml
-            - name: OIDC_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: marble
-                  key: oidc-client-secret
-            - name: ADMIN_EMAIL
-              valueFrom:
-                secretKeyRef:
-                  name: marble
-                  key: admin-email
-            - name: ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: marble
-                  key: admin-password
-          volumeMounts:
-            - name: config
-              mountPath: /config
-            - name: internal-ca
-              mountPath: /ca
-              readOnly: true
         - name: wait-for-api
           image: curlimages/curl:8.11.1
           imagePullPolicy: IfNotPresent
@@ -532,19 +340,10 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["python", "/config/init.py"]
           env:
-            - name: SSL_CERT_FILE
-              value: /ca/internal-ca.crt
             - name: MARBLE_API
               value: http://marble-api:8080
-            - name: IAM_TOKEN_URL
-              value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token
-            - name: OIDC_CLIENT_ID
-              value: aml
-            - name: OIDC_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: marble
-                  key: oidc-client-secret
+            - name: FIREBASE_AUTH
+              value: http://marble-firebase:9099
             - name: ADMIN_EMAIL
               valueFrom:
                 secretKeyRef:
@@ -558,9 +357,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
-            - name: internal-ca
-              mountPath: /ca
-              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -572,6 +368,3 @@ spec:
         - name: config
           configMap:
             name: marble-init
-        - name: internal-ca
-          configMap:
-            name: marble-internal-ca

@@ -351,7 +351,7 @@ keycloakx:
       nginx.ingress.kubernetes.io/preserve-host: "true"
       nginx.ingress.kubernetes.io/enable-cors: "true"
       # web-app must be able to fetch OIDC discovery; ops dashboard kept for backoffice.
-      nginx.ingress.kubernetes.io/cors-allow-origin: "https://web-app.dev.sandbox.internal.nbank.fr, https://web-app.dev1.sandbox.internal.nbank.fr, https://ops.sandbox.nexus-bank.io, https://aml-app.dev.sandbox.internal.nbank.fr, https://aml-app.dev.sandbox.nbank.fr"
+      nginx.ingress.kubernetes.io/cors-allow-origin: "https://web-app.dev.sandbox.internal.nbank.fr, https://web-app.dev1.sandbox.internal.nbank.fr, https://ops.sandbox.nexus-bank.io"
       nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"
       nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Accept, Origin"
       nginx.ingress.kubernetes.io/cors-allow-credentials: "true"

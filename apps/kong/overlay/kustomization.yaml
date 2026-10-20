@@ -82,6 +82,8 @@ resources:
   - aml-api-endpoints.yaml
   - aml-app-service.yaml
   - aml-app-endpoints.yaml
+  - aml-auth-service.yaml
+  - aml-auth-endpoints.yaml
   - webapp-route.yaml
   - docs-route.yaml
   - fynams-route.yaml
@@ -121,3 +123,4 @@ resources:
   - reconciliation-app-route.yaml
   - aml-api-route.yaml
   - aml-app-route.yaml
+  - aml-auth-route.yaml

@@ -16,13 +16,11 @@ API:
 
 ## Login
 
-The console uses Keycloak, the same issuer as Fineract: realm `internal` on `https://iam.dev.sandbox.internal.nbank.fr/auth`. Choose **Sign in with OpenID Connect**.
+Sign in with email and password. The browser talks to the Firebase emulator at `https://aml-auth.dev.sandbox.internal.nbank.fr`. The API keeps using the in-cluster Service `marble-firebase`.
 
 | | |
 | --- | --- |
 | Email | `aml-admin@nbank.fr` |
 | Password | `marble-aml-dev` |
 
-The `marble-init-iam` job creates the Keycloak client `aml` and this user. Same values as the `marble` secret in `apps/aml/base/secret.yaml`.
-
-Marble only shows that button when `license-key` in the secret is a Marble license with the SSO entitlement. Without it, the API exits with `cannot use OpenID Connect configuration without the appropriate license entitlement`.
+Created by the `marble-init` job on an empty database. Same values as the `marble` secret in `apps/aml/base/secret.yaml`.

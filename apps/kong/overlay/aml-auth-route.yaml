@@ -1,0 +1,21 @@
+# Marble Firebase auth emulator: HTTPRoute -> Kong -> ingress-nginx.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: aml-auth-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - aml-auth.dev.sandbox.nbank.fr
+    - aml-auth.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: aml-auth-internal
+          port: 443

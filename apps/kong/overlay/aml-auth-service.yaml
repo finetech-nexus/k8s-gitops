@@ -1,0 +1,17 @@
+# Kong -> ingress-nginx: Marble Firebase auth emulator.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aml-auth-internal
+  namespace: apim
+  annotations:
+    konghq.com/host-header: aml-auth.dev.sandbox.internal.nbank.fr
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "false"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https

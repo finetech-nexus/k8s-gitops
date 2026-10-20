@@ -5,13 +5,7 @@ resources:
   - secret.yaml
   - database.yaml
   - redis.yaml
+  - firebase.yaml
   - screening.yaml
   - marble.yaml
   - init-config.yaml
-configMapGenerator:
-  - name: marble-internal-ca
-    namespace: aml
-    files:
-      - internal-ca.crt
-    options:
-      disableNameSuffixHash: true
