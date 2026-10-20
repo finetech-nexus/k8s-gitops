@@ -30,7 +30,7 @@ jobs:
           echo "===== pods ====="
           kubectl -n aml get pods,jobs -o wide
           echo "===== api logs ====="
-          kubectl -n aml logs deploy/marble-api --tail=80
+          kubectl -n aml logs -l app=marble-api --tail=60 --prefix
           echo "===== app logs ====="
           kubectl -n aml logs deploy/marble-app -c app --tail=40
           echo "===== proxy logs ====="

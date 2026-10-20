@@ -391,15 +391,6 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
     cert-manager.io/cluster-issuer: nbank-dev
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Accept-Encoding "";
-      sub_filter 'http://marble-firebase:9099' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'https://aml-auth.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'marble-firebase:9099' 'aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'aml-auth.dev.sandbox.internal.nbank.fr' 'aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'http://aml-app.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter_once off;
-      sub_filter_types text/html text/javascript application/javascript;
 spec:
   ingressClassName: nginx
   tls:
@@ -425,15 +416,6 @@ metadata:
   namespace: aml
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Accept-Encoding "";
-      sub_filter 'http://marble-firebase:9099' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'https://aml-auth.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'marble-firebase:9099' 'aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'aml-auth.dev.sandbox.internal.nbank.fr' 'aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter 'http://aml-app.dev.sandbox.internal.nbank.fr' 'https://aml-app.dev.sandbox.internal.nbank.fr';
-      sub_filter_once off;
-      sub_filter_types text/html text/javascript application/javascript;
 spec:
   ingressClassName: nginx
   tls:
