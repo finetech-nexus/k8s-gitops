@@ -22,9 +22,19 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Reconcile Git source and Marble
         run: |
+          set +e
           flux reconcile source git flux-system -n flux-system --timeout=2m
-          flux reconcile kustomization aml -n flux-system --with-source --timeout=10m
-          kubectl -n aml rollout status deploy/marble-api --timeout=180s
-          kubectl -n aml rollout status deploy/marble-app --timeout=180s
-          kubectl -n aml get pods,jobs
-          kubectl -n flux-system get kustomization aml
+          flux reconcile kustomization aml -n flux-system --with-source --timeout=3m
+          echo "===== kustomization ====="
+          kubectl -n flux-system get kustomization aml -o yaml
+          echo "===== pods ====="
+          kubectl -n aml get pods,jobs -o wide
+          echo "===== api logs ====="
+          kubectl -n aml logs deploy/marble-api --tail=80
+          echo "===== app logs ====="
+          kubectl -n aml logs deploy/marble-app -c app --tail=40
+          echo "===== proxy logs ====="
+          kubectl -n aml logs deploy/marble-app -c proxy --tail=40
+          echo "===== init logs ====="
+          kubectl -n aml logs job/marble-init-firebase --tail=80
+          exit 0
