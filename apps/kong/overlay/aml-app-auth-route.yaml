@@ -9,6 +9,7 @@ metadata:
   annotations:
     konghq.com/strip-path: "false"
     konghq.com/plugins: internal-only
+    konghq.com/priority: "100"
 spec:
   parentRefs:
     - name: kong

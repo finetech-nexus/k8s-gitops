@@ -58,7 +58,6 @@ metadata:
   namespace: aml
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
-    nginx.ingress.kubernetes.io/upstream-vhost: "localhost:9099"
     cert-manager.io/cluster-issuer: nbank-dev
 spec:
   ingressClassName: nginx

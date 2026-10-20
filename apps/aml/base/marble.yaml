@@ -355,6 +355,34 @@ spec:
     - host: aml-app.dev.sandbox.internal.nbank.fr
       http:
         paths:
+          - path: /identitytoolkit.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /securetoken.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /emulator
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /__/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
           - path: /
             pathType: ImplementationSpecific
             backend:
@@ -389,6 +417,34 @@ spec:
     - host: aml-app.dev.sandbox.nbank.fr
       http:
         paths:
+          - path: /identitytoolkit.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /securetoken.googleapis.com
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /emulator
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
+          - path: /__/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: marble-firebase
+                port:
+                  number: 9099
           - path: /
             pathType: ImplementationSpecific
             backend:

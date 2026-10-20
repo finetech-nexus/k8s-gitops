@@ -8,6 +8,7 @@ metadata:
   annotations:
     konghq.com/strip-path: "false"
     konghq.com/plugins: internal-only,aml-app-firebase
+    konghq.com/priority: "1"
 spec:
   parentRefs:
     - name: kong
