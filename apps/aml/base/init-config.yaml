@@ -200,15 +200,37 @@ data:
         return (model or {}).get("tables") or {}
 
 
+    def field_names(table_item):
+        names = set()
+        fields = table_item.get("fields") or {}
+        if isinstance(fields, dict):
+            for key, value in fields.items():
+                if isinstance(value, dict) and value.get("name"):
+                    names.add(value["name"])
+                else:
+                    names.add(key)
+        return names
+
+
     def ensure_table(spec):
         current = tables()
+        existing = None
         for item in current.values():
             if item.get("name") == spec["name"]:
-                print(f"table {spec['name']} already exists")
-                return item["id"]
-        print(f"creating table {spec['name']}")
-        _, created = api("POST", "/data-model/tables", spec, ok=(201,))
-        return created["id"]
+                existing = item
+                break
+        if existing is None:
+            print(f"creating table {spec['name']}")
+            _, created = api("POST", "/data-model/tables", spec, ok=(201,))
+            return created["id"]
+        print(f"table {spec['name']} already exists")
+        present = field_names(existing)
+        for column in spec["fields"]:
+            if column["name"] in present:
+                continue
+            print(f"adding field {spec['name']}.{column['name']}")
+            api("POST", f"/data-model/tables/{existing['id']}/fields", column, ok=(200, 201))
+        return existing["id"]
 
 
     def datasets():
@@ -439,7 +461,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-7
+  name: marble-init-aml-8
   namespace: aml
 spec:
   backoffLimit: 1
