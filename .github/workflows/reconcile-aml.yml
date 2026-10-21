@@ -36,5 +36,5 @@ jobs:
           echo "===== proxy logs ====="
           kubectl -n aml logs deploy/marble-app -c proxy --tail=40
           echo "===== init logs ====="
-          kubectl -n aml logs job/marble-init-aml-6 --tail=160
+          kubectl -n aml logs job/marble-init-aml-7 --tail=160
           exit 0

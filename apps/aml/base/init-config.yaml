@@ -233,10 +233,12 @@ data:
 
 
     def publish(iteration_id):
+        _, report = api("POST", f"/scenario-iterations/{iteration_id}/validate")
+        print("validation: " + json.dumps(report))
         api(
             "POST",
             f"/scenario-iterations/{iteration_id}/commit",
-            ok=(200, 201, 204, 400, 404, 409),
+            ok=(200, 201, 204, 409),
         )
         api(
             "POST",
@@ -340,7 +342,10 @@ data:
                     raise
                 print("AML screening is saved. Publishing it needs a Marble license that includes sanctions.")
 
-    if TRANSACTION not in existing:
+    transaction = next((item for item in (scenarios or []) if item.get("name") == TRANSACTION), None)
+    if transaction and transaction.get("live_version_id"):
+        print("AML transaction check already present")
+    else:
         current = tables()
         clients_id = next(item["id"] for item in current.values() if item.get("name") == "clients")
         ensure_table(
@@ -367,22 +372,31 @@ data:
                 ],
             )
         )
-        print("creating AML transaction check scenario")
-        _, scenario = api(
-            "POST",
-            "/scenarios",
-            {
-                "name": TRANSACTION,
-                "description": "Review large payments and decline payments involving a high-risk country.",
-                "trigger_object_type": "transactions",
-            },
-        )
-        _, iteration = api(
-            "POST",
-            "/scenario-iterations",
-            {
-                "scenario_id": scenario["id"],
-                "body": {
+        iteration = None
+        if transaction is None:
+            print("creating AML transaction check scenario")
+            _, transaction = api(
+                "POST",
+                "/scenarios",
+                {
+                    "name": TRANSACTION,
+                    "description": "Review large payments and decline payments involving a high-risk country.",
+                    "trigger_object_type": "transactions",
+                },
+            )
+        else:
+            _, found = api("GET", "/scenario-iterations?scenario_id=" + transaction["id"])
+            for item in found or []:
+                if item.get("version") is None:
+                    iteration = item
+                    break
+        if iteration is None:
+            _, iteration = api(
+                "POST",
+                "/scenario-iterations",
+                {
+                    "scenario_id": transaction["id"],
+                    "body": {
                     "trigger_condition_ast_expression": None,
                     "score_review_threshold": 30,
                     "score_block_and_review_threshold": 80,
@@ -419,18 +433,16 @@ data:
             },
         )
         publish(iteration["id"])
-    else:
-        print("AML transaction check already present")
 
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-6
+  name: marble-init-aml-7
   namespace: aml
 spec:
-  backoffLimit: 8
+  backoffLimit: 1
   ttlSecondsAfterFinished: 86400
   template:
     spec:
