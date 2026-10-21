@@ -268,6 +268,7 @@ data:
             )
         )
         iteration = None
+        committed = None
         if screening is None:
             print("creating AML screening scenario")
             _, screening = api(
@@ -282,53 +283,62 @@ data:
         else:
             _, found = api("GET", "/scenario-iterations?scenario_id=" + screening["id"])
             for item in found or []:
-                if item.get("version") is None:
+                if item.get("version") is not None:
+                    committed = item
+                elif iteration is None:
                     iteration = item
-                    break
-        if iteration is None:
-            _, iteration = api(
-                "POST",
-                "/scenario-iterations",
-                {
-                    "scenario_id": screening["id"],
-                    "body": {
-                        "trigger_condition_ast_expression": None,
-                        "score_review_threshold": 50,
-                        "score_block_and_review_threshold": 80,
-                        "score_decline_threshold": 100,
-                        "schedule": "",
-                        "rules": [
-                            {
-                                "display_order": 1,
-                                "name": "Customer name is present",
-                                "description": "Keeps the scenario valid. A screening hit forces review.",
-                                "formula_ast_expression": {"name": "IsNotEmpty", "children": [payload("full_name")]},
-                                "score_modifier": 1,
-                                "rule_group": "screening",
-                            }
-                        ],
+        if committed is not None:
+            print("AML screening is saved. Publishing it needs a Marble license that includes sanctions.")
+        else:
+            if iteration is None:
+                _, iteration = api(
+                    "POST",
+                    "/scenario-iterations",
+                    {
+                        "scenario_id": screening["id"],
+                        "body": {
+                            "trigger_condition_ast_expression": None,
+                            "score_review_threshold": 50,
+                            "score_block_and_review_threshold": 80,
+                            "score_decline_threshold": 100,
+                            "schedule": "",
+                            "rules": [
+                                {
+                                    "display_order": 1,
+                                    "name": "Customer name is present",
+                                    "description": "Keeps the scenario valid. A screening hit forces review.",
+                                    "formula_ast_expression": {"name": "IsNotEmpty", "children": [payload("full_name")]},
+                                    "score_modifier": 1,
+                                    "rule_group": "screening",
+                                }
+                            ],
+                        },
                     },
-                },
-            )
-        if not (iteration.get("body") or {}).get("screening_configs"):
-            chosen = datasets()
-            print(f"screening datasets: {chosen}")
-            screening_body = {
-                "name": "AML person screening",
-                "description": "Sanctions and PEP screening of the customer name.",
-                "datasets": chosen,
-                "threshold": 70,
-                "forced_outcome": "review",
-                "entity_type": "Person",
-                "query": {"name": screening_name("full_name")},
-            }
+                )
+            if not (iteration.get("body") or {}).get("screening_configs"):
+                chosen = datasets()
+                print(f"screening datasets: {chosen}")
+                screening_body = {
+                    "name": "AML person screening",
+                    "description": "Sanctions and PEP screening of the customer name.",
+                    "datasets": chosen,
+                    "threshold": 70,
+                    "forced_outcome": "review",
+                    "entity_type": "Person",
+                    "query": {"name": screening_name("full_name")},
+                }
+                try:
+                    api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
+                except SystemExit as error:
+                    print(f"dataset filter rejected, retrying without a dataset list: {error}")
+                    screening_body.pop("datasets", None)
+                    api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
             try:
-                api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
+                publish(iteration["id"])
             except SystemExit as error:
-                print(f"dataset filter rejected, retrying without a dataset list: {error}")
-                screening_body.pop("datasets", None)
-                api("POST", f"/scenario-iterations/{iteration['id']}/screening", screening_body)
-        publish(iteration["id"])
+                if "screening feature access is missing" not in str(error):
+                    raise
+                print("AML screening is saved. Publishing it needs a Marble license that includes sanctions.")
 
     if TRANSACTION not in existing:
         current = tables()
@@ -417,7 +427,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-5
+  name: marble-init-aml-6
   namespace: aml
 spec:
   backoffLimit: 8
