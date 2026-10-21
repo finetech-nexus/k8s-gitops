@@ -54,8 +54,8 @@ data:
 
 
 
-    def field(name, alias, data_type, nullable):
-        return {
+    def field(name, alias, data_type, nullable, semantic=None):
+        body = {
             "name": name,
             "description": alias,
             "type": data_type,
@@ -64,6 +64,9 @@ data:
             "is_enum": False,
             "is_unique": False,
         }
+        if semantic:
+            body["semantic_type"] = semantic
+        return body
 
 
     def table(name, alias, semantic_type, ordering, fields, links=None):
@@ -252,11 +255,11 @@ data:
                 "person",
                 "updated_at",
                 [
-                    field("object_id", "Object id", "String", False),
-                    field("updated_at", "Updated at", "Timestamp", False),
-                    field("full_name", "Full name", "String", False),
+                    field("object_id", "Object id", "String", False, "id"),
+                    field("updated_at", "Updated at", "Timestamp", False, "last_update"),
+                    field("full_name", "Full name", "String", False, "name"),
                     field("birth_date", "Birth date", "String", True),
-                    field("nationality", "Nationality", "String", True),
+                    field("nationality", "Nationality", "String", True, "country"),
                 ],
             )
         )
@@ -325,12 +328,12 @@ data:
                 "transaction",
                 "updated_at",
                 [
-                    field("object_id", "Object id", "String", False),
-                    field("updated_at", "Updated at", "Timestamp", False),
-                    field("amount", "Amount", "Float", False),
-                    field("currency", "Currency", "String", True),
-                    field("country", "Country", "String", False),
-                    field("client_id", "Client", "String", True),
+                    field("object_id", "Object id", "String", False, "id"),
+                    field("updated_at", "Updated at", "Timestamp", False, "last_update"),
+                    field("amount", "Amount", "Float", False, "monetary_amount"),
+                    field("currency", "Currency", "String", True, "currency"),
+                    field("country", "Country", "String", False, "country"),
+                    field("client_id", "Client", "String", True, "foreign_key"),
                 ],
                 [
                     {
@@ -402,7 +405,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-3
+  name: marble-init-aml-4
   namespace: aml
 spec:
   backoffLimit: 8
