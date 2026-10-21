@@ -445,3 +445,61 @@ spec:
             items:
               - key: firebase-service-account.json
                 path: service-account.json
+---
+# Firebase already has this account. Marble only accepts it after a row exists in marble.users.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-add-user-medamine
+  namespace: aml
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: add-user
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGHOST
+              value: marble-postgresql
+            - name: PGDATABASE
+              value: marble
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              psql -v ON_ERROR_STOP=1 <<'SQL'
+              INSERT INTO marble.users (email, role, organization_id, first_name, last_name)
+              SELECT 'miladi.medamine@gmail.com', 4, organization_id, 'Medamine', 'Miladi'
+              FROM marble.users
+              WHERE lower(email) = 'aml-admin@nbank.fr'
+                AND deleted_at IS NULL
+                AND organization_id IS NOT NULL
+              ORDER BY email
+              LIMIT 1
+              ON CONFLICT DO NOTHING;
+              SQL
+              count=$(psql -tAc "SELECT count(*) FROM marble.users WHERE lower(email) = 'miladi.medamine@gmail.com' AND deleted_at IS NULL")
+              echo "user rows: ${count}"
+              test "$count" = "1"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
