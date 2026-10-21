@@ -135,7 +135,10 @@ data:
 
 
     print("configuring firebase")
-    ensure_firebase_user()
+    try:
+        ensure_firebase_user()
+    except (SystemExit, Exception) as error:
+        print(f"firebase admin setup skipped: {error}")
 
     print("creating organization")
     call(
@@ -382,7 +385,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-firebase-2
+  name: marble-init-aml
   namespace: aml
 spec:
   backoffLimit: 8
