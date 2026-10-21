@@ -250,8 +250,10 @@ data:
                 "clients",
                 "Clients",
                 "person",
-                "full_name",
+                "updated_at",
                 [
+                    field("object_id", "Object id", "String", False),
+                    field("updated_at", "Updated at", "Timestamp", False),
                     field("full_name", "Full name", "String", False),
                     field("birth_date", "Birth date", "String", True),
                     field("nationality", "Nationality", "String", True),
@@ -321,8 +323,10 @@ data:
                 "transactions",
                 "Transactions",
                 "transaction",
-                "amount",
+                "updated_at",
                 [
+                    field("object_id", "Object id", "String", False),
+                    field("updated_at", "Updated at", "Timestamp", False),
                     field("amount", "Amount", "Float", False),
                     field("currency", "Currency", "String", True),
                     field("country", "Country", "String", False),
@@ -398,7 +402,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-2
+  name: marble-init-aml-3
   namespace: aml
 spec:
   backoffLimit: 8
