@@ -272,6 +272,8 @@ spec:
       labels:
         app: marble-app
       annotations:
+        aml.nbank.fr/ui: "20261023-1"
+      annotations:
         aml.nbank.fr/frontend: "2f42a5b3"
     spec:
       containers:

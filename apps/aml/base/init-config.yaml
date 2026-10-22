@@ -574,6 +574,11 @@ data:
                 field("payment_reference", "Payment reference", "String", True),
                 field("is_cash", "Cash operation", "Bool", True),
                 field("counterparty_name", "Counterparty name", "String", True, "name"),
+                field("debit_account_id", "Debit account", "String", True, "foreign_key"),
+                field("credit_account_id", "Credit account", "String", True, "foreign_key"),
+                field("originator_customer_id", "Originator", "String", True, "foreign_key"),
+                field("beneficiary_customer_id", "Beneficiary", "String", True, "foreign_key"),
+                field("reversal_of_transaction_id", "Reversal of", "String", True),
             ],
         )
     )
@@ -835,12 +840,30 @@ data:
     ]:
         ensure_scenario(name, description, trigger)
 
+    _, saved = api("GET", "/scenarios")
+    for scenario in saved or []:
+        if not str(scenario.get("name") or "").startswith("AML-"):
+            continue
+        _, iterations = api("GET", "/scenario-iterations?scenario_id=" + scenario["id"])
+        for item in iterations or []:
+            if item.get("version") is not None:
+                continue
+            try:
+                api(
+                    "POST",
+                    f"/scenario-iterations/{item['id']}/commit",
+                    ok=(200, 201, 204, 409),
+                )
+                print(f"committed {scenario.get('name')}")
+            except SystemExit as error:
+                print(f"commit skipped for {scenario.get('name')}: {error}")
+
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-17
+  name: marble-init-aml-18
   namespace: aml
 spec:
   backoffLimit: 1
