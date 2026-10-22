@@ -12,6 +12,7 @@ data:
     import os
     import secrets
     import subprocess
+    import time
     import urllib.error
     import urllib.request
 
@@ -186,6 +187,14 @@ data:
 
 
     atexit.register(revoke_api_key)
+    for attempt in range(36):
+        present = psql("SELECT to_regclass('marble.api_keys')")
+        if present:
+            break
+        print("waiting for marble.api_keys")
+        time.sleep(5)
+    else:
+        raise SystemExit("marble.api_keys is missing after the database migrations")
     MARBLE_KEY = open_api_key()
 
 
@@ -787,7 +796,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-9
+  name: marble-init-aml-10
   namespace: aml
 spec:
   backoffLimit: 1

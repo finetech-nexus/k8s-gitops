@@ -33,7 +33,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-migrations-v12
+  name: marble-migrations-v13
   namespace: aml
 spec:
   backoffLimit: 6
