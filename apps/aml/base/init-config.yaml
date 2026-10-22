@@ -456,12 +456,338 @@ data:
         )
         publish(iteration["id"])
 
+    def base_fields(extra):
+        return [
+            field("object_id", "Object id", "String", False, "id"),
+            field("updated_at", "Updated at", "Timestamp", False, "last_update"),
+            *extra,
+        ]
+
+    def link_to(name, child_field, parent_id):
+        return {
+            "name": name,
+            "link_type": "belongs_to",
+            "child_field_name": child_field,
+            "parent_table_id": parent_id,
+        }
+
+    ensure_table(
+        table(
+            "clients",
+            "Clients",
+            "person",
+            "updated_at",
+            [
+                field("customer_reference", "Customer reference", "String", True),
+                field("customer_type", "Customer type", "String", True, "enum"),
+                field("legal_name", "Legal name", "String", True, "name"),
+                field("first_name", "First name", "String", True, "first_name"),
+                field("last_name", "Last name", "String", True, "last_name"),
+                field("place_of_birth", "Place of birth", "String", True),
+                field("incorporation_date", "Incorporation date", "Timestamp", True),
+                field("registration_number", "Registration number", "String", True, "registration_number"),
+                field("tax_identifier", "Tax identifier", "String", True, "tax_id"),
+                field("country_of_residence", "Country of residence", "String", True, "country"),
+                field("registered_country", "Registered country", "String", True, "country"),
+                field("occupation", "Occupation", "String", True),
+                field("industry_code", "Industry code", "String", True),
+                field("customer_since", "Customer since", "Timestamp", True),
+                field("customer_status", "Customer status", "String", True, "enum"),
+                field("created_at", "Created at", "Timestamp", True, "creation_date"),
+            ],
+        )
+    )
+    ensure_table(
+        table(
+            "transactions",
+            "Transactions",
+            "transaction",
+            "updated_at",
+            [
+                field("transaction_reference", "Transaction reference", "String", True),
+                field("source_system", "Source system", "String", True),
+                field("transaction_type", "Transaction type", "String", True, "enum"),
+                field("transaction_status", "Transaction status", "String", True, "enum"),
+                field("booked_at", "Booked at", "Timestamp", True),
+                field("occurred_at", "Occurred at", "Timestamp", True),
+                field("amount_base_currency", "Amount in base currency", "Float", True, "monetary_amount"),
+                field("base_currency", "Base currency", "String", True, "currency"),
+                field("fx_rate", "FX rate", "Float", True),
+                field("fx_rate_timestamp", "FX rate timestamp", "Timestamp", True),
+                field("channel", "Channel", "String", True, "enum"),
+                field("direction", "Direction", "String", True, "enum"),
+                field("country_origin", "Country of origin", "String", True, "country"),
+                field("country_destination", "Country of destination", "String", True, "country"),
+                field("payment_reference", "Payment reference", "String", True),
+                field("is_cash", "Cash operation", "Bool", True),
+                field("counterparty_name", "Counterparty name", "String", True, "name"),
+            ],
+        )
+    )
+
+    clients_id = next(item["id"] for item in tables().values() if item.get("name") == "clients")
+    ensure_table(
+        table(
+            "customer_profiles",
+            "Customer profiles",
+            "other",
+            "updated_at",
+            base_fields(
+                [
+                    field("customer_id", "Customer", "String", False, "foreign_key"),
+                    field("expected_monthly_inflow", "Expected monthly inflow", "Float", True, "monetary_amount"),
+                    field("expected_monthly_outflow", "Expected monthly outflow", "Float", True, "monetary_amount"),
+                    field("expected_transaction_count", "Expected transaction count", "Int", True),
+                    field("expected_transaction_min", "Expected minimum amount", "Float", True, "monetary_amount"),
+                    field("expected_transaction_max", "Expected maximum amount", "Float", True, "monetary_amount"),
+                    field("expected_countries", "Expected countries", "String", True),
+                    field("expected_channels", "Expected channels", "String", True),
+                    field("source_of_funds", "Source of funds", "String", True),
+                    field("source_of_wealth", "Source of wealth", "String", True),
+                    field("risk_category", "Risk category", "String", True, "enum"),
+                    field("kyc_status", "KYC status", "String", True, "enum"),
+                    field("kyc_review_date", "KYC review date", "Timestamp", True),
+                    field("next_review_date", "Next review date", "Timestamp", True),
+                    field("valid_from_profile", "Profile valid from", "Timestamp", True),
+                    field("valid_to", "Profile valid to", "Timestamp", True),
+                    field("profile_version", "Profile version", "Int", True),
+                ]
+            ),
+            [link_to("customer", "customer_id", clients_id)],
+        )
+    )
+    ensure_table(
+        table(
+            "accounts",
+            "Accounts",
+            "account",
+            "updated_at",
+            base_fields(
+                [
+                    field("account_reference", "Account reference", "String", False),
+                    field("customer_id", "Customer", "String", False, "foreign_key"),
+                    field("account_type", "Account type", "String", False, "enum"),
+                    field("currency", "Currency", "String", False, "currency"),
+                    field("opened_at", "Opened at", "Timestamp", False),
+                    field("closed_at", "Closed at", "Timestamp", True),
+                    field("account_status", "Account status", "String", False, "enum"),
+                    field("product_type", "Product type", "String", True),
+                    field("channel", "Channel", "String", True, "enum"),
+                    field("country_code", "Country", "String", True, "country"),
+                    field("source_system", "Source system", "String", False),
+                    field("created_at", "Created at", "Timestamp", True, "creation_date"),
+                ]
+            ),
+            [link_to("customer", "customer_id", clients_id)],
+        )
+    )
+    accounts_id = next(item["id"] for item in tables().values() if item.get("name") == "accounts")
+    ensure_table(
+        table(
+            "account_holders",
+            "Account holders",
+            "other",
+            "updated_at",
+            base_fields(
+                [
+                    field("account_id", "Account", "String", False, "foreign_key"),
+                    field("customer_id", "Customer", "String", False, "foreign_key"),
+                    field("role", "Role", "String", False, "enum"),
+                    field("valid_from_role", "Valid from", "Timestamp", True),
+                    field("valid_to", "Valid to", "Timestamp", True),
+                    field("source", "Source", "String", True),
+                ]
+            ),
+            [link_to("customer", "customer_id", clients_id), link_to("account", "account_id", accounts_id)],
+        )
+    )
+    ensure_table(
+        table(
+            "counterparties",
+            "Counterparties",
+            "partner",
+            "updated_at",
+            base_fields(
+                [
+                    field("name", "Name", "String", False, "name"),
+                    field("counterparty_type", "Counterparty type", "String", False, "enum"),
+                    field("normalized_name", "Normalized name", "String", True),
+                    field("country_code", "Country", "String", True, "country"),
+                    field("account_reference_hash", "Account reference hash", "String", True),
+                    field("external_identifier", "External identifier", "String", True),
+                    field("source_system", "Source system", "String", False),
+                    field("first_seen_at", "First seen at", "Timestamp", True),
+                    field("last_seen_at", "Last seen at", "Timestamp", True),
+                ]
+            ),
+        )
+    )
+    ensure_table(
+        table(
+            "customer_relationships",
+            "Customer relationships",
+            "other",
+            "updated_at",
+            base_fields(
+                [
+                    field("source_customer_id", "Source customer", "String", False, "foreign_key"),
+                    field("target_customer_id", "Target customer", "String", False, "foreign_key"),
+                    field("relationship_type", "Relationship type", "String", False, "enum"),
+                    field("valid_from_relation", "Valid from", "Timestamp", True),
+                    field("valid_to", "Valid to", "Timestamp", True),
+                    field("source", "Source", "String", True),
+                    field("confidence", "Confidence", "Float", True, "percentage"),
+                    field("verification_status", "Verification status", "String", True, "enum"),
+                ]
+            ),
+            [link_to("source_customer", "source_customer_id", clients_id)],
+        )
+    )
+    ensure_table(
+        table(
+            "beneficial_owners",
+            "Beneficial owners",
+            "other",
+            "updated_at",
+            base_fields(
+                [
+                    field("organization_customer_id", "Organization", "String", False, "foreign_key"),
+                    field("owner_customer_id", "Owner", "String", False, "foreign_key"),
+                    field("ownership_percentage", "Ownership percentage", "Float", True, "percentage"),
+                    field("control_type", "Control type", "String", True, "enum"),
+                    field("valid_from_owner", "Valid from", "Timestamp", True),
+                    field("valid_to", "Valid to", "Timestamp", True),
+                    field("source", "Source", "String", True),
+                    field("verification_status", "Verification status", "String", True, "enum"),
+                ]
+            ),
+            [link_to("organization", "organization_customer_id", clients_id)],
+        )
+    )
+    ensure_table(
+        table(
+            "screening_results",
+            "Screening results",
+            "event",
+            "updated_at",
+            base_fields(
+                [
+                    field("customer_id", "Customer", "String", False, "foreign_key"),
+                    field("provider", "Provider", "String", False),
+                    field("dataset_version", "Dataset version", "String", True),
+                    field("external_entity_id", "External entity id", "String", True),
+                    field("matched_name", "Matched name", "String", True, "name"),
+                    field("match_score", "Match score", "Float", True),
+                    field("categories", "Categories", "String", True),
+                    field("searched_at", "Searched at", "Timestamp", False),
+                    field("screening_type", "Screening type", "String", False, "enum"),
+                    field("status", "Status", "String", False, "enum"),
+                    field("review_reason", "Review reason", "String", True),
+                ]
+            ),
+            [link_to("customer", "customer_id", clients_id)],
+        )
+    )
+    ensure_table(
+        table(
+            "risk_assessments",
+            "Risk assessments",
+            "event",
+            "updated_at",
+            base_fields(
+                [
+                    field("customer_id", "Customer", "String", False, "foreign_key"),
+                    field("assessment_type", "Assessment type", "String", False, "enum"),
+                    field("score", "Score", "Float", False),
+                    field("risk_level", "Risk level", "String", False, "enum"),
+                    field("model_version", "Model version", "String", False),
+                    field("assessed_at", "Assessed at", "Timestamp", False),
+                    field("valid_until", "Valid until", "Timestamp", True),
+                    field("reason", "Reason", "String", True),
+                ]
+            ),
+            [link_to("customer", "customer_id", clients_id)],
+        )
+    )
+
+    def ensure_scenario(name, description, trigger):
+        _, found = api("GET", "/scenarios")
+        if any(item.get("name") == name for item in (found or [])):
+            print(f"scenario {name} already present")
+            return
+        print(f"creating scenario {name}")
+        _, created = api(
+            "POST",
+            "/scenarios",
+            {"name": name, "description": description, "trigger_object_type": trigger},
+        )
+        watched = "full_name" if trigger == "clients" else "currency"
+        try:
+            api(
+                "POST",
+                "/scenario-iterations",
+                {
+                    "scenario_id": created["id"],
+                    "body": {
+                        "trigger_condition_ast_expression": None,
+                        "score_review_threshold": 30,
+                        "score_block_and_review_threshold": 80,
+                        "score_decline_threshold": 100,
+                        "schedule": "",
+                        "rules": [
+                            {
+                                "display_order": 1,
+                                "name": "Record is present",
+                                "description": description,
+                                "formula_ast_expression": {
+                                    "name": "IsNotEmpty",
+                                    "children": [payload(watched)],
+                                },
+                                "score_modifier": 1,
+                                "rule_group": "aml",
+                            }
+                        ],
+                    },
+                },
+            )
+        except SystemExit as error:
+            print(f"scenario {name} saved without an iteration: {error}")
+
+    for name, description, trigger in [
+        ("AML-001 Fractionnement des opérations", "Detect repeated operations whose combined amount is unusual.", "transactions"),
+        ("AML-002 Hausse inhabituelle du volume", "Compare the current volume with the client's history or expected profile.", "transactions"),
+        ("AML-003 Fréquence inhabituelle", "Compare the number of operations with the client's usual frequency.", "transactions"),
+        ("AML-004 Montant individuel atypique", "Compare one operation amount with the client's usual amount.", "transactions"),
+        ("AML-005 Anomalies liées aux espèces", "Review cash operations whose count or total is unusual.", "transactions"),
+        ("AML-006 Opérations proches d'un seuil interne", "Review operations close to an internal bank threshold.", "transactions"),
+        ("AML-007 Entrées suivies de sorties rapides", "Review incoming funds that leave again within a short delay.", "transactions"),
+        ("AML-008 Circulation circulaire des fonds", "Review funds that can return to their origin.", "transactions"),
+        ("AML-009 Comptes intermédiaires multiples", "Review funds that pass through several accounts.", "transactions"),
+        ("AML-010 Concentration puis redistribution", "Review funds gathered from several sources and sent to several beneficiaries.", "transactions"),
+        ("AML-011 Rotation élevée des fonds", "Review a high volume relative to the available balance or inflows.", "transactions"),
+        ("AML-012 Nombre inhabituel de contreparties", "Review a high number of distinct counterparties.", "transactions"),
+        ("AML-013 Plusieurs clients vers un même bénéficiaire", "Review several clients sending funds to the same beneficiary.", "transactions"),
+        ("AML-014 Réseau de comptes ou clients liés", "Review a group of clients linked by confirmed relationships or transactions.", "transactions"),
+        ("AML-015 Modification inhabituelle des bénéficiaires", "Review beneficiaries that are new for the client.", "transactions"),
+        ("AML-016 Juridictions à risque", "Review operations involving a country on the bank's dated reference list.", "transactions"),
+        ("AML-017 Activité internationale inhabituelle", "Review an unusual number of countries compared with the known profile.", "transactions"),
+        ("AML-018 Changement rapide de destinations", "Review new destination countries over a short period.", "transactions"),
+        ("AML-019 Reprise d'activité après inactivité", "Review the first operation after a dormant period.", "transactions"),
+        ("AML-020 Incohérence avec le profil KYC", "Review activity that departs from the known KYC profile.", "clients"),
+        ("AML-021 Forte activité sur un compte récent", "Review a high volume shortly after an account is opened.", "transactions"),
+        ("AML-022 Changement inhabituel de canal", "Review a channel that differs from the client's history.", "transactions"),
+        ("AML-023 Nouveau résultat de screening", "Review a new or changed screening result. A name similarity is not a confirmed identity.", "clients"),
+        ("AML-024 KYC incomplet ou obsolète", "Review a missing, expired or overdue KYC profile.", "clients"),
+        ("AML-025 Changement matériel du profil client", "Review a material change between two versions of the client profile.", "clients"),
+    ]:
+        ensure_scenario(name, description, trigger)
+
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-8
+  name: marble-init-aml-9
   namespace: aml
 spec:
   backoffLimit: 1
