@@ -410,9 +410,8 @@ data:
             try:
                 publish(iteration["id"])
             except SystemExit as error:
-                if "screening feature access is missing" not in str(error):
-                    raise
                 print("AML screening is saved. Publishing it needs a Marble license that includes sanctions.")
+                print(error)
 
     transaction = next((item for item in (scenarios or []) if item.get("name") == TRANSACTION), None)
     if transaction and transaction.get("live_version_id"):
@@ -504,7 +503,11 @@ data:
                 },
             },
         )
-        publish(iteration["id"])
+        try:
+            publish(iteration["id"])
+        except SystemExit as error:
+            print("AML transaction check is saved without publication.")
+            print(error)
 
     def base_fields(extra):
         return [
@@ -837,7 +840,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-15
+  name: marble-init-aml-16
   namespace: aml
 spec:
   backoffLimit: 1
