@@ -17,7 +17,13 @@ data:
   FIREBASE_PROJECT_ID: marble-a1227
   GOOGLE_CLOUD_PROJECT: marble-a1227
   REDIS_HOST: marble-redis:6379
-  OPENSANCTIONS_API_HOST: http://marble-motiva:8000
+  OPENSANCTIONS_API_HOST: https://api.opensanctions.org
+  OPENSANCTIONS_AUTH_METHOD: apikey
+  OPENSANCTIONS_SCOPE: default
+  SCREENING_OPENSANCTIONS_API_HOST: https://api.opensanctions.org
+  SCREENING_OPENSANCTIONS_AUTH_METHOD: apikey
+  SCREENING_OPENSANCTIONS_SCOPE: default
+  SCREENING_ALGORITHM: logic-v2
   INGESTION_BUCKET_URL: file:///data/ingestion?create_dir=true
   CASE_MANAGER_BUCKET_URL: file:///data/cases?create_dir=true
   ANALYTICS_BUCKET_URL: file:///data/analytics?create_dir=true
@@ -27,7 +33,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-migrations
+  name: marble-migrations-v12
   namespace: aml
 spec:
   backoffLimit: 6
@@ -42,8 +48,8 @@ spec:
           command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: migrations
-          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
-          imagePullPolicy: IfNotPresent
+          image: docker.io/nexusbank/marble-backend:latest
+          imagePullPolicy: Always
           command: ["./app", "--migrations"]
           envFrom:
             - configMapRef:
@@ -91,8 +97,8 @@ spec:
           command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: api
-          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
-          imagePullPolicy: IfNotPresent
+          image: docker.io/nexusbank/marble-backend:latest
+          imagePullPolicy: Always
           command: ["./app", "--server"]
           ports:
             - name: http
@@ -111,6 +117,16 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: password
+            - name: SCREENING_OPENSANCTIONS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble-opensanctions
+                  key: api-key
+            - name: OPENSANCTIONS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble-opensanctions
+                  key: api-key
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/firebase/service-account.json
           readinessProbe:
@@ -187,8 +203,8 @@ spec:
           command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: worker
-          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-backend:v1.11.0
-          imagePullPolicy: IfNotPresent
+          image: docker.io/nexusbank/marble-backend:latest
+          imagePullPolicy: Always
           command: ["./app", "--worker"]
           envFrom:
             - configMapRef:
@@ -204,6 +220,16 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: password
+            - name: SCREENING_OPENSANCTIONS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble-opensanctions
+                  key: api-key
+            - name: OPENSANCTIONS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble-opensanctions
+                  key: api-key
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/firebase/service-account.json
           resources:
@@ -248,8 +274,8 @@ spec:
     spec:
       containers:
         - name: app
-          image: europe-west1-docker.pkg.dev/marble-infra/marble/marble-frontend:v1.11.0
-          imagePullPolicy: IfNotPresent
+          image: docker.io/nexusbank/marble-frontend:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
