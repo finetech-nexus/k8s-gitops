@@ -45,5 +45,6 @@ jobs:
           kubectl -n aml logs deploy/marble-app -c proxy --tail=40
           echo "===== init logs ====="
           kubectl -n aml logs job/marble-migrations-v12 --tail=80
-          kubectl -n aml logs job/marble-init-aml-9 --tail=80
+          kubectl -n aml wait --for=condition=complete job/marble-init-aml-9 --timeout=180s
+          kubectl -n aml logs job/marble-init-aml-9 --tail=120
           exit 0
