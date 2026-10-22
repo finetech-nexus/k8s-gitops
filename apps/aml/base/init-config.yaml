@@ -755,7 +755,7 @@ data:
                     field("risk_level", "Risk level", "String", False, "enum"),
                     field("model_version", "Model version", "String", False),
                     field("assessed_at", "Assessed at", "Timestamp", False),
-                    field("valid_until", "Valid until", "Timestamp", True),
+                    field("assessment_valid_to", "Valid until", "Timestamp", True),
                     field("reason", "Reason", "String", True),
                 ]
             ),
@@ -840,7 +840,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-16
+  name: marble-init-aml-17
   namespace: aml
 spec:
   backoffLimit: 1
