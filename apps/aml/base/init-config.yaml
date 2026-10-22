@@ -524,6 +524,51 @@ data:
             "parent_table_id": parent_id,
         }
 
+    def table_by_name(name):
+        for item in tables().values():
+            if item.get("name") == name:
+                return item
+        return None
+
+    def field_id(table_item, name):
+        fields = table_item.get("fields") or {}
+        value = fields.get(name) if isinstance(fields, dict) else None
+        if isinstance(value, dict):
+            return value.get("id")
+        return None
+
+    def ensure_link(name, child_name, child_field, parent_name):
+        child = table_by_name(child_name)
+        parent = table_by_name(parent_name)
+        if not child or not parent:
+            print(f"link {name} skipped, missing table")
+            return
+        if name in (child.get("links_to_single") or {}):
+            print(f"link {name} already present")
+            return
+        parent_field = field_id(parent, "object_id")
+        child_field_id = field_id(child, child_field)
+        if not parent_field or not child_field_id:
+            print(f"link {name} skipped, missing field")
+            return
+        try:
+            api(
+                "POST",
+                "/data-model/links",
+                {
+                    "name": name,
+                    "link_type": "belongs_to",
+                    "parent_table_id": parent["id"],
+                    "parent_field_id": parent_field,
+                    "child_table_id": child["id"],
+                    "child_field_id": child_field_id,
+                },
+                ok=(200, 201, 204, 409),
+            )
+            print(f"link {name} created")
+        except SystemExit as error:
+            print(f"link {name} skipped: {error}")
+
     ensure_table(
         table(
             "clients",
@@ -768,6 +813,12 @@ data:
         )
     )
 
+    ensure_link("debit_account", "transactions", "debit_account_id", "accounts")
+    ensure_link("credit_account", "transactions", "credit_account_id", "accounts")
+    ensure_link("originator", "transactions", "originator_customer_id", "clients")
+    ensure_link("beneficiary", "transactions", "beneficiary_customer_id", "clients")
+    ensure_link("reversal_of", "transactions", "reversal_of_transaction_id", "transactions")
+
     def ensure_scenario(name, description, trigger):
         _, found = api("GET", "/scenarios")
         if any(item.get("name") == name for item in (found or [])):
@@ -863,7 +914,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-18
+  name: marble-init-aml-19
   namespace: aml
 spec:
   backoffLimit: 1
