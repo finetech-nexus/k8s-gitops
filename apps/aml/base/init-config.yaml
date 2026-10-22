@@ -185,10 +185,17 @@ data:
             )
             print("organization created")
         psql(
-            "INSERT INTO marble.users (email, role, organization_id, first_name, last_name) VALUES "
+            "INSERT INTO marble.users (email, role, organization_id, first_name, last_name) "
+            "SELECT v.email, v.role, v.organization_id::uuid, v.first_name, v.last_name FROM (VALUES "
             f"('aml-admin@nbank.fr', 4, '{org}', 'AML', 'Admin'), "
-            f"('miladi.medamine@gmail.com', 4, '{org}', 'Medamine', 'Miladi') "
-            "ON CONFLICT (email) DO UPDATE SET organization_id = EXCLUDED.organization_id, deleted_at = NULL, role = 4"
+            f"('miladi.medamine@gmail.com', 4, '{org}', 'Medamine', 'Miladi')"
+            ") AS v(email, role, organization_id, first_name, last_name) "
+            "WHERE NOT EXISTS (SELECT 1 FROM marble.users u WHERE u.email = v.email AND u.deleted_at IS NULL)"
+        )
+        psql(
+            "UPDATE marble.users SET organization_id = "
+            f"'{org}'::uuid, deleted_at = NULL, role = 4 "
+            "WHERE email IN ('aml-admin@nbank.fr', 'miladi.medamine@gmail.com')"
         )
         print("organization users ready")
         psql(
@@ -196,7 +203,7 @@ data:
             "SELECT uuid_generate_v4(), 'user', u.id::text, 'marble', u.organization_id, 'ADMIN' "
             "FROM marble.users u "
             f"WHERE u.organization_id = '{org}' AND u.deleted_at IS NULL "
-            "ON CONFLICT DO NOTHING"
+            "AND NOT EXISTS (SELECT 1 FROM marble.grants g WHERE g.principal_type = 'user' AND g.principal_id = u.id::text AND g.organization_id = u.organization_id AND g.revoked_at IS NULL)"
         )
         return org
 
@@ -830,7 +837,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-14
+  name: marble-init-aml-15
   namespace: aml
 spec:
   backoffLimit: 1
