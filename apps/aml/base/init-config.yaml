@@ -157,7 +157,7 @@ data:
         if completed.returncode != 0:
             detail = (completed.stderr or completed.stdout).strip()
             raise SystemExit(f"database command failed: {detail}")
-        return completed.stdout.strip()
+        return completed.stdout.strip().splitlines()[0] if completed.stdout.strip() else ""
 
 
     def revoke_api_key():
@@ -830,7 +830,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-13
+  name: marble-init-aml-14
   namespace: aml
 spec:
   backoffLimit: 1
