@@ -177,7 +177,11 @@ data:
             return org
         org = psql("SELECT id::text FROM marble.organizations WHERE deleted_at IS NULL ORDER BY name LIMIT 1")
         if not org:
-            org = psql("INSERT INTO marble.organizations (name) VALUES ('Nexus Bank') RETURNING id::text")
+            tenant = psql("INSERT INTO marble.tenants (id, name) VALUES (uuid_generate_v4(), 'Nexus Bank') RETURNING id::text")
+            org = psql(
+                "INSERT INTO marble.organizations (name, tenant_id) "
+                f"VALUES ('Nexus Bank', '{tenant}') RETURNING id::text"
+            )
             print("organization created")
         psql(
             "INSERT INTO marble.users (email, role, organization_id, first_name, last_name) VALUES "
@@ -813,7 +817,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-11
+  name: marble-init-aml-12
   namespace: aml
 spec:
   backoffLimit: 1
