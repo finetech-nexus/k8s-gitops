@@ -173,11 +173,12 @@ data:
             "WHERE lower(email) = 'miladi.medamine@gmail.com' "
             "AND deleted_at IS NULL AND organization_id IS NOT NULL LIMIT 1"
         )
-        if org:
-            return org
-        org = psql("SELECT id::text FROM marble.organizations WHERE deleted_at IS NULL ORDER BY name LIMIT 1")
         if not org:
-            tenant = psql("INSERT INTO marble.tenants (id, name) VALUES (uuid_generate_v4(), 'Nexus Bank') RETURNING id::text")
+            org = psql("SELECT id::text FROM marble.organizations WHERE deleted_at IS NULL ORDER BY name LIMIT 1")
+        if not org:
+            tenant = psql("SELECT id::text FROM marble.tenants WHERE name = 'Nexus Bank' AND deleted_at IS NULL LIMIT 1")
+            if not tenant:
+                tenant = psql("INSERT INTO marble.tenants (id, name) VALUES (uuid_generate_v4(), 'Nexus Bank') RETURNING id::text")
             org = psql(
                 "INSERT INTO marble.organizations (name, tenant_id) "
                 f"VALUES ('Nexus Bank', '{tenant}') RETURNING id::text"
@@ -190,6 +191,13 @@ data:
             "ON CONFLICT (email) DO UPDATE SET organization_id = EXCLUDED.organization_id, deleted_at = NULL, role = 4"
         )
         print("organization users ready")
+        psql(
+            "INSERT INTO marble.grants (id, principal_type, principal_id, principal_authority, organization_id, role) "
+            "SELECT uuid_generate_v4(), 'user', u.id::text, 'marble', u.organization_id, 'ADMIN' "
+            "FROM marble.users u "
+            f"WHERE u.organization_id = '{org}' AND u.deleted_at IS NULL "
+            "ON CONFLICT DO NOTHING"
+        )
         return org
 
 
@@ -199,9 +207,14 @@ data:
         key = "aml" + secrets.token_hex(24)
         digest = hashlib.sha256(key.encode()).hexdigest()
         org = ensure_organization()
-        psql(
+        key_id = psql(
             "INSERT INTO marble.api_keys (org_id, prefix, role, description, key_hash) "
-            f"VALUES ('{org}', '{key[:3]}', 4, 'aml-init', decode('{digest}', 'hex'))"
+            f"VALUES ('{org}', '{key[:3]}', 4, 'aml-init', decode('{digest}', 'hex')) "
+            "RETURNING id::text"
+        )
+        psql(
+            "INSERT INTO marble.grants (id, principal_type, principal_id, principal_authority, organization_id, role) "
+            f"VALUES (uuid_generate_v4(), 'api_key', '{key_id}', 'marble', '{org}', 'ADMIN')"
         )
         print("temporary admin api key created")
         return key
@@ -817,7 +830,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-12
+  name: marble-init-aml-13
   namespace: aml
 spec:
   backoffLimit: 1
