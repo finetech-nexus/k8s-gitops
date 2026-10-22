@@ -167,17 +167,34 @@ data:
         )
 
 
-    def open_api_key():
-        revoke_api_key()
-        key = "aml" + secrets.token_hex(24)
-        digest = hashlib.sha256(key.encode()).hexdigest()
+    def ensure_organization():
         org = psql(
             "SELECT organization_id::text FROM marble.users "
             "WHERE lower(email) = 'miladi.medamine@gmail.com' "
             "AND deleted_at IS NULL AND organization_id IS NOT NULL LIMIT 1"
         )
+        if org:
+            return org
+        org = psql("SELECT id::text FROM marble.organizations WHERE deleted_at IS NULL ORDER BY name LIMIT 1")
         if not org:
-            raise SystemExit("Marble organization was not found")
+            org = psql("INSERT INTO marble.organizations (name) VALUES ('Nexus Bank') RETURNING id::text")
+            print("organization created")
+        psql(
+            "INSERT INTO marble.users (email, role, organization_id, first_name, last_name) VALUES "
+            f"('aml-admin@nbank.fr', 4, '{org}', 'AML', 'Admin'), "
+            f"('miladi.medamine@gmail.com', 4, '{org}', 'Medamine', 'Miladi') "
+            "ON CONFLICT (email) DO UPDATE SET organization_id = EXCLUDED.organization_id, deleted_at = NULL, role = 4"
+        )
+        print("organization users ready")
+        return org
+
+
+    def open_api_key():
+        ensure_organization()
+        revoke_api_key()
+        key = "aml" + secrets.token_hex(24)
+        digest = hashlib.sha256(key.encode()).hexdigest()
+        org = ensure_organization()
         psql(
             "INSERT INTO marble.api_keys (org_id, prefix, role, description, key_hash) "
             f"VALUES ('{org}', '{key[:3]}', 4, 'aml-init', decode('{digest}', 'hex'))"
@@ -796,7 +813,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-10
+  name: marble-init-aml-11
   namespace: aml
 spec:
   backoffLimit: 1
