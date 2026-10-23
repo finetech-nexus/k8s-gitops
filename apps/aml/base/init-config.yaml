@@ -1001,13 +1001,75 @@ data:
         )
         print("client 360 configured on clients.full_name")
 
+    def ensure_review_cases():
+        _, listed = api("GET", "/inboxes")
+        inboxes = (listed or {}).get("inboxes") if isinstance(listed, dict) else (listed or [])
+        inbox = next((item for item in inboxes if item.get("name") == "AML review"), None)
+        if inbox is None:
+            _, created = api("POST", "/inboxes", {"name": "AML review"})
+            inbox = created.get("inbox") if isinstance(created, dict) else created
+            print("inbox AML review created")
+        else:
+            print("inbox AML review already exists")
+        inbox_id = inbox["id"]
+        _, scenarios = api("GET", "/scenarios")
+        for scenario in scenarios or []:
+            if not scenario.get("live_version_id"):
+                continue
+            _, rules = api("GET", "/workflows/" + scenario["id"])
+            if any(rule.get("name") == "Open a case on review" for rule in (rules or [])):
+                print(f"case workflow already set on {scenario.get('name')}")
+                continue
+            _, rule = api(
+                "POST",
+                "/workflows/rule",
+                {
+                    "scenario_id": scenario["id"],
+                    "name": "Open a case on review",
+                    "fallthrough": False,
+                },
+                ok=(201,),
+            )
+            api(
+                "POST",
+                f"/workflows/rule/{rule['id']}/condition",
+                {"function": "outcome_in", "params": ["review", "block_and_review", "decline"]},
+                ok=(201,),
+            )
+            api(
+                "POST",
+                f"/workflows/rule/{rule['id']}/action",
+                {"action": "CREATE_CASE", "params": {"inbox_id": inbox_id}},
+                ok=(201,),
+            )
+            print(f"case workflow created on {scenario.get('name')}")
+        pending = psql(
+            "SELECT coalesce(json_agg(json_build_object("
+            "'id', id::text, "
+            "'object_id', trigger_object->>'object_id', "
+            "'amount', trigger_object->>'amount'))::text, '[]') "
+            "FROM marble.decisions "
+            "WHERE outcome IN ('review', 'block_and_review', 'decline') AND case_id IS NULL"
+        )
+        for row in json.loads(pending or "[]"):
+            label = row.get("object_id") or row["id"]
+            amount = row.get("amount")
+            name = f"Large amount {amount} {label}" if amount else f"Review {label}"
+            api(
+                "POST",
+                "/v1/cases",
+                {"inbox_id": inbox_id, "name": name[:180], "decisions": [row["id"]]},
+            )
+            print(f"case opened for {label}")
+
     ensure_client_360()
+    ensure_review_cases()
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-22
+  name: marble-init-aml-23
   namespace: aml
 spec:
   backoffLimit: 1
