@@ -25,11 +25,9 @@ jobs:
           kubectl -n api logs deploy/core-api-kyc-api --since=3h | awk 'BEGIN{IGNORECASE=1} /marble|kafka|ingest|decision/ {print}' | tail -n 80
           echo '## banking marble logs'
           kubectl -n api logs deploy/core-api-core-banking-api --since=3h | awk 'BEGIN{IGNORECASE=1} /marble|kafka|onboarding completed|transfer\/request/ {print}' | tail -n 80
-          echo '## restart kyc consumer'
-          kubectl -n api rollout restart deploy/core-api-kyc-api
-          kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
-          sleep 25
-          echo '## kyc logs after restart'
-          kubectl -n api logs deploy/core-api-kyc-api --since=5m | awk 'BEGIN{IGNORECASE=1} /marble|kafka|ingest|decision/ {print}' | tail -n 60
-          echo '## probe ingest'
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e 'const http=require("http"); const data=JSON.stringify({object_id:"probe:check",updated_at:new Date().toISOString().replace(/\.\d{3}Z$/,"Z"),full_name:"Probe User",customer_type:"person"}); const req=http.request({hostname:"marble-api.aml.svc.cluster.local",port:8080,path:"/v1/ingest/clients",method:"POST",headers:{"Content-Type":"application/json","X-API-Key":process.env.MARBLE_API_KEY,"Content-Length":Buffer.byteLength(data)}},res=>{let b="";res.on("data",c=>b+=c);res.on("end",()=>console.log(res.statusCode,b.slice(0,800)));}); req.on("error",e=>console.error("PROBE_ERR",e.message)); req.write(data); req.end();'
+          echo '## kyc pods'
+          kubectl -n api get pods -o wide | awk '/kyc-api/'
+          for pod in $(kubectl -n api get pods -o name | awk '/kyc-api/'); do
+            echo "### $pod"
+            kubectl -n api logs "$pod" --tail=50
+          done
