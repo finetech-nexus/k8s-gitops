@@ -952,12 +952,62 @@ data:
             except SystemExit as error:
                 print(f"commit skipped for {scenario.get('name')}: {error}")
 
+    def field_record(table_item, name):
+        fields = table_item.get("fields") or {}
+        if not isinstance(fields, dict):
+            return None
+        direct = fields.get(name)
+        if isinstance(direct, dict) and direct.get("name", name) == name and direct.get("id"):
+            return direct
+        for value in fields.values():
+            if isinstance(value, dict) and value.get("name") == name and value.get("id"):
+                return value
+        return None
+
+    def ensure_name_field(table_name, field_name):
+        item = table_by_name(table_name)
+        column = field_record(item, field_name) if item else None
+        if not column:
+            print(f"name field {table_name}.{field_name} missing")
+            return
+        if column.get("semantic_type") == "name":
+            print(f"name field {table_name}.{field_name} already set")
+            return
+        api(
+            "PATCH",
+            f"/data-model/fields/{column['id']}",
+            {"semantic_type": "name"},
+            ok=(200, 204),
+        )
+        print(f"name field {table_name}.{field_name} set")
+
+    def ensure_client_360():
+        ensure_name_field("clients", "full_name")
+        ensure_name_field("clients", "legal_name")
+        ensure_name_field("counterparties", "name")
+        ensure_name_field("transactions", "counterparty_name")
+        item = table_by_name("clients")
+        if not item:
+            print("client 360 skipped, clients table missing")
+            return
+        if item.get("caption_field") == "full_name" and item.get("semantic_type") == "person":
+            print("client 360 already configured")
+            return
+        api(
+            "PATCH",
+            f"/data-model/tables/{item['id']}",
+            {"semantic_type": "person", "caption_field": "full_name", "alias": "Clients"},
+            ok=(200, 204),
+        )
+        print("client 360 configured on clients.full_name")
+
+    ensure_client_360()
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-21
+  name: marble-init-aml-22
   namespace: aml
 spec:
   backoffLimit: 1
