@@ -1,0 +1,19 @@
+name: Restore KYC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Scale KYC back up and show recent Marble logs
+        run: |
+          kubectl -n api scale deploy/core-api-kyc-api --replicas=1
+          kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='{.spec.template.spec.containers[0].image}{" ready="}{.status.readyReplicas}{"\n"}'
+          sleep 15
+          kubectl -n api logs deploy/core-api-kyc-api --tail=40
