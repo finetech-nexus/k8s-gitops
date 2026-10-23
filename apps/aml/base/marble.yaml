@@ -97,7 +97,7 @@ spec:
           command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: api
-          image: docker.io/nexusbank/marble-backend:latest
+          image: docker.io/nexusbank/marble-backend:4c4db5a3
           imagePullPolicy: Always
           command: ["./app", "--server"]
           ports:
@@ -203,7 +203,7 @@ spec:
           command: ["sh", "-c", "until pg_isready -h marble-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: worker
-          image: docker.io/nexusbank/marble-backend:latest
+          image: docker.io/nexusbank/marble-backend:4c4db5a3
           imagePullPolicy: Always
           command: ["./app", "--worker"]
           envFrom:
@@ -272,11 +272,11 @@ spec:
       labels:
         app: marble-app
       annotations:
-        aml.nbank.fr/frontend: "6d6601ae"
+        aml.nbank.fr/frontend: "2cf33c94"
     spec:
       containers:
         - name: app
-          image: docker.io/nexusbank/marble-frontend:latest
+          image: docker.io/nexusbank/marble-frontend:2cf33c94
           imagePullPolicy: Always
           ports:
             - name: http
