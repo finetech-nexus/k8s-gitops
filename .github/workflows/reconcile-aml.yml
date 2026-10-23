@@ -45,11 +45,11 @@ jobs:
           kubectl -n aml logs deploy/marble-app -c proxy --tail=40
           echo "===== init logs ====="
           kubectl -n aml exec marble-postgresql-0 -- sh -c 'psql -U "$POSTGRES_USER" -d marble -c "SELECT to_regclass('\''marble.api_keys'\'') AS api_keys, to_regclass('\''marble.users'\'') AS users"'
-          kubectl -n aml wait --for=condition=complete job/marble-migrations-v13 --timeout=180s
-          kubectl -n aml logs job/marble-migrations-v13 --tail=40
-          kubectl -n aml wait --for=condition=complete job/marble-init-aml-19 --timeout=240s
-          kubectl -n aml logs job/marble-init-aml-19 --tail=40
-          kubectl -n aml wait --for=condition=complete job/marble-ensure-user-medamine --timeout=180s
-          kubectl -n aml logs job/marble-ensure-user-medamine
+          kubectl -n aml wait --for=condition=complete job/marble-migrations-v14 --timeout=180s
+          kubectl -n aml logs job/marble-migrations-v14 --tail=40
+          kubectl -n aml wait --for=condition=complete job/marble-init-aml-20 --timeout=240s
+          kubectl -n aml logs job/marble-init-aml-20 --tail=80
+          kubectl -n aml wait --for=condition=complete job/marble-ensure-user-medamine-2 --timeout=180s
+          kubectl -n aml logs job/marble-ensure-user-medamine-2
           kubectl -n aml logs deploy/marble-worker --tail=40
           exit 0
