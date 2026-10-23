@@ -1,0 +1,23 @@
+name: Check Marble cases
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Read recent decisions and cases
+        run: |
+          kubectl -n aml exec marble-postgresql-0 -- sh -c 'psql -U "$POSTGRES_USER" -d marble -c "SELECT outcome, score, trigger_object_type, trigger_object->>'\''object_id'\'' AS object_id, trigger_object->>'\''amount'\'' AS amount, (case_id IS NOT NULL) AS has_case, created_at FROM marble.decisions ORDER BY created_at DESC LIMIT 25"'
+          echo "===== cases ====="
+          kubectl -n aml exec marble-postgresql-0 -- sh -c 'psql -U "$POSTGRES_USER" -d marble -c "SELECT count(*) AS cases FROM marble.cases"'
+          echo "===== workflows ====="
+          kubectl -n aml exec marble-postgresql-0 -- sh -c 'psql -U "$POSTGRES_USER" -d marble -c "SELECT s.name, s.trigger_object_type, (s.live_scenario_iteration_id IS NOT NULL) AS live, count(w.id) AS rules FROM marble.scenarios s LEFT JOIN marble.scenario_workflow_rules w ON w.scenario_id = s.id WHERE s.deleted_at IS NULL GROUP BY s.name, s.trigger_object_type, s.live_scenario_iteration_id ORDER BY s.name"'
+          echo "===== inboxes ====="
+          kubectl -n aml exec marble-postgresql-0 -- sh -c 'psql -U "$POSTGRES_USER" -d marble -c "SELECT name, id FROM marble.inboxes"'
+          echo "===== kyc ====="
+          kubectl -n api logs deploy/core-api-kyc-api --tail=80 | grep -E "Marble |transfer" || true
