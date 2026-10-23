@@ -1057,7 +1057,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-ensure-user-medamine-2
+  name: marble-check-user-3
   namespace: aml
 spec:
   backoffLimit: 1
@@ -1089,14 +1089,8 @@ spec:
             - -c
             - |
               set -eu
-              for attempt in $(seq 1 60); do
-                ready=$(psql -tAc "SELECT to_regclass('marble.users')") || ready=""
-                if [ "$ready" = "marble.users" ]; then
-                  break
-                fi
-                echo "waiting for marble.users"
-                sleep 5
-              done
+              echo "===== connection ====="
+              psql -c "SELECT current_database() AS database, current_user AS db_user, to_regclass('marble.users')::text AS users_table"
               echo "===== users before ====="
               psql -c "SELECT email, role, organization_id::text, deleted_at FROM marble.users WHERE lower(email) IN ('miladi.medamine@gmail.com', 'aml-admin@nbank.fr') ORDER BY email, deleted_at NULLS FIRST"
               psql -v ON_ERROR_STOP=1 <<'SQL'

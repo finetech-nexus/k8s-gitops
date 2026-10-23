@@ -49,7 +49,7 @@ jobs:
           kubectl -n aml logs job/marble-migrations-v14 --tail=40
           kubectl -n aml wait --for=condition=complete job/marble-init-aml-20 --timeout=240s
           kubectl -n aml logs job/marble-init-aml-20 --tail=80
-          kubectl -n aml wait --for=condition=complete job/marble-ensure-user-medamine-2 --timeout=180s
-          kubectl -n aml logs job/marble-ensure-user-medamine-2
+          kubectl -n aml wait --for=condition=complete job/marble-check-user-3 --timeout=180s
+          kubectl -n aml logs job/marble-check-user-3
           kubectl -n aml logs deploy/marble-worker --tail=40
           exit 0
