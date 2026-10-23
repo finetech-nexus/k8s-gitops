@@ -133,7 +133,7 @@ kyc-api:
   replicaCount: 1
   image:
     repository: nexusbank/kyc-api
-    tag: "7c24857"
+    tag: "63c6590"
     pullPolicy: Always
   env:
     PORT: 3000
