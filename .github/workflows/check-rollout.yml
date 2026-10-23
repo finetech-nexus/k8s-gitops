@@ -1,0 +1,20 @@
+name: Check API rollout
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Show image tags and readiness
+        run: |
+          echo '## api'
+          kubectl -n api get deploy -o custom-columns='NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image,READY:.status.readyReplicas,DESIRED:.spec.replicas'
+          echo '## api-eu kustomization'
+          kubectl -n flux-system get kustomization api-eu -o json | jq -r '.status.conditions[] | "\(.type)=\(.status) \(.message)"'
+          echo '## api-eu helmrelease'
+          kubectl -n api-eu get helmrelease core-api -o json | jq -r '"suspend=\(.spec.suspend)"' || true
