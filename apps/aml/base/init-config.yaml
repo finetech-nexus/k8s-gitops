@@ -199,6 +199,12 @@ data:
         )
         print("organization users ready")
         psql(
+            "INSERT INTO marble.organization_feature_access (org_id) "
+            f"SELECT '{org}'::uuid WHERE NOT EXISTS ("
+            "SELECT 1 FROM marble.organization_feature_access "
+            f"WHERE org_id = '{org}'::uuid)"
+        )
+        psql(
             "INSERT INTO marble.grants (id, principal_type, principal_id, principal_authority, organization_id, role) "
             "SELECT uuid_generate_v4(), 'user', u.id::text, 'marble', u.organization_id, 'ADMIN' "
             "FROM marble.users u "
@@ -1140,6 +1146,54 @@ spec:
               psql -c "SELECT child.name AS child_table, links.name AS link, parent.name AS parent_table FROM marble.data_model_links links JOIN marble.data_model_tables child ON child.id = links.child_table_id JOIN marble.data_model_tables parent ON parent.id = links.parent_table_id ORDER BY 1, 2"
               echo "===== scenarios ====="
               psql -c "SELECT s.name, s.trigger_object_type, (s.live_scenario_iteration_id IS NOT NULL) AS published, max(i.version) AS version FROM marble.scenarios s LEFT JOIN marble.scenario_iterations i ON i.scenario_id = s.id AND i.deleted_at IS NULL WHERE s.deleted_at IS NULL GROUP BY s.name, s.trigger_object_type, s.live_scenario_iteration_id ORDER BY s.name"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-feature-access-1
+  namespace: aml
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: feature-access
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGHOST
+              value: marble-postgresql
+            - name: PGDATABASE
+              value: marble
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "===== feature access before ====="
+              psql -c "SELECT o.name, (f.org_id IS NOT NULL) AS ready FROM marble.organizations o LEFT JOIN marble.organization_feature_access f ON f.org_id = o.id WHERE o.deleted_at IS NULL ORDER BY o.name"
+              psql -v ON_ERROR_STOP=1 -c "INSERT INTO marble.organization_feature_access (org_id) SELECT o.id FROM marble.organizations o WHERE o.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM marble.organization_feature_access f WHERE f.org_id = o.id)"
+              echo "===== feature access after ====="
+              psql -c "SELECT o.name, (f.org_id IS NOT NULL) AS ready FROM marble.organizations o LEFT JOIN marble.organization_feature_access f ON f.org_id = o.id WHERE o.deleted_at IS NULL ORDER BY o.name"
           resources:
             requests:
               cpu: 20m
