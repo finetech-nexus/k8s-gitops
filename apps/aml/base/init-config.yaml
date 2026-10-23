@@ -1062,14 +1062,159 @@ data:
             )
             print(f"case opened for {label}")
 
+    def ensure_prospects():
+        ensure_table(
+            table(
+                "clients",
+                "Clients",
+                "person",
+                "updated_at",
+                [
+                    field("kyc_status", "KYC status", "String", True, "enum"),
+                    field("kyc_expires_at", "KYC expiration", "Timestamp", True),
+                    field("risk_level", "Risk level", "String", True, "enum"),
+                    field("risk_score", "Risk score", "Float", True),
+                    field("screening_tags", "Screening tags", "String", True),
+                    field("pep_public_function", "PEP public function", "Bool", True),
+                    field("pep_family_associate", "PEP family or associate", "Bool", True),
+                    field("pep_financial_involvement", "PEP financial involvement", "Bool", True),
+                ],
+            )
+        )
+        ensure_table(
+            table(
+                "prospects",
+                "Prospects",
+                "person",
+                "updated_at",
+                base_fields(
+                    [
+                        field("full_name", "Full name", "String", False, "name"),
+                        field("first_name", "First name", "String", True, "name"),
+                        field("last_name", "Last name", "String", True, "name"),
+                        field("birth_date", "Birth date", "String", True),
+                        field("nationality", "Nationality", "String", True),
+                        field("country", "Country", "String", True, "country"),
+                        field("email", "Email", "String", True),
+                        field("phone", "Phone", "String", True),
+                        field("pep_public_function", "PEP public function", "Bool", True),
+                        field("pep_family_associate", "PEP family or associate", "Bool", True),
+                        field("pep_financial_involvement", "PEP financial involvement", "Bool", True),
+                        field("screening_tags", "Screening tags", "String", True),
+                        field("risk_score", "Risk score", "Float", True),
+                        field("risk_level", "Risk level", "String", True, "enum"),
+                        field("kyc_status", "KYC status", "String", True, "enum"),
+                        field("kyc_expires_at", "KYC expiration", "Timestamp", True),
+                        field("source_system", "Source system", "String", True),
+                    ]
+                ),
+            )
+        )
+        item = table_by_name("prospects")
+        if item and not (item.get("caption_field") == "full_name" and item.get("semantic_type") == "person"):
+            api(
+                "PATCH",
+                f"/data-model/tables/{item['id']}",
+                {"semantic_type": "person", "caption_field": "full_name", "alias": "Prospects"},
+                ok=(200, 204),
+            )
+            print("prospect client 360 configured")
+        else:
+            print("prospect client 360 already configured")
+        _, scenarios = api("GET", "/scenarios")
+        scenario = next((entry for entry in (scenarios or []) if entry.get("name") == "KYC prospect review"), None)
+        if scenario is None:
+            _, scenario = api(
+                "POST",
+                "/scenarios",
+                {
+                    "name": "KYC prospect review",
+                    "description": "Open a review as soon as a KYC prospect is created, before the bank client exists.",
+                    "trigger_object_type": "prospects",
+                },
+            )
+        _, iterations = api("GET", "/scenario-iterations?scenario_id=" + scenario["id"])
+        draft = next((entry for entry in (iterations or []) if entry.get("version") is None), None)
+        if scenario.get("live_version_id"):
+            print("KYC prospect review already published")
+            return
+        if draft is None:
+            _, draft = api(
+                "POST",
+                "/scenario-iterations",
+                {
+                    "scenario_id": scenario["id"],
+                    "body": {
+                        "trigger_condition_ast_expression": None,
+                        "score_review_threshold": 30,
+                        "score_block_and_review_threshold": 80,
+                        "score_decline_threshold": 100,
+                        "schedule": "",
+                        "rules": [
+                            {
+                                "display_order": 1,
+                                "name": "KYC started",
+                                "description": "Every new KYC prospect is reviewed.",
+                                "formula_ast_expression": {
+                                    "name": "=",
+                                    "children": [{"constant": True}, {"constant": True}],
+                                },
+                                "score_modifier": 40,
+                                "rule_group": "kyc",
+                            },
+                            {
+                                "display_order": 2,
+                                "name": "Declared PEP",
+                                "description": "The applicant answered yes to a PEP question.",
+                                "formula_ast_expression": {
+                                    "name": "Or",
+                                    "children": [
+                                        {"name": "=", "children": [payload("pep_public_function"), {"constant": True}]},
+                                        {"name": "=", "children": [payload("pep_family_associate"), {"constant": True}]},
+                                        {"name": "=", "children": [payload("pep_financial_involvement"), {"constant": True}]},
+                                    ],
+                                },
+                                "score_modifier": 20,
+                                "rule_group": "kyc",
+                            },
+                        ],
+                    },
+                },
+            )
+        publish(draft["id"])
+        print("KYC prospect review published")
+
+    def enable_kyc_enrichment():
+        psql(
+            "INSERT INTO marble.ai_settings (id, org_id, type, value, created_at, updated_at) "
+            "SELECT uuid_generate_v4(), o.id, 'kyc_enrichment', "
+            "'{\"enabled\": true, \"domain_filter\": []}'::jsonb, now(), now() "
+            "FROM marble.organizations o "
+            "WHERE o.deleted_at IS NULL AND NOT EXISTS ("
+            "SELECT 1 FROM marble.ai_settings s WHERE s.org_id = o.id AND s.type = 'kyc_enrichment')"
+        )
+        psql(
+            "UPDATE marble.ai_settings SET value = jsonb_set(coalesce(value, '{}'::jsonb), '{enabled}', 'true'), "
+            "updated_at = now() WHERE type = 'kyc_enrichment'"
+        )
+        print("kyc enrichment enabled")
+
     ensure_client_360()
+    try:
+        ensure_prospects()
+    except SystemExit as error:
+        print(f"prospect setup skipped: {error}")
+    try:
+        enable_kyc_enrichment()
+    except SystemExit as error:
+        print(f"kyc enrichment setting skipped: {error}")
     ensure_review_cases()
     print("Marble AML configuration is ready")
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-23
+  name: marble-init-aml-24
   namespace: aml
 spec:
   backoffLimit: 1
