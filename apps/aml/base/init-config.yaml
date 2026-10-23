@@ -233,6 +233,42 @@ data:
         return key
 
 
+    def ensure_ingestion_api_key():
+        key = os.environ.get("INGESTION_API_KEY", "").strip()
+        if not key:
+            print("ingestion api key skipped")
+            return
+        digest = hashlib.sha256(key.encode()).hexdigest()
+        org = ensure_organization()
+        prefix = key[:3].replace("'", "")
+        key_id = psql(
+            "SELECT id::text FROM marble.api_keys "
+            "WHERE description = 'kyc-ingestion' AND deleted_at IS NULL LIMIT 1"
+        )
+        if key_id:
+            psql(
+                "UPDATE marble.api_keys SET "
+                f"key_hash = decode('{digest}', 'hex'), prefix = '{prefix}', role = 5, "
+                f"org_id = '{org}', deleted_at = NULL WHERE id = '{key_id}'"
+            )
+            print("ingestion api key updated")
+        else:
+            key_id = psql(
+                "INSERT INTO marble.api_keys (org_id, prefix, role, description, key_hash) "
+                f"VALUES ('{org}', '{prefix}', 5, 'kyc-ingestion', decode('{digest}', 'hex')) "
+                "RETURNING id::text"
+            )
+            print("ingestion api key created")
+        psql(
+            "INSERT INTO marble.grants (id, principal_type, principal_id, principal_authority, organization_id, role) "
+            f"SELECT uuid_generate_v4(), 'api_key', '{key_id}', 'marble', '{org}', 'API_CLIENT' "
+            "WHERE NOT EXISTS (SELECT 1 FROM marble.grants g "
+            "WHERE g.principal_type = 'api_key' "
+            f"AND g.principal_id = '{key_id}' AND g.organization_id = '{org}' "
+            "AND g.role = 'API_CLIENT' AND g.revoked_at IS NULL)"
+        )
+
+
     atexit.register(revoke_api_key)
     for attempt in range(36):
         present = psql("SELECT to_regclass('marble.api_keys')")
@@ -243,6 +279,7 @@ data:
     else:
         raise SystemExit("marble.api_keys is missing after the database migrations")
     MARBLE_KEY = open_api_key()
+    ensure_ingestion_api_key()
 
 
     def api(method, path, body=None, ok=(200, 201)):
@@ -920,7 +957,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: marble-init-aml-20
+  name: marble-init-aml-21
   namespace: aml
 spec:
   backoffLimit: 1
@@ -977,6 +1014,11 @@ spec:
                 secretKeyRef:
                   name: marble
                   key: admin-password
+            - name: INGESTION_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: ingestion-api-key
           volumeMounts:
             - name: config
               mountPath: /config
