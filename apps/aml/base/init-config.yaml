@@ -1052,3 +1052,96 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+---
+# Re-applies the console user. The earlier job does not run again after it completes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: marble-ensure-user-medamine
+  namespace: aml
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: ensure-user
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGHOST
+              value: marble-postgresql
+            - name: PGDATABASE
+              value: marble
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: marble
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "===== users before ====="
+              psql -c "SELECT email, role, organization_id::text, deleted_at FROM marble.users WHERE lower(email) IN ('miladi.medamine@gmail.com', 'aml-admin@nbank.fr') ORDER BY email, deleted_at NULLS FIRST"
+              psql -v ON_ERROR_STOP=1 <<'SQL'
+              UPDATE marble.users
+              SET deleted_at = NULL, role = 4
+              WHERE id = (
+                SELECT id FROM marble.users
+                WHERE lower(email) = 'miladi.medamine@gmail.com'
+                ORDER BY deleted_at NULLS FIRST
+                LIMIT 1
+              );
+              INSERT INTO marble.users (email, role, organization_id, first_name, last_name)
+              SELECT 'miladi.medamine@gmail.com', 4, organization_id, 'Medamine', 'Miladi'
+              FROM marble.users
+              WHERE lower(email) = 'aml-admin@nbank.fr'
+                AND deleted_at IS NULL
+                AND organization_id IS NOT NULL
+              ORDER BY email
+              LIMIT 1
+              ON CONFLICT DO NOTHING;
+              INSERT INTO marble.users (email, role, organization_id, first_name, last_name)
+              SELECT 'miladi.medamine@gmail.com', 4, id, 'Medamine', 'Miladi'
+              FROM marble.organizations
+              WHERE deleted_at IS NULL
+              ORDER BY name
+              LIMIT 1
+              ON CONFLICT DO NOTHING;
+              INSERT INTO marble.grants (id, principal_type, principal_id, principal_authority, organization_id, role)
+              SELECT uuid_generate_v4(), 'user', u.id::text, 'marble', u.organization_id, 'ADMIN'
+              FROM marble.users u
+              WHERE lower(u.email) = 'miladi.medamine@gmail.com'
+                AND u.deleted_at IS NULL
+                AND u.organization_id IS NOT NULL
+                AND NOT EXISTS (
+                  SELECT 1 FROM marble.grants g
+                  WHERE g.principal_type = 'user'
+                    AND g.principal_id = u.id::text
+                    AND g.organization_id = u.organization_id
+                    AND g.role = 'ADMIN'
+                    AND g.revoked_at IS NULL
+                );
+              SQL
+              echo "===== users after ====="
+              psql -c "SELECT u.email, u.role, u.organization_id::text, u.deleted_at, g.role AS grant_role, g.revoked_at FROM marble.users u LEFT JOIN marble.grants g ON g.principal_type = 'user' AND g.principal_id = u.id::text AND g.revoked_at IS NULL WHERE lower(u.email) IN ('miladi.medamine@gmail.com', 'aml-admin@nbank.fr') ORDER BY u.email"
+              echo "===== data model ====="
+              psql -c "SELECT t.name, count(f.id) FILTER (WHERE f.archived IS NOT TRUE) AS fields FROM marble.data_model_tables t LEFT JOIN marble.data_model_fields f ON f.table_id = t.id GROUP BY t.name ORDER BY t.name"
+              psql -c "SELECT child.name AS child_table, links.name AS link, parent.name AS parent_table FROM marble.data_model_links links JOIN marble.data_model_tables child ON child.id = links.child_table_id JOIN marble.data_model_tables parent ON parent.id = links.parent_table_id ORDER BY 1, 2"
+              echo "===== scenarios ====="
+              psql -c "SELECT s.name, s.trigger_object_type, (s.live_scenario_iteration_id IS NOT NULL) AS published, max(i.version) AS version FROM marble.scenarios s LEFT JOIN marble.scenario_iterations i ON i.scenario_id = s.id AND i.deleted_at IS NULL WHERE s.deleted_at IS NULL GROUP BY s.name, s.trigger_object_type, s.live_scenario_iteration_id ORDER BY s.name"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
