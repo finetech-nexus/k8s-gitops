@@ -10,21 +10,8 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Replay events without leaving KYC scaled down
+      - name: Show KYC and Kafka status
         run: |
-          set +e
-          cleanup() {
-            kubectl -n api scale deploy/core-api-kyc-api --replicas=1
-            kubectl -n api patch helmrelease core-api --type merge -p '{"spec":{"suspend":false}}'
-            kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
-          }
-          trap cleanup EXIT
-          kubectl -n api patch helmrelease core-api --type merge -p '{"spec":{"suspend":true}}'
-          kubectl -n api scale deploy/core-api-kyc-api --replicas=0
-          sleep 12
-          timeout 40 kubectl -n infra exec kafka-broker-0 -- sh -c '
-            bin=$(command -v kafka-consumer-groups.sh || command -v kafka-consumer-groups || echo /opt/bitnami/kafka/bin/kafka-consumer-groups.sh)
-            echo "using $bin"
-            "$bin" --bootstrap-server localhost:9092 --group kyc-marble --topic notification.transaction --reset-offsets --to-earliest --execute
-          '
-          echo "reset exit=$?"
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='{.spec.template.spec.containers[0].image}{" ready="}{.status.readyReplicas}{"\n"}'
+          kubectl -n infra get pod kafka-broker-0 --no-headers
+          kubectl -n api logs deploy/core-api-kyc-api --tail=30
