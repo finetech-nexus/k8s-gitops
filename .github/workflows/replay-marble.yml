@@ -1,0 +1,40 @@
+name: Replay Marble consumer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Replay stored transaction events into Marble
+        run: |
+          set -e
+          echo '## image'
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+          kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
+          kubectl -n api scale deploy/core-api-kyc-api --replicas=0
+          sleep 15
+          echo '## kafka pods'
+          kubectl get pods -A --no-headers | awk 'BEGIN{IGNORECASE=1} /kafka/ {print}'
+          kubectl delete pod -n infra kafka-reset --ignore-not-found
+          kubectl run kafka-reset -n infra --restart=Never --image=bitnami/kafka:3.6.1 --command -- \
+            /opt/bitnami/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka.infra.svc.cluster.local:9092 \
+            --group kyc-marble --topic notification.transaction --reset-offsets --to-earliest --execute
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            phase=$(kubectl -n infra get pod kafka-reset -o jsonpath='{.status.phase}' 2>/dev/null || true)
+            echo "kafka-reset phase=$phase"
+            if [ "$phase" = "Succeeded" ] || [ "$phase" = "Failed" ]; then
+              break
+            fi
+            sleep 10
+          done
+          kubectl -n infra logs pod/kafka-reset || true
+          kubectl delete pod -n infra kafka-reset --ignore-not-found
+          kubectl -n api scale deploy/core-api-kyc-api --replicas=1
+          kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
+          sleep 20
+          kubectl -n api logs deploy/core-api-kyc-api --tail=80
