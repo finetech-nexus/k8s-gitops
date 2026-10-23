@@ -12,7 +12,7 @@ core-banking-api:
   #       - "fynams.dev.sandbox.internal.nbank.fr"
   image:
     repository: nexusbank/core-banking-api
-    tag: "latest"
+    tag: "a9d980e"
     pullPolicy: Always
 
   env:
@@ -133,7 +133,7 @@ kyc-api:
   replicaCount: 1
   image:
     repository: nexusbank/kyc-api
-    tag: "latest"
+    tag: "8fa2272"
     pullPolicy: Always
   env:
     PORT: 3000
@@ -266,7 +266,7 @@ notification-api:
   replicaCount: 1
   image:
     repository: nexusbank/notification-api
-    tag: "latest"
+    tag: "0570e5d"
     pullPolicy: Always
   env:
     PORT: "8080"
