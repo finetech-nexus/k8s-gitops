@@ -55,7 +55,7 @@ backoffice:
     repository: 'nexusbank/ballerine-x-ballerine-case-managment'
     pullPolicy: Always
     pullSecrets: ""
-    tag: "latest"
+    tag: "a92a4f3c"
   ingress:
     enabled: true
     className: "nginx"
