@@ -81,6 +81,10 @@ resources:
   - reconciliation-app-endpoints.yaml
   - aml-api-service.yaml
   - aml-api-endpoints.yaml
+  - clarity-api-service.yaml
+  - clarity-api-endpoints.yaml
+  - clarity-web-service.yaml
+  - clarity-web-endpoints.yaml
   - aml-app-service.yaml
   - aml-app-endpoints.yaml
   - aml-auth-service.yaml
@@ -124,5 +128,7 @@ resources:
   - reconciliation-app-route.yaml
   - aml-api-route.yaml
   - aml-app-route.yaml
+  - clarity-api-route.yaml
+  - clarity-web-route.yaml
   - aml-app-auth-route.yaml
   - aml-auth-route.yaml

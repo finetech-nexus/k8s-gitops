@@ -19,8 +19,10 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Reconcile Kustomizations — kong
         run: |
+          flux reconcile source git flux-system -n flux-system --timeout=2m || true
           flux reconcile kustomization kong -n flux-system --timeout=5m || true
-          flux reconcile kustomization kong-routes -n flux-system --timeout=3m || true
+          flux reconcile kustomization kong-routes -n flux-system --with-source --timeout=3m || true
+          flux reconcile kustomization coredns-custom -n flux-system --with-source --timeout=2m || true
       - name: Reconcile HelmReleases — apim (Kong)
         run: |
           kubectl get helmreleases.helm.toolkit.fluxcd.io -n apim --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | while read -r name; do
