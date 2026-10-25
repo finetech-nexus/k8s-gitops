@@ -18,6 +18,8 @@ metadata:
     app: clarity-api
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: clarity-api
@@ -26,11 +28,6 @@ spec:
       labels:
         app: clarity-api
     spec:
-      initContainers:
-        - name: wait-for-postgresql
-          image: postgres:16-alpine
-          imagePullPolicy: IfNotPresent
-          command: ["sh", "-c", "until pg_isready -h clarity-postgresql -p 5432; do echo waiting for PostgreSQL; sleep 2; done"]
       containers:
         - name: clarity-api
           image: nexusbank/clarity-api:latest
@@ -40,7 +37,7 @@ spec:
               containerPort: 8095
           env:
             - name: CLARITY_DATABASE_URL
-              value: postgresql+psycopg://clarity:clarity@clarity-postgresql:5432/clarity
+              value: sqlite:////var/lib/clarity/uploads/clarity.db
             - name: CLARITY_ENV
               value: development
             - name: CLARITY_SEED_DEMO

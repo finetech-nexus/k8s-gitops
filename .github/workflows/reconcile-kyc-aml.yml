@@ -29,8 +29,6 @@ jobs:
       - name: Wait for Clarity
         run: |
           set +e
-          kubectl -n kyc-aml rollout status statefulset/clarity-postgresql --timeout=360s
-          pg=$?
           kubectl -n kyc-aml rollout status deploy/clarity-api --timeout=360s
           api=$?
           kubectl -n kyc-aml rollout status deploy/clarity-web --timeout=360s
@@ -39,11 +37,9 @@ jobs:
           kubectl -n kyc-aml get pods,pvc,svc,ingress -o wide
           echo "===== events ====="
           kubectl -n kyc-aml get events --sort-by=.lastTimestamp
-          echo "===== postgres ====="
-          kubectl -n kyc-aml describe pod -l app=clarity-postgresql
           echo "===== api ====="
           kubectl -n kyc-aml describe pod -l app=clarity-api
           kubectl -n kyc-aml logs deploy/clarity-api --tail=60
           echo "===== web ====="
           kubectl -n kyc-aml describe pod -l app=clarity-web
-          test "$pg" = 0 -a "$api" = 0 -a "$web" = 0
+          test "$api" = 0 -a "$web" = 0
