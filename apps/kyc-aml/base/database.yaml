@@ -98,11 +98,11 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 20m
+              memory: 64Mi
             limits:
-              cpu: "1"
-              memory: 1Gi
+              cpu: 500m
+              memory: 256Mi
   volumeClaimTemplates:
     - metadata:
         name: data
