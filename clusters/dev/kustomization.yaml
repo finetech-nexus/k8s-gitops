@@ -29,3 +29,4 @@ resources:
   - treasury.yaml
   - reconciliation.yaml
   - aml.yaml
+  - kyc-aml.yaml

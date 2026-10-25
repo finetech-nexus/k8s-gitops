@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clarity-web
+  namespace: kyc-aml
+  labels:
+    app: clarity-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clarity-web
+  template:
+    metadata:
+      labels:
+        app: clarity-web
+    spec:
+      containers:
+        - name: clarity-web
+          image: nexusbank/clarity-web:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3010
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clarity-web
+  namespace: kyc-aml
+  labels:
+    app: clarity-web
+spec:
+  type: ClusterIP
+  selector:
+    app: clarity-web
+  ports:
+    - name: http
+      port: 3010
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clarity-web
+  namespace: kyc-aml
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    cert-manager.io/cluster-issuer: nbank-dev
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - clarity.api.dev.sandbox.internal.nbank.fr
+      secretName: clarity-web-dev-tls
+  rules:
+    - host: clarity.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: clarity-web
+                port:
+                  number: 3010

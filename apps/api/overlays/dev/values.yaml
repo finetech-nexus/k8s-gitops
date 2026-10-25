@@ -141,8 +141,9 @@ kyc-api:
     PORT: 3000
     NODE_ENV: production
     LOG_LEVEL: info
-    BALLERINE_ENDPOINT: "https://workflowsvc.kyc.dev.sandbox.internal.nbank.fr"
-    BALLERINE_API_KEY: "webhook-shared-secret-secret"
+    BALLERINE_ENDPOINT: "http://clarity-api.kyc-aml.svc.cluster.local:8095"
+    BALLERINE_API_KEY: "clry_demo_ballerine_v1"
+    BALLERINE_EXTERNAL_AUTH: "Bearer clry_demo_ballerine_v1"
     KYC_PROXY_URL: "https://apim.nbank.fr"
     KYC_TIMEOUT: 300000
     KYC_MAX_RETRIES: 3
@@ -152,8 +153,8 @@ kyc-api:
     # pass for the challenge id sent with it. Keep the bypass off.
     LIVENESS_PASS_TTL_MS: 900000
     ALLOW_LIVENESS_BYPASS: "false"
-    MARBLE_API_URL: "http://marble-api.aml.svc.cluster.local:8080"
-    MARBLE_API_KEY: "kyc9c4e7a1b6d8f2035a7c9e1b4d6f8a0c2e5b7d9f1a3c6e8b0d2f4a6c8e1b3d5"
+    MARBLE_API_URL: "http://clarity-api.kyc-aml.svc.cluster.local:8095"
+    MARBLE_API_KEY: "clry_demo_marble_v1"
     KYC_INTERNAL_API_KEY: "nbank-kyc-marble-internal"
     KAFKA_BROKERS: "kafka.infra.svc.cluster.local:9092"
     KAFKA_TRANSACTION_TOPIC: "notification.transaction"

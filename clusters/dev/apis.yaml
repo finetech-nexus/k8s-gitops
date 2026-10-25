@@ -17,4 +17,6 @@ spec:
       namespace: flux-system
     - name: ingress-nginx
       namespace: flux-system
+    - name: kyc-aml
+      namespace: flux-system
   timeout: 10m0s
