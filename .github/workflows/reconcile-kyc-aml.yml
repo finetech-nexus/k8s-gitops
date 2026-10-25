@@ -23,9 +23,15 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Reconcile Clarity
         run: |
+          set +e
           flux reconcile source git flux-system -n flux-system --timeout=2m
-          flux reconcile kustomization flux-system -n flux-system --timeout=5m
-          flux reconcile kustomization kyc-aml -n flux-system --with-source --timeout=10m
+          flux reconcile kustomization flux-system -n flux-system --timeout=3m
+          flux reconcile kustomization kyc-aml -n flux-system --with-source --timeout=3m
+          kubectl -n kyc-aml delete statefulset clarity-postgresql --ignore-not-found
+          kubectl -n kyc-aml delete pod -l app=clarity-postgresql --ignore-not-found --force --grace-period=0
+          kubectl -n kyc-aml delete pod -l app=clarity-api --force --grace-period=0
+          kubectl -n kyc-aml delete pod -l app=clarity-web --field-selector=status.phase=Pending --force --grace-period=0
+          exit 0
       - name: Wait for Clarity
         run: |
           set +e
