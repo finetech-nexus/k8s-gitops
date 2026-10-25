@@ -21,31 +21,21 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
-      - name: Reconcile Clarity
+      - name: Apply Clarity
         run: |
           set +e
           flux reconcile source git flux-system -n flux-system --timeout=2m
-          flux reconcile kustomization flux-system -n flux-system --timeout=3m
-          flux reconcile kustomization kyc-aml -n flux-system --with-source --timeout=3m
+          flux reconcile kustomization flux-system -n flux-system --timeout=2m
+          kubectl apply -k apps/kyc-aml/base
           kubectl -n kyc-aml delete statefulset clarity-postgresql --ignore-not-found
           kubectl -n kyc-aml delete pod -l app=clarity-postgresql --ignore-not-found --force --grace-period=0
-          kubectl -n kyc-aml delete pod -l app=clarity-api --force --grace-period=0
-          kubectl -n kyc-aml delete pod -l app=clarity-web --field-selector=status.phase=Pending --force --grace-period=0
-          exit 0
-      - name: Wait for Clarity
-        run: |
-          set +e
-          kubectl -n kyc-aml rollout status deploy/clarity-api --timeout=360s
+          kubectl -n kyc-aml rollout restart deploy/clarity-api deploy/clarity-web
+          kubectl -n kyc-aml rollout status deploy/clarity-api --timeout=300s
           api=$?
-          kubectl -n kyc-aml rollout status deploy/clarity-web --timeout=360s
+          kubectl -n kyc-aml rollout status deploy/clarity-web --timeout=180s
           web=$?
           echo "===== resources ====="
-          kubectl -n kyc-aml get pods,pvc,svc,ingress -o wide
-          echo "===== events ====="
-          kubectl -n kyc-aml get events --sort-by=.lastTimestamp
+          kubectl -n kyc-aml get pods,svc,ingress -o wide
           echo "===== api ====="
-          kubectl -n kyc-aml describe pod -l app=clarity-api
-          kubectl -n kyc-aml logs deploy/clarity-api --tail=60
-          echo "===== web ====="
-          kubectl -n kyc-aml describe pod -l app=clarity-web
+          kubectl -n kyc-aml logs deploy/clarity-api --tail=40
           test "$api" = 0 -a "$web" = 0
