@@ -23,28 +23,15 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Trace the photo check
         run: |
-          echo "kyc client"
-          kubectl -n api logs deploy/core-api-kyc-api --since=3h | python3 -c '
+          kubectl -n ingress-nginx logs -l app.kubernetes.io/component=controller --since=3h --tail=5000 | python3 -c '
           import sys
-          keys=("Client error","entity.parse","entity.too","verify/final","SyntaxError")
           n=0
           for line in sys.stdin:
-            if any(k in line for k in keys):
-              print(line[:400].replace("apikey","k").replace("Bearer","b"), end="")
+            if "verify/final" in line or "kyc/verify" in line:
+              print(line[:500], end="")
               n+=1
-          print("kyc-matches", n)
-          '
-          echo "bank"
-          kubectl -n app logs deploy/nexus-bank-api --since=3h | python3 -c '
-          import sys
-          keys=("verify/final","Tenant proxy","payload","KYC")
-          n=0
-          for line in sys.stdin:
-            if any(k in line for k in keys):
-              print(line[:400], end="")
-              n+=1
-              if n>30: break
-          print("bank-matches", n)
+              if n>20: break
+          print("ingress-matches", n)
           '
       - name: Apply Clarity
         run: |
