@@ -23,14 +23,16 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Trace the photo check
         run: |
-          echo "pod env"
-          kubectl -n api exec deploy/core-api-kyc-api -- printenv ML_BACKEND_URL
-          echo "pod age"
-          kubectl -n api get pods -l app.kubernetes.io/name=kyc-api -o wide
-          echo "recent lines"
-          kubectl -n api logs deploy/core-api-kyc-api --tail=40
-          echo "--- eu ---"
-          kubectl -n api-eu exec deploy/core-api-kyc-api -- printenv ML_BACKEND_URL || true
+          kubectl -n api logs deploy/core-api-kyc-api --since=3h | python3 -c '
+          import sys
+          keys=("Processing final","Error processing final","Calling Python ML","ML Backend Response","Missing required","No documents","Video check")
+          n=0
+          for line in sys.stdin:
+            if any(k in line for k in keys):
+              print(line[:700], end="")
+              n+=1
+          print("matches", n)
+          '
       - name: Apply Clarity
         run: |
           set +e
