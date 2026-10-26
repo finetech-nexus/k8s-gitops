@@ -21,6 +21,21 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Read the final submit
+        run: |
+          set -o pipefail
+          kubectl -n api logs deploy/core-api-kyc-api --since=6h > /tmp/kyc.log
+          wc -l /tmp/kyc.log
+          echo "final $(grep -c 'Processing final' /tmp/kyc.log || true)"
+          echo "ml-error $(grep -c 'Error processing final' /tmp/kyc.log || true)"
+          echo "missing $(grep -c 'Missing required' /tmp/kyc.log || true)"
+          echo "video $(grep -c 'Video check' /tmp/kyc.log || true)"
+          echo "calling $(grep -c 'Calling Python ML backend for verification' /tmp/kyc.log || true)"
+          grep -E 'Processing final|Error processing final|Missing required|Video check|Calling Python ML backend for verification|ML Backend Response' /tmp/kyc.log | tail -30
+          echo "--- clarity ---"
+          kubectl -n kyc-aml logs deploy/clarity-api --since=6h > /tmp/clarity.log
+          wc -l /tmp/clarity.log
+          grep -E 'kyc/verify|POST /api' /tmp/clarity.log | tail -30
       - name: Apply Clarity
         run: |
           set +e
