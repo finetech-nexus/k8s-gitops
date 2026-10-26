@@ -23,7 +23,7 @@ jobs:
           grep -nE "Processing final|Liveness pass|Rejected final|Calling Python|Error processing|Error calling|ECONNREFUSED|Failed to process|verification|simulator|ML backend|Video check|Missing required|No documents" /tmp/kyc.log || true
       - name: OCR probe
         run: |
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e 'fetch("http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1/kyc/ocr",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({document:"data:image/jpeg;base64,QQ=="})}).then(async (r)=>{console.log(r.status); console.log(await r.text())})'
+          kubectl -n api exec deploy/core-api-kyc-api -- node -e 'const base="http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1"; async function post(path, body){ const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); console.log(path, r.status); console.log(await r.text()); } post("/kyc/ocr",{document:"data:image/jpeg;base64,QQ=="}).then(()=>post("/liveness/detect",{frames:["data:image/jpeg;base64,QQ=="]}))'
       - name: Clarity lines
         run: |
           set +e
