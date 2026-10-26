@@ -23,17 +23,14 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Trace the photo check
         run: |
-          kubectl -n api logs deploy/core-api-kyc-api --tail=200 | python3 -c 'import sys
-          keys=("final","ML Backend","verification","Error","error","400","Calling")
-          for line in sys.stdin:
-            if any(k in line for k in keys):
-              print(line[:500], end="")'
-          echo "--- clarity ---"
-          kubectl -n kyc-aml logs deploy/clarity-api --tail=120 | python3 -c 'import sys
-          for line in sys.stdin:
-            if "kyc/verify" in line or "liveness" in line or "400" in line or "ERROR" in line:
-              print(line[:500], end="")'
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e 'const http=require("http"); const b=Buffer.from("x"); const boundary="----c"; const body=Buffer.concat([Buffer.from("--"+boundary+"\r\nContent-Disposition: form-data; name=\"id_document\"; filename=\"a.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n"), b, Buffer.from("\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"selfie_image\"; filename=\"b.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n"), b, Buffer.from("\r\n--"+boundary+"--\r\n")]); const req=http.request({hostname:"clarity-api.kyc-aml.svc.cluster.local", port:8095, path:"/api/v1/kyc/verify", method:"POST", headers:{"content-type":"multipart/form-data; boundary="+boundary, "content-length":body.length}}, res=>{let d=""; res.on("data", c=>d+=c); res.on("end", ()=>console.log(res.statusCode, d.slice(0,300)));}); req.on("error", e=>console.log("ERR", e.message)); req.end(body);'
+          echo "pod env"
+          kubectl -n api exec deploy/core-api-kyc-api -- printenv ML_BACKEND_URL
+          echo "pod age"
+          kubectl -n api get pods -l app.kubernetes.io/name=kyc-api -o wide
+          echo "recent lines"
+          kubectl -n api logs deploy/core-api-kyc-api --tail=40
+          echo "--- eu ---"
+          kubectl -n api-eu exec deploy/core-api-kyc-api -- printenv ML_BACKEND_URL || true
       - name: Apply Clarity
         run: |
           set +e
