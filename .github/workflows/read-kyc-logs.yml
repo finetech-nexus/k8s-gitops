@@ -13,10 +13,16 @@ jobs:
       - name: Pod status
         run: |
           kubectl -n kyc-aml get pods -o wide
+          echo "--- api describe ---"
+          kubectl -n kyc-aml describe pod -l app=clarity-api | sed -n '/Status:/,/^Events/p;/Events/,$p'
+          echo "--- nodes ---"
+          kubectl get nodes
+          kubectl describe nodes | sed -n '/Allocated resources/,/Events/p'
           echo "--- api kyc ---"
           kubectl -n api get pods | grep kyc || true
       - name: Upstream targets
         run: |
+          set +e
           kubectl -n api exec deploy/core-api-kyc-api -- printenv BALLERINE_ENDPOINT MARBLE_API_URL ML_BACKEND_URL
           echo "--- clarity model route ---"
           kubectl -n api exec deploy/core-api-kyc-api -- node -e 'fetch("http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1/liveness/detect",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(async (r)=>{console.log(r.status); console.log((await r.text()).slice(0,180))})'
