@@ -21,14 +21,6 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
-      - name: Read the final submit
-        run: |
-          kubectl -n api logs deploy/core-api-kyc-api --tail=160 | python3 -c '
-          import sys,re
-          for line in sys.stdin:
-            line=re.sub(r"(Bearer|apikey|apiKey|token)[^\s,\"]*","[redacted]", line, flags=re.I)
-            print(line[:360], end="")
-          '
       - name: Apply Clarity
         run: |
           set +e
