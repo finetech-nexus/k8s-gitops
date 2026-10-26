@@ -23,15 +23,12 @@ jobs:
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
       - name: Read the final submit
         run: |
-          kubectl -n api get pods -l app.kubernetes.io/instance=core-api -o wide | head -40
-          echo "--- current ---"
-          kubectl -n api logs deploy/core-api-kyc-api --tail=400 > /tmp/kyc.log || true
-          echo "lines $(wc -l < /tmp/kyc.log)"
-          grep -E 'Processing final|Error processing final|Missing required|Video check|Calling Python ML|Ballerine Error|verify/final' /tmp/kyc.log | tail -40 || true
-          echo "--- previous ---"
-          kubectl -n api logs deploy/core-api-kyc-api --previous --tail=400 > /tmp/kyc-prev.log || true
-          echo "prev lines $(wc -l < /tmp/kyc-prev.log)"
-          grep -E 'Processing final|Error processing final|Missing required|Video check|Calling Python ML|Ballerine Error|verify/final' /tmp/kyc-prev.log | tail -40 || true
+          kubectl -n api logs deploy/core-api-kyc-api --tail=160 | python3 -c '
+          import sys,re
+          for line in sys.stdin:
+            line=re.sub(r"(Bearer|apikey|apiKey|token)[^\s,\"]*","[redacted]", line, flags=re.I)
+            print(line[:360], end="")
+          '
       - name: Apply Clarity
         run: |
           set +e
