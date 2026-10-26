@@ -1,0 +1,31 @@
+name: Read KYC logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Pod status
+        run: |
+          kubectl -n kyc-aml get pods -o wide
+          echo "--- api kyc ---"
+          kubectl -n api get pods | grep kyc || true
+      - name: KYC service lines
+        run: |
+          set +e
+          kubectl -n api logs deploy/core-api-kyc-api --since=25m --tail=500 > /tmp/kyc.log
+          echo "kyc-lines $(wc -l < /tmp/kyc.log)"
+          grep -nE "Processing final|Liveness pass|Rejected final|Calling Python|Error processing|Error calling|ECONNREFUSED|Failed to process|verification|simulator|ML backend|Video check|Missing required|No documents" /tmp/kyc.log || true
+      - name: Clarity lines
+        run: |
+          set +e
+          kubectl -n kyc-aml logs deploy/clarity-api --since=25m --tail=400 > /tmp/clarity.log
+          echo "clarity-lines $(wc -l < /tmp/clarity.log)"
+          grep -nE "ERROR|Exception|liveness|kyc/verify|kyc/ocr| 4[0-9][0-9] | 5[0-9][0-9] " /tmp/clarity.log || true
+          echo "=== clarity tail ==="
+          tail -60 /tmp/clarity.log
