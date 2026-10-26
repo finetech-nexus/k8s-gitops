@@ -21,6 +21,9 @@ jobs:
           kubectl -n api logs deploy/core-api-kyc-api --since=25m --tail=500 > /tmp/kyc.log
           echo "kyc-lines $(wc -l < /tmp/kyc.log)"
           grep -nE "Processing final|Liveness pass|Rejected final|Calling Python|Error processing|Error calling|ECONNREFUSED|Failed to process|verification|simulator|ML backend|Video check|Missing required|No documents" /tmp/kyc.log || true
+      - name: OCR probe
+        run: |
+          kubectl -n api exec deploy/core-api-kyc-api -- node -e 'fetch("http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1/kyc/ocr",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({document:"data:image/jpeg;base64,QQ=="})}).then(async (r)=>{console.log(r.status); console.log(await r.text())})'
       - name: Clarity lines
         run: |
           set +e
