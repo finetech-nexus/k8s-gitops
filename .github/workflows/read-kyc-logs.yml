@@ -1,0 +1,42 @@
+name: Read KYC logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Recent errors
+        run: |
+          echo "===== kyc-api ====="
+          kubectl -n api logs deploy/core-api-kyc-api --since=20m | python3 -c '
+          import sys, re, json
+          keys = ("final", "Error", "error", "Missing", "Video", "Calling Python", "Ballerine", "verify", "400", "502", "503")
+          for line in sys.stdin:
+            if not any(k in line for k in keys):
+              continue
+            line = re.sub(r"(Bearer |apikey[\"=: ]+|apiKey[\"=: ]+|token[\"=: ]+)[^\s,\"]+", "[redacted]", line, flags=re.I)
+            print(line[:500], end="")
+          '
+          echo "===== clarity ====="
+          kubectl -n kyc-aml logs deploy/clarity-api --since=20m | python3 -c '
+          import sys, re
+          for line in sys.stdin:
+            if not any(k in line for k in ("ERROR", "Error", "400", "422", "500", "kyc/verify", "liveness", "POST", "Exception")):
+              continue
+            line = re.sub(r"(Bearer |password|secret|api.key)[^\s,\"]*", "[redacted]", line, flags=re.I)
+            print(line[:500], end="")
+          '
+          echo "===== pods ====="
+          kubectl -n kyc-aml get pods -o wide
+          kubectl -n api get pods -l app.kubernetes.io/name=kyc-api -o wide || true
+          kubectl -n api get pods | python3 -c '
+          import sys
+          for line in sys.stdin:
+            if "kyc" in line.lower() or line.startswith("NAME"):
+              print(line, end="")
+          '
