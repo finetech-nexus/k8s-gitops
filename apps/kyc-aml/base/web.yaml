@@ -67,6 +67,8 @@ metadata:
   namespace: kyc-aml
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
     cert-manager.io/cluster-issuer: nbank-dev
 spec:
   ingressClassName: nginx
