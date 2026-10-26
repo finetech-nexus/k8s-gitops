@@ -21,18 +21,6 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
-      - name: Trace the photo check
-        run: |
-          kubectl -n ingress-nginx logs -l app.kubernetes.io/component=controller --since=3h --tail=5000 | python3 -c '
-          import sys
-          n=0
-          for line in sys.stdin:
-            if "verify/final" in line or "kyc/verify" in line:
-              print(line[:500], end="")
-              n+=1
-              if n>20: break
-          print("ingress-matches", n)
-          '
       - name: Apply Clarity
         run: |
           set +e
