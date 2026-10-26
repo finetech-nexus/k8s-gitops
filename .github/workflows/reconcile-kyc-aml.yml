@@ -21,6 +21,20 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Install Flux CLI
         run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Trace the photo check
+        run: |
+          kubectl -n api get deploy -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.spec.template.spec.containers[0].name}{"\n"}{end}'
+          kubectl -n api get deploy -o json | python3 -c 'import json,sys; d=json.load(sys.stdin)
+          for item in d["items"]:
+            for c in item["spec"]["template"]["spec"]["containers"]:
+              for e in c.get("env") or []:
+                if e.get("name") in ("ML_BACKEND_URL","BALLERINE_ENDPOINT"):
+                  print(item["metadata"]["name"], e["name"], e.get("value"))'
+          kubectl -n api logs -l app=kyc-api --tail=80 | python3 -c 'import sys
+          keys=("final","ML Backend","verification","error","Error","Ballerine")
+          for line in sys.stdin:
+            if any(k in line for k in keys):
+              print(line[:400], end="")'
       - name: Apply Clarity
         run: |
           set +e
