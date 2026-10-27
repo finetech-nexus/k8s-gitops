@@ -59,7 +59,9 @@ spec:
             - name: CLARITY_OIDC_ISSUER
               value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
             - name: CLARITY_OIDC_CLIENT_ID
-              value: clarity
+              value: web-app
+            - name: CLARITY_OIDC_ADMINS
+              value: mifos
             - name: CLARITY_OIDC_REDIRECT_URI
               value: https://clarity.api.dev.sandbox.internal.nbank.fr/api/clarity/v1/auth/oidc/callback
             - name: CLARITY_CORS_ORIGINS
