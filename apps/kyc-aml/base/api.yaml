@@ -50,6 +50,8 @@ spec:
               value: /var/lib/clarity/uploads
             - name: CLARITY_PUBLIC_APP_URL
               value: https://clarity.api.dev.sandbox.internal.nbank.fr
+            - name: CLARITY_CORE_BANKING_HOOK_URL
+              value: http://core-api-core-banking-api.api.svc.cluster.local/api/kyc/onboarding
             - name: CLARITY_CORS_ORIGINS
               value: https://clarity.api.dev.sandbox.internal.nbank.fr,http://localhost:3010
           volumeMounts:
