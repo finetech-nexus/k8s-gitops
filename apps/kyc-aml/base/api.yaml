@@ -52,8 +52,6 @@ spec:
               value: https://clarity.api.dev.sandbox.internal.nbank.fr
             - name: CLARITY_CORS_ORIGINS
               value: https://clarity.api.dev.sandbox.internal.nbank.fr,http://localhost:3010
-            - name: CLARITY_OCR_URL
-              value: http://core-api-ai-api.api.svc.cluster.local
           volumeMounts:
             - name: uploads
               mountPath: /var/lib/clarity/uploads
@@ -75,7 +73,7 @@ spec:
               memory: 8Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 2Gi
       volumes:
         - name: uploads
           persistentVolumeClaim:
