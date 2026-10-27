@@ -1,0 +1,62 @@
+name: Purge KYC clients
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type purge-clients to delete clients and verifications
+        required: true
+        type: string
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'purge-clients'
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Delete clients and verifications
+        run: |
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - << 'PY'
+          import sqlite3
+          from pathlib import Path
+
+          con = sqlite3.connect("/var/lib/clarity/uploads/clarity.db")
+          cur = con.cursor()
+
+          def count(table):
+              return cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+          print("before", "customers", count("customers"), "verifications", count("workflow_instances"), "users", count("users"))
+          for (path,) in cur.execute("SELECT storage_path FROM identity_documents WHERE storage_path IS NOT NULL"):
+              file = Path(path)
+              if file.is_file():
+                  file.unlink()
+          statements = [
+              "DELETE FROM case_tags",
+              "DELETE FROM case_comments",
+              "DELETE FROM evidence",
+              "DELETE FROM alerts",
+              "DELETE FROM approvals",
+              "DELETE FROM workflow_tasks",
+              "DELETE FROM workflow_instances",
+              "DELETE FROM screening_matches",
+              "DELETE FROM screening_checks",
+              "DELETE FROM risk_assessments",
+              "DELETE FROM transactions",
+              "DELETE FROM identity_documents",
+              "DELETE FROM kyc_cycles",
+              "DELETE FROM verification_checks",
+              "DELETE FROM parties",
+              "DELETE FROM individual_profiles",
+              "DELETE FROM business_profiles",
+              "DELETE FROM cases",
+              "DELETE FROM customers",
+              "DELETE FROM ingested_objects WHERE object_type IN ('clients', 'counterparties')",
+          ]
+          for statement in statements:
+              cur.execute(statement)
+          con.commit()
+          print("after", "customers", count("customers"), "verifications", count("workflow_instances"), "users", count("users"))
+          PY
