@@ -11,8 +11,9 @@ on:
 jobs:
   purge:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'purge-clients'
     steps:
+      - name: Require confirmation
+        run: test "${{ github.event.inputs.confirm }}" = "purge-clients"
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
