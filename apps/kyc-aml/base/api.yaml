@@ -52,6 +52,16 @@ spec:
               value: https://clarity.api.dev.sandbox.internal.nbank.fr
             - name: CLARITY_CORE_BANKING_HOOK_URL
               value: http://core-api-core-banking-api.api.svc.cluster.local/api/kyc/onboarding
+            - name: CLARITY_ADMIN_USERNAME
+              value: admin
+            - name: CLARITY_ADMIN_PASSWORD
+              value: password
+            - name: CLARITY_OIDC_ISSUER
+              value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
+            - name: CLARITY_OIDC_CLIENT_ID
+              value: clarity
+            - name: CLARITY_OIDC_REDIRECT_URI
+              value: https://clarity.api.dev.sandbox.internal.nbank.fr/api/clarity/v1/auth/oidc/callback
             - name: CLARITY_CORS_ORIGINS
               value: https://clarity.api.dev.sandbox.internal.nbank.fr,http://localhost:3010
           volumeMounts:
