@@ -56,6 +56,8 @@ spec:
               value: admin
             - name: CLARITY_ADMIN_PASSWORD
               value: password
+            - name: CLARITY_AUTH_MODE
+              value: oidc
             - name: CLARITY_OIDC_ISSUER
               value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal
             - name: CLARITY_OIDC_CLIENT_ID
