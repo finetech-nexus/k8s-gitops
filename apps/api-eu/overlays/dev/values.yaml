@@ -695,7 +695,7 @@ ai-api:
   replicaCount: 1
   image:
     repository: nexusbank/ai-api
-    tag: "4d4c527"
+    tag: "fac6af7"
     pullPolicy: Always
   env:
     PORT: "8000"
