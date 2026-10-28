@@ -40,3 +40,13 @@ jobs:
             [ -z "$name" ] && continue
             flux reconcile helmrelease "$name" -n api-eu --timeout=3m || true
           done
+      - name: Replace the document reader in place
+        run: |
+          # The node has no room for two readers. A rolling update leaves the new
+          # pod pending and the old, slow reader serving scans.
+          for ns in api api-eu; do
+            kubectl -n "$ns" get deploy core-api-ai-api >/dev/null 2>&1 || continue
+            kubectl -n "$ns" patch deploy core-api-ai-api --type=json \
+              -p='[{"op":"replace","path":"/spec/strategy","value":{"type":"Recreate"}}]'
+            kubectl -n "$ns" rollout status deploy/core-api-ai-api --timeout=180s || true
+          done
