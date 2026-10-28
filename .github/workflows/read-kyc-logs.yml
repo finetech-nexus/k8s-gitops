@@ -28,6 +28,12 @@ jobs:
           kubectl -n api exec deploy/core-api-kyc-api -- node -e 'fetch("http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1/liveness/detect",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(async (r)=>{console.log(r.status); console.log((await r.text()).slice(0,180))})'
           echo "--- clarity ballerine health ---"
           kubectl -n api exec deploy/core-api-kyc-api -- node -e 'fetch("http://clarity-api.kyc-aml.svc.cluster.local:8095/api/v1/_health/live").then(async (r)=>{console.log(r.status)})'
+      - name: AI reader
+        run: |
+          set +e
+          kubectl -n api get deploy core-api-ai-api -o jsonpath='image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}'
+          kubectl -n api get pods -l app.kubernetes.io/instance=core-api -o wide | grep ai-api || kubectl -n api get pods | grep ai-api || true
+          kubectl -n api logs deploy/core-api-ai-api --since=20m --tail=120
       - name: KYC service lines
         run: |
           set +e
