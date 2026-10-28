@@ -66,6 +66,8 @@ spec:
               value: mifos
             - name: CLARITY_OIDC_REDIRECT_URI
               value: https://clarity.api.dev.sandbox.internal.nbank.fr/api/clarity/v1/auth/oidc/callback
+            - name: CLARITY_FACE_API_URL
+              value: http://core-api-ai-api.api.svc.cluster.local
             - name: CLARITY_CORS_ORIGINS
               value: https://clarity.api.dev.sandbox.internal.nbank.fr,http://localhost:3010
           volumeMounts:
