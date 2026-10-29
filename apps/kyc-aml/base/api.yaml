@@ -70,6 +70,19 @@ spec:
               value: http://core-api-ai-api.api.svc.cluster.local
             - name: CLARITY_CORS_ORIGINS
               value: https://clarity.api.dev.sandbox.internal.nbank.fr,http://localhost:3010
+            # Same MinIO as Ballerine (kyc overlay dev)
+            - name: CLARITY_STORAGE_PROVIDER
+              value: minio
+            - name: AWS_S3_BUCKET_NAME
+              value: ballerine-documents
+            - name: AWS_S3_BUCKET_KEY
+              value: "7M0KO9hp3fVqUqHJVmpb"
+            - name: AWS_S3_BUCKET_SECRET
+              value: "ORyuJopXh56DdaLlp2YFuqBMOjr0QhTsP2p8SKFN"
+            - name: AWS_S3_ENDPOINT
+              value: https://minio.payment-hub.dev.sandbox.internal.nbank.fr
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: "true"
           volumeMounts:
             - name: uploads
               mountPath: /var/lib/clarity/uploads
