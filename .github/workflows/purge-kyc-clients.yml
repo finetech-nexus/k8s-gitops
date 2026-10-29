@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: Type purge-clients to delete clients and verifications
+        description: Type purge-clients to delete clients/verifications and seed 100 Tunisian cases
         required: true
         type: string
 
@@ -17,47 +17,43 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Delete clients and verifications
+      - name: Purge clients and seed Tunisian scenarios
         run: |
           kubectl -n kyc-aml exec -i deploy/clarity-api -- python - << 'PY'
-          import sqlite3
+          import os
           from pathlib import Path
 
-          con = sqlite3.connect("/var/lib/clarity/uploads/clarity.db")
-          cur = con.cursor()
+          os.chdir("/srv/clarity/backend")
+          from app.config import Settings, bind_settings, reset_runtime_overlay
+          from app.db import Database
+          from app.engine import build_engine
+          from app.ids import TENANT_ID
+          from app.seed import DEMO_SEED_VERSION, reseed_demo_clients
+          from sqlalchemy import text
 
-          def count(table):
-              return cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-
-          print("before", "customers", count("customers"), "verifications", count("workflow_instances"), "users", count("users"))
-          for (path,) in cur.execute("SELECT storage_path FROM identity_documents WHERE storage_path IS NOT NULL"):
-              file = Path(path)
-              if file.is_file():
-                  file.unlink()
-          statements = [
-              "DELETE FROM case_tags",
-              "DELETE FROM case_comments",
-              "DELETE FROM evidence",
-              "DELETE FROM alerts",
-              "DELETE FROM approvals",
-              "DELETE FROM workflow_tasks",
-              "DELETE FROM workflow_instances",
-              "DELETE FROM screening_matches",
-              "DELETE FROM screening_checks",
-              "DELETE FROM risk_assessments",
-              "DELETE FROM transactions",
-              "DELETE FROM identity_documents",
-              "DELETE FROM kyc_cycles",
-              "DELETE FROM verification_checks",
-              "DELETE FROM parties",
-              "DELETE FROM individual_profiles",
-              "DELETE FROM business_profiles",
-              "DELETE FROM cases",
-              "DELETE FROM customers",
-              "DELETE FROM ingested_objects WHERE object_type IN ('clients', 'counterparties')",
-          ]
-          for statement in statements:
-              cur.execute(statement)
-          con.commit()
-          print("after", "customers", count("customers"), "verifications", count("workflow_instances"), "users", count("users"))
+          settings = Settings()
+          reset_runtime_overlay()
+          bind_settings(settings)
+          database = Database(settings.database_url)
+          database.create_all()
+          processes = Path("/srv/clarity/flowable/processes")
+          engine, _error = build_engine(
+              settings.flowable_url,
+              settings.flowable_user,
+              settings.flowable_password,
+              processes if processes.exists() else Path("flowable/processes"),
+          )
+          db = database.session_factory()
+          try:
+              before = db.execute(text("SELECT COUNT(*) FROM customers")).scalar()
+              print("before_customers", before)
+              result = reseed_demo_clients(db, engine)
+              db.commit()
+              after = db.execute(text("SELECT COUNT(*) FROM customers")).scalar()
+              print("after_customers", after, "seed", result, "version", DEMO_SEED_VERSION, "tenant", TENANT_ID)
+          except Exception:
+              db.rollback()
+              raise
+          finally:
+              db.close()
           PY

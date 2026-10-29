@@ -43,7 +43,7 @@ spec:
             - name: CLARITY_SEED_DEMO
               value: "true"
             - name: CLARITY_SEED_CLIENTS
-              value: "false"
+              value: "true"
             - name: CLARITY_JWT_SECRET
               value: clarity-kyc-aml-sandbox-jwt-secret-32b
             - name: CLARITY_UPLOAD_DIR
