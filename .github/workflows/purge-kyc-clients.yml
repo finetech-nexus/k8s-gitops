@@ -19,6 +19,8 @@ jobs:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Purge clients and seed Tunisian scenarios
         run: |
+          # Wait for API pod to be ready after image rollouts.
+          kubectl -n kyc-aml rollout status deploy/clarity-api --timeout=300s
           kubectl -n kyc-aml exec -i deploy/clarity-api -- python - << 'PY'
           import os
           from pathlib import Path
