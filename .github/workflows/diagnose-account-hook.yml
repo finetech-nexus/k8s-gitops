@@ -7,38 +7,32 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Inspect hook delivery and workflowservice error
+      - name: Core-banking onboarding + IAM
         run: |
           set +e
-          echo '=== clarity hook env ==='
-          kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'HOOK|SECRET' || true
-          echo '=== workflowservice recent logs ==='
-          kubectl -n kyc logs deploy/workflowservice --since=45m --tail=400 2>&1 | tail -n 200
-          echo '=== stored account_hook for Mohamed ==='
-          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
-          import json, os
-          os.chdir("/srv/clarity/backend")
-          from app.config import Settings, bind_settings, reset_runtime_overlay
-          from app.db import Database
-          from sqlalchemy import text
-          reset_runtime_overlay(); bind_settings(Settings())
-          db = Database(Settings().database_url).session_factory()
-          row = db.execute(text("select id, state, context from workflow_instances where id=:id"), {"id":"331396fb-65b1-4b3a-8817-1e2d94d47266"}).mappings().first()
-          ctx = row["context"] if row else {}
-          if isinstance(ctx, str): ctx = json.loads(ctx)
-          hook = (ctx or {}).get("account_hook") or {}
-          print("status", hook.get("status"), "delivered", hook.get("delivered"))
-          print("response", (hook.get("response") or "")[:800])
-          payload = hook.get("payload") or {}
-          print("eventName", payload.get("eventName"))
-          print("workflowFinalState", payload.get("workflowFinalState"))
-          print("workflowRuntimeId", payload.get("workflowRuntimeId"))
-          print("ballerineEntityId", payload.get("ballerineEntityId"))
-          print("correlationId", payload.get("correlationId"))
-          data = payload.get("data") or {}
-          print("entity", json.dumps(data.get("entity"), default=str)[:1000])
-          docs = data.get("documents") or []
-          print("documents_count", len(docs))
-          if docs:
-              print("doc0", json.dumps(docs[0], default=str)[:800])
-          PY
+          echo '=== IAM pods ==='
+          kubectl -n iam get pods -o wide
+          echo '=== Keycloak OIDC probe ==='
+          kubectl -n iam exec deploy/keycloak -- curl -sf -o /dev/null -w 'oidc=%{http_code}\n' http://127.0.0.1:8080/auth/realms/internal/.well-known/openid-configuration 2>/dev/null \
+            || kubectl -n iam get pods
+          echo '=== core-api-core-banking-api pods ==='
+          kubectl -n api get pods | grep -iE 'core-banking|cbanking' || kubectl -n api get pods | head -40
+          echo '=== cbanking logs (onboarding) ==='
+          for d in core-api-core-banking-api core-banking-api cbanking-api; do
+            kubectl -n api logs deploy/$d --since=60m --tail=400 2>/dev/null | grep -iE 'onboarding|Register user|error|Error|ECONN|timeout|500|Keycloak|failed' | tail -80 && break
+          done
+          echo '=== workflowservice ONBORDING/KEYCLOAK env ==='
+          kubectl -n kyc get deploy workflowservice -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -iE 'ONBORDING|KEYCLOAK|TENANT|WEBHOOK' || true
+          echo '=== probe cbanking from workflowservice pod ==='
+          kubectl -n kyc exec -i deploy/workflowservice -- node -e '
+            const https=require("https");
+            const url=process.env.ONBORDING_URL||"";
+            console.log("ONBORDING_URL", url);
+            const u=new URL(url);
+            const req=https.request({hostname:u.hostname,path:u.pathname,method:"GET",rejectUnauthorized:false,timeout:8000},res=>{
+              let d=""; res.on("data",c=>d+=c); res.on("end",()=>console.log("get",res.statusCode,d.slice(0,200)));
+            });
+            req.on("error",e=>console.log("err",e.message));
+            req.on("timeout",()=>{console.log("timeout"); req.destroy();});
+            req.end();
+          ' 2>&1 | tail -20
