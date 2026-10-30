@@ -1,0 +1,34 @@
+name: Diagnose — iam
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: IAM status
+        run: |
+          set +e
+          echo '=== pods/svc/ingress/endpoints ==='
+          kubectl -n iam get pods,svc,ingress,endpoints -o wide
+          echo '=== helmreleases ==='
+          kubectl -n iam get helmreleases.helm.toolkit.fluxcd.io -o wide
+          echo '=== events ==='
+          kubectl -n iam get events --sort-by=.lastTimestamp | tail -50
+          echo '=== describe non-ready pods ==='
+          for p in $(kubectl -n iam get pods --no-headers 2>/dev/null | awk '$3!="Running" && $3!="Completed" {print $1}'); do
+            echo "---- $p ----"
+            kubectl -n iam describe pod "$p" | tail -80
+            kubectl -n iam logs "$p" --all-containers --tail=80 2>/dev/null
+          done
+          for p in $(kubectl -n iam get pods --no-headers 2>/dev/null | awk '$3=="Running" {print $1}'); do
+            ready=$(kubectl -n iam get pod "$p" -o jsonpath='{.status.containerStatuses[*].ready}')
+            echo "running $p ready=$ready"
+            if echo "$ready" | grep -qv true; then
+              kubectl -n iam logs "$p" --all-containers --tail=100 2>/dev/null
+            fi
+          done
