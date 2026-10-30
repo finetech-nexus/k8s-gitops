@@ -12,7 +12,7 @@ core-banking-api:
   #       - "fynams.dev.sandbox.internal.nbank.fr"
   image:
     repository: nexusbank/core-banking-api
-    tag: "bd5d1cf"
+    tag: "15efcfd"
     pullPolicy: Always
 
   env:
