@@ -1,0 +1,58 @@
+name: Recover — iam
+on: workflow_dispatch
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Recover Keycloak + Postgres
+        run: |
+          set +e
+          echo '=== nodes ==='
+          kubectl get nodes -o wide
+          kubectl top nodes 2>/dev/null || true
+          echo '=== iam before ==='
+          kubectl -n iam get pods -o wide
+          kubectl -n iam get pvc
+          echo '=== free pressure: scale down demo-heavy workloads briefly ==='
+          # Clarity seed / KYC dashboards can starve IAM on the small sandbox.
+          kubectl -n kyc scale deploy/backoffice --replicas=0 2>/dev/null || true
+          kubectl -n kyc scale deploy/workflowsdashboard --replicas=0 2>/dev/null || true
+          sleep 5
+          echo '=== recycle postgres pod (keep PVC) ==='
+          kubectl -n iam delete pod keycloak-postgresql-0 --wait=false --grace-period=0 2>/dev/null || true
+          for i in $(seq 1 36); do
+            phase=$(kubectl -n iam get pod keycloak-postgresql-0 -o jsonpath='{.status.phase}' 2>/dev/null)
+            ready=$(kubectl -n iam get pod keycloak-postgresql-0 -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
+            echo "pg try=$i phase=$phase ready=$ready"
+            if [ "$phase" = "Running" ] && [ "$ready" = "true" ]; then break; fi
+            # if stuck Initializing on mount, delete again once
+            if [ "$i" = "12" ]; then
+              kubectl -n iam delete pod keycloak-postgresql-0 --wait=false --grace-period=0 2>/dev/null || true
+            fi
+            sleep 5
+          done
+          echo '=== recycle keycloak ==='
+          kubectl -n iam delete pod keycloak-0 --wait=false --grace-period=0 2>/dev/null || true
+          for i in $(seq 1 48); do
+            ready=$(kubectl -n iam get pod keycloak-0 -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
+            echo "kc try=$i ready=$ready"
+            if [ "$ready" = "true" ]; then break; fi
+            sleep 5
+          done
+          echo '=== after ==='
+          kubectl -n iam get pods -o wide
+          kubectl -n iam get events --sort-by=.lastTimestamp | tail -25
+          echo '=== external probe ==='
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 15 https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/.well-known/openid-configuration || echo err)
+            echo "oidc=$code"
+            [ "$code" = "200" ] && break
+            sleep 10
+          done
+          echo '=== restore scaled apps ==='
+          kubectl -n kyc scale deploy/backoffice --replicas=1 2>/dev/null || true
+          kubectl -n kyc scale deploy/workflowsdashboard --replicas=1 2>/dev/null || true
+          test "$code" = "200"
