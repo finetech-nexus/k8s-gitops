@@ -1,0 +1,92 @@
+name: Diagnose — activate-account
+on: workflow_dispatch
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Trace partial clients, transfers, funding workflows
+        run: |
+          set +e
+          echo '=== clarity images ==='
+          kubectl -n kyc-aml get deploy clarity-api clarity-web -o jsonpath='{range .items[*]}{.metadata.name} image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}{end}'
+          echo '=== partial customers + workflows + recent txs ==='
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
+          import os, json
+          os.chdir("/srv/clarity/backend")
+          from app.config import Settings, bind_settings, reset_runtime_overlay
+          from app.db import Database
+          from app.engine import PROCESS_CATALOG
+          from sqlalchemy import text
+          reset_runtime_overlay(); bind_settings(Settings())
+          db = Database(Settings().database_url).session_factory()
+          print("catalog_name", PROCESS_CATALOG.get("clarityFundingOrigin", {}).get("name"))
+          custs = db.execute(text("""
+            select id, display_name, canonical_status, external_ref, kind
+            from customers
+            where canonical_status in ('approved-partially','approved_partially','approved')
+            order by updated_at desc nulls last, created_at desc
+            limit 20
+          """)).mappings().all()
+          print("customers", len(custs))
+          for c in custs:
+            print("CUSTOMER", dict(c))
+            wfs = db.execute(text("""
+              select id, definition_key, definition_name, state, status, created_at,
+                     json_extract(context, '$.source') as source,
+                     json_extract(context, '$.transaction_id') as transaction_id
+              from workflow_instances
+              where customer_id=:cid
+              order by created_at desc
+              limit 10
+            """), {"cid": c["id"]}).mappings().all()
+            for w in wfs:
+              print("  WF", dict(w))
+            txs = db.execute(text("""
+              select id, amount, currency, direction, counterparty_name, description,
+                     correlation_id, customer_id, occurred_at, created_at,
+                     substr(cast(payload as text), 1, 400) as payload_head
+              from transactions
+              where customer_id=:cid
+              order by created_at desc
+              limit 8
+            """), {"cid": c["id"]}).mappings().all()
+            for t in txs:
+              print("  TX", dict(t))
+          print('=== recent txs without customer match ===')
+          orphans = db.execute(text("""
+            select id, amount, currency, direction, counterparty_name, customer_id,
+                   correlation_id, created_at, substr(cast(payload as text), 1, 500) as payload_head
+            from transactions
+            order by created_at desc
+            limit 15
+          """)).mappings().all()
+          for t in orphans:
+            print("TX", dict(t))
+          print('=== funding / activate workflows ===')
+          funds = db.execute(text("""
+            select id, customer_id, definition_key, definition_name, state, status, created_at
+            from workflow_instances
+            where definition_key='clarityFundingOrigin'
+            order by created_at desc limit 10
+          """)).mappings().all()
+          for f in funds:
+            print("FUND", dict(f))
+          print('=== ingested transaction objects (last 10) ===')
+          try:
+            rows = db.execute(text("""
+              select object_id, object_type, updated_at, substr(cast(payload as text), 1, 500) as payload_head
+              from ingested_objects
+              where object_type='transactions'
+              order by updated_at desc limit 10
+            """)).mappings().all()
+            for r in rows:
+              print("INGEST", dict(r))
+          except Exception as e:
+            print("ingest_err", e)
+          PY
+          echo '=== kyc-api image + recent marble/deposit logs ==='
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}'
+          kubectl -n api logs deploy/core-api-kyc-api --since=2h --tail=300 2>/dev/null | grep -iE 'deposit|transfer|marble|ingest|customer_id|client_id|transaction' | tail -60
