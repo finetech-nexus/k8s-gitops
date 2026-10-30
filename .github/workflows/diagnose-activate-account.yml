@@ -7,10 +7,10 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Map Fineract client 8 to Clarity customer
+      - name: Prove Fineract client 8 identity
         run: |
           set +e
-          echo '=== Mohamed Miladi full context + hook ==='
+          echo '=== Clarity: who has external_ref containing 8 / user-6cbff ==='
           kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
           import os, json
           os.chdir("/srv/clarity/backend")
@@ -19,27 +19,24 @@ jobs:
           from sqlalchemy import text
           reset_runtime_overlay(); bind_settings(Settings())
           db = Database(Settings().database_url).session_factory()
-          cust = db.execute(text("select * from customers where display_name='Mohamed Miladi'")).mappings().first()
-          print("CUSTOMER", {k: cust[k] for k in cust.keys() if k != 'id' or True})
-          wfs = db.execute(text("select id, definition_key, state, status, context from workflow_instances where customer_id=:cid order by created_at desc"), {"cid": cust["id"]}).mappings().all()
-          for w in wfs:
-            ctx = w["context"]
-            if isinstance(ctx, str):
-              try: ctx = json.loads(ctx)
-              except Exception: pass
-            hook = (ctx or {}).get("account_hook") if isinstance(ctx, dict) else None
-            entity = (ctx or {}).get("entity") if isinstance(ctx, dict) else None
-            print("WF", w["id"], w["definition_key"], w["state"], "hook", json.dumps(hook, default=str)[:800] if hook else None)
-            print("  entity.id", (entity or {}).get("id") if isinstance(entity, dict) else None)
-            print("  entity.data keys", list(((entity or {}).get("data") or {}).keys()) if isinstance(entity, dict) else None)
-          tx = db.execute(text("select payload from transactions where correlation_id='deposit:232'")).mappings().first()
-          print("DEPOSIT_PAYLOAD", json.dumps(tx["payload"] if isinstance(tx["payload"], dict) else json.loads(tx["payload"]), default=str))
+          print("match_external_ref_8", [dict(r) for r in db.execute(text("select id, display_name, external_ref, canonical_status from customers where external_ref in ('8','client:8')")).mappings()])
+          print("miladi", dict(db.execute(text("select id, display_name, external_ref, canonical_status from customers where display_name='Mohamed Miladi'")).mappings().first() or {}))
+          tx = db.execute(text("select id, customer_id, correlation_id, amount, direction, payload from transactions where correlation_id='deposit:232'")).mappings().first()
+          print("tx_customer_id_linked", tx["customer_id"] if tx else None)
+          print("tx_payload_customer_id", (tx["payload"] or {}).get("customer_id") if tx and isinstance(tx["payload"], dict) else None)
+          print("tx_payload_client_id", (tx["payload"] or {}).get("client_id") if tx and isinstance(tx["payload"], dict) else None)
+          print("tx_payload_account", (tx["payload"] or {}).get("credit_account_id") if tx and isinstance(tx["payload"], dict) else None)
+          # hook response body if any
+          row = db.execute(text("select context from workflow_instances where id='72fdd14e-29c8-4e02-854b-9ab7d84f4eba'")).mappings().first()
+          ctx = row["context"]
+          if isinstance(ctx, str): ctx = json.loads(ctx)
+          hook = (ctx or {}).get("account_hook") or {}
+          print("hook_status", hook.get("status"), "hook_response_head", str(hook.get("response"))[:1000])
+          print("hook_error", hook.get("error"))
           PY
-          echo '=== fineract / core-banking client 8 ==='
-          kubectl -n core-banking get pods 2>/dev/null | head -20
-          for ns in core-banking banking fineract api; do
-            kubectl -n $ns get deploy 2>/dev/null | grep -iE 'fineract|core-banking|ledger' | head -10
-          done
-          # try resolve client 8 via core-banking-api if present
-          kubectl -n api get deploy 2>/dev/null | head -40
-          kubectl -n api logs deploy/core-api-kyc-api --since=3h --tail=400 2>/dev/null | grep -iE 'deposit:232|"clientId":.?8|clientId.:8|accountId' | tail -40
+          echo '=== Fineract MySQL client id 8 ==='
+          kubectl -n core-banking exec fineract-mysql-0 -- mysql -N -ufineract -pfineract fineract_default -e "SELECT id, external_id, display_name, firstname, lastname, mobile_no, email_address, status_enum FROM m_client WHERE id=8\G" 2>/dev/null || \
+          kubectl -n core-banking exec fineract-mysql-0 -- mysql -N -uroot -pshola -e "SELECT id, external_id, display_name, firstname, lastname FROM fineract_default.m_client WHERE id=8\G" 2>/dev/null || \
+          kubectl -n core-banking exec fineract-mysql-0 -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW DATABASES; SELECT id, external_id, display_name, firstname, lastname FROM fineract_tenants.tenants LIMIT 5;"' 2>&1 | tail -40
+          echo '=== Fineract savings account 10 ==='
+          kubectl -n core-banking exec fineract-mysql-0 -- sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "SELECT id, account_no, client_id, product_id, status_enum FROM fineract_default.m_savings_account WHERE id=10\G"' 2>&1 | tail -30
