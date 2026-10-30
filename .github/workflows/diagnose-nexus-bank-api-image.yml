@@ -1,0 +1,24 @@
+name: Diagnose — nexus-bank-api image
+on: workflow_dispatch
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Check image and restart if needed
+        run: |
+          set -e
+          echo '=== deploy image ==='
+          kubectl -n app get deploy -o wide | head -20
+          kubectl -n app get deploy -l app.kubernetes.io/name=nexus-bank-api -o jsonpath='{range .items[*]}{.metadata.name} {.spec.template.spec.containers[0].image}{"\n"}{end}' 2>/dev/null || true
+          kubectl -n app get deploy nexus-bank-api -o jsonpath='image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}' 2>/dev/null || \
+          kubectl -n app get deploy -o json | python3 -c 'import json,sys; d=json.load(sys.stdin);
+[print(i["metadata"]["name"], i["spec"]["template"]["spec"]["containers"][0].get("image")) for i in d.get("items",[]) if "nexus" in i["metadata"]["name"] or "bank-api" in i["metadata"]["name"]]'
+          NAME=$(kubectl -n app get deploy -o name | rg -i 'nexus-bank-api|nexusbank-api|bank-api' | head -1 || true)
+          echo NAME=$NAME
+          if [ -n "$NAME" ]; then
+            kubectl -n app rollout status "$NAME" --timeout=120s || true
+            kubectl -n app get "$NAME" -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+          fi
