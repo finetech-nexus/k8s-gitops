@@ -7,19 +7,20 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Verify fixed status response
+      - name: Rollout nexus-bank-api 494a8ed
         run: |
           set +e
-          echo '=== image ==='
-          kubectl -n api get deploy core-api-kyc-api -o jsonpath='image={.spec.template.spec.containers[0].image}{"\n"}'
-          PARTIAL=a6f5ef7c-d7c7-4f93-8978-42cf9f0f0052
-          VID=6cbff49a-6e30-4511-a626-9387b285b83c
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
-            const http=require('http');
-            const path='/api/kyc/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL';
-            const req=http.request({hostname:'127.0.0.1',port:3000,path,method:'GET',headers:{'x-tenant-id':'tn'},timeout:8000},res=>{
-              let d=''; res.on('data',c=>d+=c); res.on('end',()=>console.log(res.statusCode,d));
-            });
-            req.on('error',e=>console.log('err',e.message));
-            req.end();
-          "
+          echo '=== app deploys ==='
+          kubectl -n app get deploy -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image,READY:.status.readyReplicas
+          echo '=== find nexus-bank-api ==='
+          NAME=$(kubectl -n app get deploy -o name | grep -iE 'nexus-bank-api|nexusbank' | head -1)
+          echo NAME=$NAME
+          if [ -z "$NAME" ]; then
+            kubectl -n app get deploy -o yaml | grep -E 'name:|image:' | head -80
+            exit 1
+          fi
+          echo '=== set image 494a8ed ==='
+          kubectl -n app set image "$NAME" "*=nexusbank/nexus-bank-api:494a8ed"
+          kubectl -n app rollout status "$NAME" --timeout=180s
+          kubectl -n app get "$NAME" -o jsonpath='image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}'
+          kubectl -n app logs "$NAME" --tail=30 | grep -iE 'me/status|token exchanged|listening|error' || true
