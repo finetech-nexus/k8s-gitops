@@ -1,0 +1,40 @@
+name: Diagnose — kyc-hook-path
+on: workflow_dispatch
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Path status
+        run: |
+          set +e
+          echo '=== kyc pods ==='
+          kubectl -n kyc get pods -o wide | head -40
+          echo '=== kyc svc ==='
+          kubectl -n kyc get svc | head -40
+          echo '=== clarity hook env ==='
+          kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'HOOK|CORE_BANK|SECRET' || true
+          echo '=== recent account_hook audits ==='
+          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          import json, os
+          os.chdir("/srv/clarity/backend")
+          from app.config import Settings, bind_settings, reset_runtime_overlay
+          from app.db import Database
+          from sqlalchemy import text
+          reset_runtime_overlay(); bind_settings(Settings())
+          db = Database(Settings().database_url).session_factory()
+          rows = db.execute(text("select id, state, created_at, context from workflow_instances where state='approved' order by created_at desc limit 3")).mappings().all()
+          for row in rows:
+              ctx = row["context"]
+              if isinstance(ctx, str):
+                  ctx = json.loads(ctx)
+              hook = (ctx or {}).get("account_hook") or {}
+              print(row["id"], row["state"], row["created_at"], "delivered", hook.get("delivered"), "url", hook.get("url"), "status", hook.get("status"), "error", hook.get("error"), "reason", hook.get("reason"))
+          PY
+          echo '=== probe in-cluster workflowsvc ==='
+          kubectl -n kyc get svc -o name | head -50
+          for svc in $(kubectl -n kyc get svc -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+            echo "svc=$svc"
+          done
