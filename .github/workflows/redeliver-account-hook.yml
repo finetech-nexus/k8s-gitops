@@ -1,0 +1,63 @@
+name: Redeliver — account-hook
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_id:
+        description: Workflow instance id (empty = latest approved)
+        required: false
+        type: string
+jobs:
+  redeliver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Probe workflowservice and redeliver
+        env:
+          WORKFLOW_ID: ${{ github.event.inputs.workflow_id }}
+        run: |
+          set -e
+          echo '=== env ==='
+          kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'ACCOUNT_HOOK|CORE_BANKING_HOOK|UNIFIED_API' || true
+          echo '=== probe workflowservice from clarity ==='
+          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          import httpx
+          url = "http://workflowservice.kyc.svc.cluster.local:3000/api/v1/hooks/onboarding"
+          try:
+              r = httpx.post(url, json={"eventName":"ping"}, headers={"x-hmac-signature":"test"}, timeout=10)
+              print("probe", r.status_code, r.text[:300])
+          except Exception as e:
+              print("probe_err", e)
+          PY
+          echo '=== redeliver ==='
+          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          import json, os
+          os.chdir("/srv/clarity/backend")
+          from app.config import Settings, bind_settings, reset_runtime_overlay
+          from app.db import Database
+          from app.models import Customer, WorkflowInstance
+          from app.services import deliver_account_hook
+          from sqlalchemy import select, text
+          reset_runtime_overlay(); bind_settings(Settings())
+          settings = Settings()
+          print("hook_url", settings.resolved_account_hook_url)
+          db = Database(settings.database_url).session_factory()
+          wanted = os.environ.get("WORKFLOW_ID") or ""
+          if wanted:
+              workflow = db.get(WorkflowInstance, wanted)
+          else:
+              workflow = db.scalar(
+                  select(WorkflowInstance)
+                  .where(WorkflowInstance.state.in_(("approved", "approved-partially")))
+                  .order_by(WorkflowInstance.created_at.desc())
+              )
+          if not workflow:
+              raise SystemExit("no approved workflow")
+          customer = db.get(Customer, workflow.customer_id)
+          print("workflow", workflow.id, workflow.state, "customer", customer and customer.display_name)
+          deliver_account_hook(db, workflow, customer)
+          db.commit()
+          hook = (workflow.context or {}).get("account_hook") or {}
+          print(json.dumps({k: hook.get(k) for k in ("delivered", "status", "url", "error", "response")}, default=str))
+          PY

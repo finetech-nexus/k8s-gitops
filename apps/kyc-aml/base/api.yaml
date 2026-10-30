@@ -50,17 +50,11 @@ spec:
               value: /var/lib/clarity/uploads
             - name: CLARITY_PUBLIC_APP_URL
               value: https://clarity.api.dev.sandbox.internal.nbank.fr
-            - name: CLARITY_CORE_BANKING_HOOK_URL
-              value: http://core-api-core-banking-api.api.svc.cluster.local/api/kyc/onboarding
-            # Same credentials Ballerine workflowsvc uses to call /api/kyc/onboarding (Bearer required).
-            - name: CLARITY_CORE_BANKING_TOKEN_URL
-              value: https://iam.dev.sandbox.internal.nbank.fr/auth/realms/internal/protocol/openid-connect/token
-            - name: CLARITY_CORE_BANKING_CLIENT_ID
-              value: kyc
-            - name: CLARITY_CORE_BANKING_CLIENT_SECRET
-              value: tudlWzNqRrF41T8ciEmDggDIejeLqNUa
-            - name: CLARITY_CORE_BANKING_TENANT
-              value: tn
+            # Same path as Ballerine: Clarity → workflowservice onboarding hook → core banking (with Keycloak token).
+            - name: CLARITY_ACCOUNT_HOOK_URL
+              value: http://workflowservice.kyc.svc.cluster.local:3000/api/v1/hooks/onboarding
+            - name: CLARITY_UNIFIED_API_SHARED_SECRET
+              value: webhooksecret
             - name: CLARITY_ADMIN_USERNAME
               value: admin
             - name: CLARITY_ADMIN_PASSWORD
