@@ -7,15 +7,15 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Inspect hook delivery and core-banking route
+      - name: Inspect hook delivery and workflowservice error
         run: |
           set +e
-          echo '=== clarity env hook ==='
-          kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'CORE_BANKING|UNIFIED|SECRET|HOOK' || true
-          echo '=== services in api ns matching core ==='
-          kubectl -n api get svc | grep -iE 'core|bank|cbank' || true
-          echo '=== workflow account_hook from DB ==='
-          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          echo '=== clarity hook env ==='
+          kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'HOOK|SECRET' || true
+          echo '=== workflowservice recent logs ==='
+          kubectl -n kyc logs deploy/workflowservice --since=45m --tail=400 2>&1 | tail -n 200
+          echo '=== stored account_hook for Mohamed ==='
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
           import json, os
           os.chdir("/srv/clarity/backend")
           from app.config import Settings, bind_settings, reset_runtime_overlay
@@ -23,29 +23,22 @@ jobs:
           from sqlalchemy import text
           reset_runtime_overlay(); bind_settings(Settings())
           db = Database(Settings().database_url).session_factory()
-          row = db.execute(text("select id, state, definition_key, context from workflow_instances where id=:id"), {"id":"322bf42f-a014-4b37-a5fe-96f5abbe1355"}).mappings().first()
-          print("workflow", row and dict(row) and {k: row[k] for k in ("id","state","definition_key")})
+          row = db.execute(text("select id, state, context from workflow_instances where id=:id"), {"id":"331396fb-65b1-4b3a-8817-1e2d94d47266"}).mappings().first()
           ctx = row["context"] if row else {}
-          if isinstance(ctx, str):
-              ctx = json.loads(ctx)
-          print(json.dumps((ctx or {}).get("account_hook"), indent=2, default=str)[:4000])
-          audits = db.execute(text("select created_at, detail from audit_events where action='workflow.account_hook' order by created_at desc limit 5")).mappings().all()
-          for a in audits:
-              print("audit", a["created_at"], a["detail"])
-          PY
-          echo '=== probe hook URL from clarity pod ==='
-          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
-          import os, httpx
-          url = os.environ.get("CLARITY_CORE_BANKING_HOOK_URL","")
-          print("url", url)
-          try:
-              r = httpx.get(url.replace("/api/kyc/onboarding","/api/health") if url else "http://127.0.0.1", timeout=5)
-              print("healthish", r.status_code, r.text[:200])
-          except Exception as e:
-              print("get_err", e)
-          try:
-              r = httpx.post(url, json={"ping": True}, timeout=8)
-              print("post", r.status_code, r.text[:500])
-          except Exception as e:
-              print("post_err", e)
+          if isinstance(ctx, str): ctx = json.loads(ctx)
+          hook = (ctx or {}).get("account_hook") or {}
+          print("status", hook.get("status"), "delivered", hook.get("delivered"))
+          print("response", (hook.get("response") or "")[:800])
+          payload = hook.get("payload") or {}
+          print("eventName", payload.get("eventName"))
+          print("workflowFinalState", payload.get("workflowFinalState"))
+          print("workflowRuntimeId", payload.get("workflowRuntimeId"))
+          print("ballerineEntityId", payload.get("ballerineEntityId"))
+          print("correlationId", payload.get("correlationId"))
+          data = payload.get("data") or {}
+          print("entity", json.dumps(data.get("entity"), default=str)[:1000])
+          docs = data.get("documents") or []
+          print("documents_count", len(docs))
+          if docs:
+              print("doc0", json.dumps(docs[0], default=str)[:800])
           PY
