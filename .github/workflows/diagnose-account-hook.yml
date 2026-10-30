@@ -7,64 +7,58 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Live status poll for Mohamed Miladi
+      - name: Dump real status JSON
         run: |
           set +e
-          echo '=== kyc-api image ==='
-          kubectl -n api get deploy core-api-kyc-api -o jsonpath='image={.spec.template.spec.containers[0].image} ready={.status.readyReplicas}{"\n"}'
-          kubectl -n api get pods -l app.kubernetes.io/name=kyc-api -o wide 2>/dev/null || kubectl -n api get pods | grep kyc-api
-          echo '=== Clarity customer + workflows ==='
-          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
-          import os, json
-          os.chdir("/srv/clarity/backend")
-          from app.config import Settings, bind_settings, reset_runtime_overlay
-          from app.db import Database
-          from sqlalchemy import text
-          reset_runtime_overlay(); bind_settings(Settings())
-          db = Database(Settings().database_url).session_factory()
-          for name in ("Mohamed Miladi", "Mohamed Amine Miladi"):
-            cust = db.execute(text("select id, display_name, canonical_status, external_ref from customers where display_name = :n"), {"n": name}).mappings().first()
-            print("CUSTOMER", name, dict(cust) if cust else None)
-            if not cust: continue
-            rows = db.execute(text("select ballerine_runtime_id, definition_key, state, status from workflow_instances where customer_id=:cid order by created_at desc"), {"cid": cust["id"]}).mappings().all()
-            for r in rows: print("  wf", dict(r))
-          PY
           PARTIAL=a6f5ef7c-d7c7-4f93-8978-42cf9f0f0052
-          echo '=== simulate status endpoint logic (new) ==='
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
-            const ep=process.env.BALLERINE_ENDPOINT, key=process.env.BALLERINE_API_KEY;
-            const ids=['$PARTIAL'];
-            (async()=>{
-              for (const id of ids) {
-                const r=await fetch(ep+'/api/v1/external/workflows/'+id,{headers:{Authorization:'Bearer '+key}});
-                const j=await r.json();
-                const state=String(j.state||j.status||'').toLowerCase();
-                let mapped='pending';
-                if (state==='approved-partially'||state==='approved_partially') mapped='approved-partially';
-                else if (state==='approved') mapped='verified';
-                console.log(JSON.stringify({id, http:r.status, state:j.state, status:j.status, mapped}));
-              }
-            })().catch(e=>console.log('err',e.message));
-          "
-          echo '=== hit status via kyc-api HTTP (in-cluster) ==='
-          # Call the real status route with reviewWorkflowRuntimeId like the app
+          VID=6cbff49a-6e30-4511-a626-9387b285b83c
+          echo '=== svc ports ==='
+          kubectl -n api get svc | grep -i kyc
+          echo '=== curl status via cluster svc ==='
           kubectl -n api exec deploy/core-api-kyc-api -- node -e "
             const http=require('http');
-            const qs='tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL';
-            // try common listen ports
-            const ports=[3000,8080,80];
-            (async()=>{
-              for (const port of ports) {
-                await new Promise(resolve=>{
-                  const req=http.request({hostname:'127.0.0.1',port,path:'/v2/enduser/verify/status/test-vid?'+qs,method:'GET',headers:{'x-tenant-id':'tn',Accept:'application/json'},timeout:5000},res=>{
-                    let d=''; res.on('data',c=>d+=c); res.on('end',()=>{console.log('port',port,'->',res.statusCode,d.slice(0,500)); resolve();});
-                  });
-                  req.on('error',e=>{console.log('port',port,'err',e.message); resolve();});
-                  req.on('timeout',()=>{console.log('port',port,'timeout'); req.destroy(); resolve();});
-                  req.end();
+            function get(path){
+              return new Promise(resolve=>{
+                const req=http.request({hostname:'127.0.0.1',port:3000,path,method:'GET',headers:{'x-tenant-id':'tn',Accept:'application/json'},timeout:8000},res=>{
+                  let d=''; res.on('data',c=>d+=c); res.on('end',()=>resolve({code:res.statusCode,body:d}));
                 });
+                req.on('error',e=>resolve({err:e.message}));
+                req.on('timeout',()=>{req.destroy(); resolve({err:'timeout'});});
+                req.end();
+              });
+            }
+            (async()=>{
+              for (const path of [
+                '/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
+                '/api/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
+                '/api/kyc/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
+              ]) {
+                const r=await get(path);
+                console.log(path, JSON.stringify(r).slice(0,800));
               }
             })();
           "
-          echo '=== kyc-api recent status poll logs ==='
-          kubectl -n api logs deploy/core-api-kyc-api --since=30m --tail=200 2>/dev/null | grep -iE 'KYC status poll|Ballerine status|approved-partially|verify/status' | tail -40
+          echo '=== what does old mapping do with real Clarity payload ==='
+          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
+            const ep=process.env.BALLERINE_ENDPOINT, key=process.env.BALLERINE_API_KEY;
+            (async()=>{
+              const runtime=await (await fetch(ep+'/api/v1/external/workflows/$PARTIAL',{headers:{Authorization:'Bearer '+key}})).json();
+              const state=String(runtime.state??'').toLowerCase();
+              let idvResult;
+              if (state==='approved') idvResult='approved';
+              else if (state==='rejected') idvResult='declined';
+              else idvResult='review';
+              const publicState=state;
+              const payload={state:publicState,idvResult};
+              // copy of mobile mapApiToKycStatus (pre and post)
+              function map(data){
+                const s=(data.state||'').toLowerCase();
+                const idv=(data.idvResult||'').toLowerCase();
+                if (s==='approved-partially'||s==='approved_partially') return 'approved-partially';
+                if (s==='approved' && idv==='approved') return 'verified';
+                if (s==='rejected'||idv==='declined') return 'refused';
+                return 'pending';
+              }
+              console.log('payload', payload, 'mapped', map(payload));
+            })();
+          "
