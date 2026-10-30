@@ -7,32 +7,41 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Core-banking onboarding + IAM
+      - name: Poll status path like mobile
         run: |
           set +e
-          echo '=== IAM pods ==='
-          kubectl -n iam get pods -o wide
-          echo '=== Keycloak OIDC probe ==='
-          kubectl -n iam exec deploy/keycloak -- curl -sf -o /dev/null -w 'oidc=%{http_code}\n' http://127.0.0.1:8080/auth/realms/internal/.well-known/openid-configuration 2>/dev/null \
-            || kubectl -n iam get pods
-          echo '=== core-api-core-banking-api pods ==='
-          kubectl -n api get pods | grep -iE 'core-banking|cbanking' || kubectl -n api get pods | head -40
-          echo '=== cbanking logs (onboarding) ==='
-          for d in core-api-core-banking-api core-banking-api cbanking-api; do
-            kubectl -n api logs deploy/$d --since=60m --tail=400 2>/dev/null | grep -iE 'onboarding|Register user|error|Error|ECONN|timeout|500|Keycloak|failed' | tail -80 && break
-          done
-          echo '=== workflowservice ONBORDING/KEYCLOAK env ==='
-          kubectl -n kyc get deploy workflowservice -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -iE 'ONBORDING|KEYCLOAK|TENANT|WEBHOOK' || true
-          echo '=== probe cbanking from workflowservice pod ==='
-          kubectl -n kyc exec -i deploy/workflowservice -- node -e '
-            const https=require("https");
-            const url=process.env.ONBORDING_URL||"";
-            console.log("ONBORDING_URL", url);
-            const u=new URL(url);
-            const req=https.request({hostname:u.hostname,path:u.pathname,method:"GET",rejectUnauthorized:false,timeout:8000},res=>{
-              let d=""; res.on("data",c=>d+=c); res.on("end",()=>console.log("get",res.statusCode,d.slice(0,200)));
-            });
-            req.on("error",e=>console.log("err",e.message));
-            req.on("timeout",()=>{console.log("timeout"); req.destroy();});
-            req.end();
-          ' 2>&1 | tail -20
+          echo '=== kyc-api BALLERINE_ENDPOINT ==='
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -iE 'BALLERINE|CLARITY' || true
+          echo '=== Clarity workflow by runtime id ==='
+          RID=0f91357a-cc6e-48ea-8617-d246d37d4c6f
+          WID=331396fb-65b1-4b3a-8817-1e2d94d47266
+          KEY=$(kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | sed -n 's/^BALLERINE_API_KEY=//p')
+          EP=$(kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | sed -n 's/^BALLERINE_ENDPOINT=//p')
+          echo "EP=$EP"
+          echo "--- GET runtime ---"
+          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
+            const ep=process.env.BALLERINE_ENDPOINT;
+            const key=process.env.BALLERINE_API_KEY;
+            const id='$RID';
+            fetch(ep+'/api/v1/external/workflows/'+id,{headers:{Authorization:'Bearer '+key}})
+              .then(async r=>{const t=await r.text(); console.log('status',r.status); console.log(t.slice(0,1500));})
+              .catch(e=>console.log('err',e.message));
+          "
+          echo '=== Clarity DB states for Mohamed ==='
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
+          import json, os
+          os.chdir("/srv/clarity/backend")
+          from app.config import Settings, bind_settings, reset_runtime_overlay
+          from app.db import Database
+          from sqlalchemy import text
+          reset_runtime_overlay(); bind_settings(Settings())
+          db = Database(Settings().database_url).session_factory()
+          rows = db.execute(text("""
+            select w.id, w.ballerine_runtime_id, w.definition_key, w.state, w.status, c.display_name, c.canonical_status
+            from workflow_instances w join customers c on c.id=w.customer_id
+            where c.display_name ilike '%Miladi%' or c.display_name ilike '%Mohamed%'
+            order by w.created_at desc limit 10
+          """)).mappings().all()
+          for r in rows:
+              print(dict(r))
+          PY
