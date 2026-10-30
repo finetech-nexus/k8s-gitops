@@ -7,58 +7,19 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Dump real status JSON
+      - name: Verify fixed status response
         run: |
           set +e
+          echo '=== image ==='
+          kubectl -n api get deploy core-api-kyc-api -o jsonpath='image={.spec.template.spec.containers[0].image}{"\n"}'
           PARTIAL=a6f5ef7c-d7c7-4f93-8978-42cf9f0f0052
           VID=6cbff49a-6e30-4511-a626-9387b285b83c
-          echo '=== svc ports ==='
-          kubectl -n api get svc | grep -i kyc
-          echo '=== curl status via cluster svc ==='
           kubectl -n api exec deploy/core-api-kyc-api -- node -e "
             const http=require('http');
-            function get(path){
-              return new Promise(resolve=>{
-                const req=http.request({hostname:'127.0.0.1',port:3000,path,method:'GET',headers:{'x-tenant-id':'tn',Accept:'application/json'},timeout:8000},res=>{
-                  let d=''; res.on('data',c=>d+=c); res.on('end',()=>resolve({code:res.statusCode,body:d}));
-                });
-                req.on('error',e=>resolve({err:e.message}));
-                req.on('timeout',()=>{req.destroy(); resolve({err:'timeout'});});
-                req.end();
-              });
-            }
-            (async()=>{
-              for (const path of [
-                '/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
-                '/api/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
-                '/api/kyc/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL',
-              ]) {
-                const r=await get(path);
-                console.log(path, JSON.stringify(r).slice(0,800));
-              }
-            })();
-          "
-          echo '=== what does old mapping do with real Clarity payload ==='
-          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
-            const ep=process.env.BALLERINE_ENDPOINT, key=process.env.BALLERINE_API_KEY;
-            (async()=>{
-              const runtime=await (await fetch(ep+'/api/v1/external/workflows/$PARTIAL',{headers:{Authorization:'Bearer '+key}})).json();
-              const state=String(runtime.state??'').toLowerCase();
-              let idvResult;
-              if (state==='approved') idvResult='approved';
-              else if (state==='rejected') idvResult='declined';
-              else idvResult='review';
-              const publicState=state;
-              const payload={state:publicState,idvResult};
-              // copy of mobile mapApiToKycStatus (pre and post)
-              function map(data){
-                const s=(data.state||'').toLowerCase();
-                const idv=(data.idvResult||'').toLowerCase();
-                if (s==='approved-partially'||s==='approved_partially') return 'approved-partially';
-                if (s==='approved' && idv==='approved') return 'verified';
-                if (s==='rejected'||idv==='declined') return 'refused';
-                return 'pending';
-              }
-              console.log('payload', payload, 'mapped', map(payload));
-            })();
+            const path='/api/kyc/v2/enduser/verify/status/$VID?tenantId=tn&reviewWorkflowRuntimeId=$PARTIAL';
+            const req=http.request({hostname:'127.0.0.1',port:3000,path,method:'GET',headers:{'x-tenant-id':'tn'},timeout:8000},res=>{
+              let d=''; res.on('data',c=>d+=c); res.on('end',()=>console.log(res.statusCode,d));
+            });
+            req.on('error',e=>console.log('err',e.message));
+            req.end();
           "
