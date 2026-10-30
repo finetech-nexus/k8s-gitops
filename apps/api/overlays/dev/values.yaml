@@ -12,7 +12,7 @@ core-banking-api:
   #       - "fynams.dev.sandbox.internal.nbank.fr"
   image:
     repository: nexusbank/core-banking-api
-    tag: "36ce661"
+    tag: "bd5d1cf"
     pullPolicy: Always
 
   env:
@@ -64,11 +64,15 @@ core-banking-api:
     - name: PRODUIT_API_URL
       value: "http://core-api-produit-api"
     - name: DEPLOYED_AT
-      value: "2026-10-14T09:22:00Z"
+      value: "2026-10-30T12:12:31Z"
     - name: KAFKA_BROKERS
       value: "kafka.infra.svc.cluster.local:9092"
     - name: KAFKA_TRANSACTION_TOPIC
-      value: "notification.transaction" 
+      value: "notification.transaction"
+    - name: CLARITY_API_URL
+      value: "http://clarity-api.kyc-aml.svc.cluster.local:8095"
+    - name: CLARITY_API_KEY
+      value: "clry_demo_ballerine_v1"
 #generate another client or kafka client for best resilience
   extraVolumes:
     - name: certificate
