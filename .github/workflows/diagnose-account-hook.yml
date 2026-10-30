@@ -7,29 +7,20 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Poll status path like mobile
+      - name: State + status endpoint
         run: |
           set +e
-          echo '=== kyc-api BALLERINE_ENDPOINT ==='
-          kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -iE 'BALLERINE|CLARITY' || true
-          echo '=== Clarity workflow by runtime id ==='
           RID=0f91357a-cc6e-48ea-8617-d246d37d4c6f
-          WID=331396fb-65b1-4b3a-8817-1e2d94d47266
-          KEY=$(kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | sed -n 's/^BALLERINE_API_KEY=//p')
-          EP=$(kubectl -n api get deploy core-api-kyc-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | sed -n 's/^BALLERINE_ENDPOINT=//p')
-          echo "EP=$EP"
-          echo "--- GET runtime ---"
+          echo '=== Clarity GET state/status only ==='
           kubectl -n api exec deploy/core-api-kyc-api -- node -e "
-            const ep=process.env.BALLERINE_ENDPOINT;
-            const key=process.env.BALLERINE_API_KEY;
-            const id='$RID';
+            const ep=process.env.BALLERINE_ENDPOINT, key=process.env.BALLERINE_API_KEY, id='$RID';
             fetch(ep+'/api/v1/external/workflows/'+id,{headers:{Authorization:'Bearer '+key}})
-              .then(async r=>{const t=await r.text(); console.log('status',r.status); console.log(t.slice(0,1500));})
+              .then(async r=>{const j=await r.json(); console.log(JSON.stringify({http:r.status,id:j.id,state:j.state,status:j.status,def:j.workflowDefinitionId},null,2));})
               .catch(e=>console.log('err',e.message));
           "
-          echo '=== Clarity DB states for Mohamed ==='
+          echo '=== Clarity DB (like) ==='
           kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
-          import json, os
+          import os
           os.chdir("/srv/clarity/backend")
           from app.config import Settings, bind_settings, reset_runtime_overlay
           from app.db import Database
@@ -39,9 +30,24 @@ jobs:
           rows = db.execute(text("""
             select w.id, w.ballerine_runtime_id, w.definition_key, w.state, w.status, c.display_name, c.canonical_status
             from workflow_instances w join customers c on c.id=w.customer_id
-            where c.display_name ilike '%Miladi%' or c.display_name ilike '%Mohamed%'
+            where lower(c.display_name) like '%miladi%'
             order by w.created_at desc limit 10
           """)).mappings().all()
           for r in rows:
               print(dict(r))
           PY
+          echo '=== simulate kyc-api status mapping ==='
+          kubectl -n api exec deploy/core-api-kyc-api -- node -e "
+            const ep=process.env.BALLERINE_ENDPOINT, key=process.env.BALLERINE_API_KEY, id='$RID';
+            fetch(ep+'/api/v1/external/workflows/'+id,{headers:{Authorization:'Bearer '+key}})
+              .then(async r=>{
+                const runtime=await r.json();
+                const state=String(runtime.state??'').toLowerCase();
+                let idvResult;
+                if (state==='approved') idvResult='approved';
+                else if (state==='rejected') idvResult='declined';
+                else idvResult='review';
+                const publicState=state;
+                console.log(JSON.stringify({state:publicState,idvResult,wouldMap: state==='approved-partially'?'approved-partially': (state==='approved'&&idvResult==='approved'?'verified':'pending')}));
+              });
+          "
