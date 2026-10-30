@@ -21,7 +21,7 @@ jobs:
           echo '=== env ==='
           kubectl -n kyc-aml get deploy clarity-api -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -E 'ACCOUNT_HOOK|CORE_BANKING_HOOK|UNIFIED_API' || true
           echo '=== probe workflowservice from clarity ==='
-          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
           import httpx
           url = "http://workflowservice.kyc.svc.cluster.local:3000/api/v1/hooks/onboarding"
           try:
@@ -31,7 +31,7 @@ jobs:
               print("probe_err", e)
           PY
           echo '=== redeliver ==='
-          kubectl -n kyc-aml exec deploy/clarity-api -- python - <<'PY'
+          kubectl -n kyc-aml exec -i deploy/clarity-api -- python - <<'PY'
           import json, os
           os.chdir("/srv/clarity/backend")
           from app.config import Settings, bind_settings, reset_runtime_overlay
