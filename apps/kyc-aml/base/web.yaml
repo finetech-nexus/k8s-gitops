@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: clarity-web
-          image: nexusbank/clarity-web:ee0266a
+          image: nexusbank/clarity-web:3acf527
           imagePullPolicy: Always
           ports:
             - name: http
