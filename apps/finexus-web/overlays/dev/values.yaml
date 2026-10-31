@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: nexusbank/finexus-web
-  tag: "83b1b0d"
+  tag: "d6b0534"
   pullPolicy: IfNotPresent
 
 containerPort: 8080
