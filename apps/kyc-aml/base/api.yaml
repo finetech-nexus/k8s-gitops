@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
         - name: clarity-api
-          image: nexusbank/clarity-api:69defbb
+          image: nexusbank/clarity-api:4a8dc54
           imagePullPolicy: Always
           ports:
             - name: http
