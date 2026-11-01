@@ -1,0 +1,29 @@
+name: Verify NS alias filter
+on: workflow_dispatch
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Check iam alias only returns iam
+        run: |
+          set -euo pipefail
+          kubectl delete pod v-alias -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run v-alias --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            BASE=http://infra-elasticsearch:9200
+            echo "=== agg namespaces on logs-ns-iam ==="
+            curl -sf -u "$AUTH" "$BASE/logs-ns-iam/_search" -H "Content-Type: application/json" -d "{
+              \"size\":0,
+              \"aggs\":{\"ns\":{\"terms\":{\"field\":\"k8s_namespace_name\",\"size\":20}}}
+            }"
+            echo
+            echo "=== sample ==="
+            curl -sf -u "$AUTH" "$BASE/logs-ns-iam/_search?size=3&_source=k8s_namespace_name,message"
+            echo
+            echo "=== data view title ==="
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" "http://infra-kibana.infra.svc.cluster.local:5601/api/data_views/data_view/logs-ns-iam" | tr "," "\n" | grep -E "title|name" | head -10
+          '

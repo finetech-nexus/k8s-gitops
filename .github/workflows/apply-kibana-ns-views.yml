@@ -16,4 +16,4 @@ jobs:
           kubectl delete job -n logging kibana-data-views-v5 --ignore-not-found
           kubectl apply -f apps/logging/kibana-data-views-job.yaml
           kubectl wait -n logging --for=condition=complete job/kibana-data-views-v5 --timeout=5m
-          kubectl logs -n logging job/kibana-data-views-v5 | tr '}' '\n' | grep -E 'alias |data_view |search |verify|ready|FAILED|k8s_namespace' | head -80
+          kubectl logs -n logging job/kibana-data-views-v5 2>/dev/null | tr "}" "\n" | grep -E "alias |data_view |search |verify|ready|FAILED" | head -80 || true
