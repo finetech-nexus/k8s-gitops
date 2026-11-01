@@ -133,3 +133,9 @@ resources:
   - clarity-web-route.yaml
   - aml-app-auth-route.yaml
   - aml-auth-route.yaml
+  - grafana-service.yaml
+  - grafana-endpoints.yaml
+  - grafana-route.yaml
+  - kibana-service.yaml
+  - kibana-endpoints.yaml
+  - kibana-route.yaml

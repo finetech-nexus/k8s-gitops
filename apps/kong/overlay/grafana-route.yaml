@@ -1,0 +1,21 @@
+# Grafana: HTTPRoute -> Kong -> ingress-nginx.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: apim
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/plugins: internal-only
+spec:
+  parentRefs:
+    - name: kong
+      namespace: apim
+  hostnames:
+    - grafana.api.dev.sandbox.nbank.fr
+    - grafana.api.dev.sandbox.internal.nbank.fr
+  rules:
+    - backendRefs:
+        - name: grafana-internal
+          port: 443
