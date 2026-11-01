@@ -65,6 +65,10 @@ spec:
             record["functional_perimeter"] = map[ns] or "other"
             record["residency"] = "tn"
             record["cluster"] = "sandbox-dev"
+            -- Kibana Discover expects "message"; CRI/docker logs land in "log".
+            if record["message"] == nil or record["message"] == "" then
+                record["message"] = record["log"] or record["MESSAGE"] or ""
+            end
             return 1, timestamp, record
         end
     config:

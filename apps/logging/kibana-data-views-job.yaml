@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kibana-data-views-v2
+  name: kibana-data-views-v3
   namespace: logging
   labels:
     nexus.bank/functional-perimeter: platform
@@ -32,15 +32,24 @@ spec:
               until curl -sf -u "$ES_USER:$ES_PASSWORD" "$ES_URL/_cluster/health"; do sleep 10; done
               echo "Waiting for Kibana..."
               until curl -sf "$KIBANA_URL/api/status" | grep -q available; do sleep 15; done
+
+              # Backfill message from log so Discover stops showing "failed to find message".
+              curl -sf -u "$ES_USER:$ES_PASSWORD" -X POST "$ES_URL/logs-tn-*/_update_by_query?conflicts=proceed&wait_for_completion=false" \
+                -H 'Content-Type: application/json' \
+                -d '{"script":{"lang":"painless","source":"if (ctx._source.message == null || ctx._source.message == \"\") { if (ctx._source.log != null) { ctx._source.message = ctx._source.log; } }"},"query":{"bool":{"must_not":[{"exists":{"field":"message"}}]}}}' \
+                || true
+
               create_view() {
                 id="$1"; title="$2"; pattern="$3"
+                # Prefer update; create if missing. Default columns: message + perimeter.
+                body="{\"data_view\":{\"title\":\"$pattern\",\"name\":\"$title\",\"timeFieldName\":\"@timestamp\"}}"
                 curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' \
+                  -X POST "$KIBANA_URL/api/data_views/data_view/$id" \
+                  -d "$body" \
+                || curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' \
                   -X POST "$KIBANA_URL/api/data_views/data_view" \
                   -d "{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$title\",\"timeFieldName\":\"@timestamp\"}}" \
-                  || curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' \
-                  -X POST "$KIBANA_URL/api/saved_objects/index-pattern/$id" \
-                  -d "{\"attributes\":{\"title\":\"$pattern\",\"timeFieldName\":\"@timestamp\"}}" \
-                  || true
+                || true
               }
               create_view "logs-tn" "Logs TN (all perimeters)" "logs-tn-*"
               create_view "logs-tn-kyc" "Logs KYC" "logs-tn-*"

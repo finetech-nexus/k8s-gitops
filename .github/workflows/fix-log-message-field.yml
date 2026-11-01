@@ -1,0 +1,33 @@
+name: Fix log message field
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Backfill message + restart fluent-bit
+        run: |
+          set -euo pipefail
+          # Immediate backfill (don't wait for Flux job)
+          kubectl delete pod fix-msg -n infra --ignore-not-found --wait=false 2>/dev/null || true
+          sleep 2
+          kubectl run fix-msg --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            BASE=http://infra-elasticsearch:9200
+            echo "=== sample before ==="
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_search?size=1&sort=@timestamp:desc&_source=log,message" | head -c 800; echo
+            curl -sf -u "$AUTH" -X POST "$BASE/logs-tn-*/_update_by_query?conflicts=proceed" \
+              -H "Content-Type: application/json" \
+              -d "{\"script\":{\"lang\":\"painless\",\"source\":\"if (ctx._source.message == null || ctx._source.message == \\\"\\\") { if (ctx._source.log != null) { ctx._source.message = ctx._source.log; } }\"},\"query\":{\"bool\":{\"must_not\":[{\"exists\":{\"field\":\"message\"}}]}}}"
+            echo
+            echo "=== sample after ==="
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_search?size=1&sort=@timestamp:desc&_source=log,message" | head -c 800; echo
+          '
+          # Force fluent-bit to pick up new lua (Flux will also reconcile)
+          kubectl rollout restart ds/fluent-bit-tn -n logging || true
+          kubectl rollout status ds/fluent-bit-tn -n logging --timeout=3m || true
+          kubectl delete job -n logging kibana-data-views-v2 --ignore-not-found || true
+          kubectl delete job -n logging kibana-data-views-v3 --ignore-not-found || true
+          echo done

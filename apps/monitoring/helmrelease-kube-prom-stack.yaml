@@ -129,7 +129,7 @@ spec:
             index: "logs-tn-*"
             timeField: "@timestamp"
             esVersion: "8.0.0"
-            logMessageField: log
+            logMessageField: message
             logLevelField: level
             includeFrozen: false
             maxConcurrentShardRequests: 5

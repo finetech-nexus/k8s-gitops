@@ -52,6 +52,9 @@ spec:
             record["functional_perimeter"] = map[ns] or "other"
             record["residency"] = "eu"
             record["cluster"] = "sandbox-dev"
+            if record["message"] == nil or record["message"] == "" then
+                record["message"] = record["log"] or record["MESSAGE"] or ""
+            end
             return 1, timestamp, record
         end
     config:
