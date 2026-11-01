@@ -1,0 +1,28 @@
+name: List Kibana views
+on: workflow_dispatch
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: List data views and NS searches
+        run: |
+          set -euo pipefail
+          kubectl delete pod kbn-list -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run kbn-list --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            K=http://infra-kibana.infra.svc.cluster.local:5601
+            echo "=== DATA VIEWS ==="
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" "$K/api/data_views" | tr "," "\n" | grep -E "\"id\"|\"name\"|\"title\"" | head -120
+            echo
+            echo "=== SEARCHES (ns- / perimeter-) ==="
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" "$K/api/saved_objects/_find?type=search&per_page=100&search_fields=title&search=NS" | tr "," "\n" | grep -E "\"id\"|\"title\"" | head -80
+            echo
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" "$K/api/saved_objects/_find?type=search&per_page=100&search_fields=title&search=Perimeter" | tr "," "\n" | grep -E "\"id\"|\"title\"" | head -80
+            echo
+            echo "=== COUNT searches ==="
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" "$K/api/saved_objects/_find?type=search&per_page=1" | tr "," "\n" | grep total
+          '
