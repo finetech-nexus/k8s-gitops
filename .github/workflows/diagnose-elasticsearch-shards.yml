@@ -1,0 +1,19 @@
+name: Diagnose ES shards
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: ES status
+        run: |
+          set -e
+          kubectl get pods -n infra -l app=elasticsearch -o wide || kubectl get pods -n infra | grep -i elastic || true
+          kubectl get sts -n infra | grep -i elastic || true
+          kubectl get pvc -n infra | grep -i elastic || true
+          echo '==== HEALTH ===='
+          kubectl delete pod es-diag -n infra --ignore-not-found --wait=false || true
+          sleep 2
+          kubectl run es-diag --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 --overrides='{"spec":{"containers":[{"name":"es-diag","image":"curlimages/curl:8.10.1","command":["sh","-c","AUTH=elastic:elasticSearchPas42; BASE=http://infra-elasticsearch:9200; echo HEALTH; curl -sf -u $AUTH $BASE/_cluster/health?pretty; echo; echo NODES; curl -sf -u $AUTH $BASE/_cat/nodes?v; echo; echo ALLOCATION; curl -sf -u $AUTH $BASE/_cat/allocation?v; echo; echo SHARDS_UNASSIGNED; curl -sf -u $AUTH \"$BASE/_cat/shards?v&h=index,shard,prirep,state,node,unassigned.reason\" | awk \"NR==1 || /UNASSIGNED/\" | head -80; echo; echo EXPLAIN; curl -sf -u $AUTH $BASE/_cluster/allocation/explain?pretty | head -80"]]}}' || true
