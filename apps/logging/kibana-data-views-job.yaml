@@ -1,8 +1,8 @@
-# Creates Kibana data views for functional-perimeter log browsing once Kibana is ready.
+# Creates Kibana data views + Discover saved searches filtered by k8s namespace.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kibana-data-views-v3
+  name: kibana-data-views-v4
   namespace: logging
   labels:
     nexus.bank/functional-perimeter: platform
@@ -33,25 +33,53 @@ spec:
               echo "Waiting for Kibana..."
               until curl -sf "$KIBANA_URL/api/status" | grep -q available; do sleep 15; done
 
-              # Backfill message from log so Discover stops showing "failed to find message".
-              curl -sf -u "$ES_USER:$ES_PASSWORD" -X POST "$ES_URL/logs-tn-*/_update_by_query?conflicts=proceed&wait_for_completion=false" \
-                -H 'Content-Type: application/json' \
-                -d '{"script":{"lang":"painless","source":"if (ctx._source.message == null || ctx._source.message == \"\") { if (ctx._source.log != null) { ctx._source.message = ctx._source.log; } }"},"query":{"bool":{"must_not":[{"exists":{"field":"message"}}]}}}' \
-                || true
-
-              create_view() {
-                id="$1"; title="$2"; pattern="$3"
-                # Prefer update; create if missing. Default columns: message + perimeter.
-                body="{\"data_view\":{\"title\":\"$pattern\",\"name\":\"$title\",\"timeFieldName\":\"@timestamp\"}}"
-                curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' \
-                  -X POST "$KIBANA_URL/api/data_views/data_view/$id" \
-                  -d "$body" \
-                || curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' \
-                  -X POST "$KIBANA_URL/api/data_views/data_view" \
-                  -d "{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$title\",\"timeFieldName\":\"@timestamp\"}}" \
-                || true
+              kbn() {
+                curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' "$@"
               }
-              create_view "logs-tn" "Logs TN (all perimeters)" "logs-tn-*"
-              create_view "logs-tn-kyc" "Logs KYC" "logs-tn-*"
-              create_view "zeebe" "Zeebe / payments" "zeebe-*"
-              echo "Data views requested."
+
+              ensure_data_view() {
+                id="$1"; name="$2"; pattern="$3"
+                body="{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$name\",\"timeFieldName\":\"@timestamp\"}}"
+                kbn -X POST "$KIBANA_URL/api/data_views/data_view" -d "$body" \
+                  || kbn -X POST "$KIBANA_URL/api/data_views/data_view/$id" -d "{\"data_view\":{\"title\":\"$pattern\",\"name\":\"$name\",\"timeFieldName\":\"@timestamp\"}}" \
+                  || true
+                echo "data_view $id ($name)"
+              }
+
+              # Discover saved search scoped to one namespace (filter on k8s_namespace_name).
+              ensure_ns_search() {
+                ns="$1"
+                id="ns-${ns}"
+                title="NS / ${ns}"
+                # searchSourceJSON: data view id logs-tn + kuery filter
+                search_source=$(printf '%s' "{\"index\":\"logs-tn\",\"query\":{\"query\":\"k8s_namespace_name: \\\"${ns}\\\"\",\"language\":\"kuery\"},\"filter\":[],\"highlightAll\":true,\"version\":true}")
+                # Escape for JSON string embedding
+                search_source_esc=$(printf '%s' "$search_source" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                body=$(printf '%s' "{\"attributes\":{\"title\":\"${title}\",\"description\":\"Logs for namespace ${ns}\",\"columns\":[\"message\",\"k8s_pod_name\",\"functional_perimeter\",\"k8s_namespace_name\"],\"sort\":[[\"@timestamp\",\"desc\"]],\"kibanaSavedObjectMeta\":{\"searchSourceJSON\":\"${search_source_esc}\"}}}")
+                kbn -X POST "$KIBANA_URL/api/saved_objects/search/${id}?overwrite=true" -d "$body" \
+                  && echo "search $id OK" \
+                  || echo "search $id FAILED"
+              }
+
+              ensure_data_view "logs-tn" "Logs TN (all namespaces)" "logs-tn-*"
+              ensure_data_view "zeebe" "Zeebe / payments" "zeebe-*"
+
+              # Namespaces shipped by fluent-bit-tn (grep allowlist).
+              for ns in payment-hub api core-banking kyc infra kyc-aml aml app kong iam treasury reconciliation webapp docs; do
+                ensure_data_view "logs-ns-${ns}" "Logs · ${ns}" "logs-tn-*"
+                ensure_ns_search "$ns"
+              done
+
+              # Perimeter shortcuts (same index, named for Discover).
+              for p in payments kyc aml api gateway iam core-banking treasury reconciliation platform; do
+                id="perimeter-${p}"
+                title="Perimeter / ${p}"
+                search_source=$(printf '%s' "{\"index\":\"logs-tn\",\"query\":{\"query\":\"functional_perimeter: \\\"${p}\\\"\",\"language\":\"kuery\"},\"filter\":[],\"highlightAll\":true,\"version\":true}")
+                search_source_esc=$(printf '%s' "$search_source" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                body=$(printf '%s' "{\"attributes\":{\"title\":\"${title}\",\"description\":\"Logs for functional_perimeter=${p}\",\"columns\":[\"message\",\"k8s_namespace_name\",\"k8s_pod_name\",\"functional_perimeter\"],\"sort\":[[\"@timestamp\",\"desc\"]],\"kibanaSavedObjectMeta\":{\"searchSourceJSON\":\"${search_source_esc}\"}}}")
+                kbn -X POST "$KIBANA_URL/api/saved_objects/search/${id}?overwrite=true" -d "$body" \
+                  && echo "search $id OK" \
+                  || echo "search $id FAILED"
+              done
+
+              echo "Kibana namespace views ready."
