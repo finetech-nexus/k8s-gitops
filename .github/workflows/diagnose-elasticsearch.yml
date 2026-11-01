@@ -1,0 +1,45 @@
+name: Diagnose — elasticsearch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Elasticsearch / Kibana status
+        run: |
+          set +e
+          echo "===== pods infra"
+          kubectl get pods -n infra -o wide | grep -E 'NAME|elastic|kibana' || kubectl get pods -n infra
+          echo "===== sts/deploy"
+          kubectl get sts,deploy,svc -n infra | grep -E 'NAME|elastic|kibana' || true
+          echo "===== helmrelease"
+          kubectl get helmrelease -n infra infra -o wide || true
+          kubectl describe helmrelease -n infra infra | tail -40 || true
+          echo "===== elasticsearch pods describe (events)"
+          for p in $(kubectl get pods -n infra -o name | grep -i elasticsearch); do
+            echo "--- $p"
+            kubectl describe -n infra "$p" | tail -50
+            echo "--- logs $p"
+            kubectl logs -n infra "$p" --tail=80 --all-containers=true 2>&1 | tail -80
+          done
+          echo "===== kibana logs"
+          for p in $(kubectl get pods -n infra -o name | grep -i kibana); do
+            kubectl logs -n infra "$p" --tail=40 2>&1 | tail -40
+          done
+          echo "===== in-cluster curl"
+          kubectl delete pod es-probe -n infra --ignore-not-found
+          kubectl run es-probe --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- \
+            sh -c 'curl -sS -m 15 -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"; echo; curl -sS -m 15 -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/"' || true
+          echo "===== scale stray data STS to 0 (single-node master)"
+          kubectl scale sts -n infra -l app.kubernetes.io/component=data --replicas=0 2>/dev/null || true
+          kubectl get sts -n infra | grep -i elastic || true
+          echo "===== restart kibana"
+          kubectl rollout restart deploy -n infra -l app.kubernetes.io/name=kibana 2>/dev/null \
+            || kubectl rollout restart deploy -n infra $(kubectl get deploy -n infra -o name | grep -i kibana | head -1) 2>/dev/null \
+            || true
