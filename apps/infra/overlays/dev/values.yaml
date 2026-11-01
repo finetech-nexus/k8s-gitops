@@ -295,10 +295,17 @@ elasticsearch:
         memory: "4Gi"
         cpu: "2"
 
-  # Single all-in-one master holds data. Extra data nodes refuse to join after
-  # master bootstrap and leave Kibana on "server is not ready yet".
+  # Data STS holds shard data; master must stay up (was OOM at 128m heap).
   data:
-    replicaCount: 0
+    replicaCount: 1
+    heapSize: 1024m
+    resources:
+      requests:
+        memory: "1536Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "1"
   coordinating:
     replicaCount: 0
   ingest:
