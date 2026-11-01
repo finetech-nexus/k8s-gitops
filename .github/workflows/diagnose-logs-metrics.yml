@@ -1,0 +1,87 @@
+name: Diagnose logs and metrics
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Cluster observability status
+        run: |
+          set +e
+          echo "===== PODS: elastic / kibana / fluent / prom / grafana ====="
+          kubectl get pods -A | grep -iE 'elastic|kibana|fluent|prometheus|grafana|alertmanager|business-exporter|kube-state|node-exporter' || true
+          echo
+          echo "===== STS / DEPLOY ====="
+          kubectl get sts,deploy -n infra | grep -iE 'elastic|kibana' || true
+          kubectl get sts,deploy -n monitoring 2>/dev/null | head -40 || true
+          kubectl get ds -n logging 2>/dev/null || true
+          echo
+          echo "===== EVENTS (infra/logging/monitoring) ====="
+          kubectl get events -n infra --sort-by='.lastTimestamp' 2>/dev/null | tail -25
+          kubectl get events -n logging --sort-by='.lastTimestamp' 2>/dev/null | tail -15
+          kubectl get events -n monitoring --sort-by='.lastTimestamp' 2>/dev/null | tail -15
+          echo
+          echo "===== FLUENT-BIT LOGS (last errors) ====="
+          for p in $(kubectl get pods -n logging -o name 2>/dev/null | grep fluent); do
+            echo "--- $p ---"
+            kubectl logs -n logging "$p" --tail=40 2>&1 | grep -iE 'error|warn|fail|elasticsearch|denied|refused|timeout|200|201|403|401' | tail -20
+          done
+          echo
+          echo "===== PROMETHEUS TARGETS / READY ====="
+          kubectl get pods -n monitoring -o wide 2>/dev/null | head -40
+          PROM=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          if [ -n "$PROM" ]; then
+            kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/-/ready' 2>&1 | head -5
+            kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=up' 2>&1 | head -c 2000
+            echo
+            kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/api/v1/targets?state=active' 2>&1 | head -c 1500
+            echo
+          else
+            echo "No prometheus pod found"
+          fi
+          echo
+          echo "===== GRAFANA DATASOURCES ====="
+          GF=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          if [ -n "$GF" ]; then
+            kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header='Authorization: Bearer unused' http://127.0.0.1:3000/api/health 2>&1 | head -5
+            # admin/prom-operator default from kube-prom-stack unless overridden
+            PASS=$(kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d)
+            USER=$(kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d)
+            echo "grafana user=$USER"
+            kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --user "$USER" --password "$PASS" http://127.0.0.1:3000/api/datasources 2>&1 | head -c 3000
+            echo
+            echo "--- prometheus ds proxy test ---"
+            kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --user "$USER" --password "$PASS" \
+              'http://127.0.0.1:3000/api/datasources/proxy/1/api/v1/query?query=up' 2>&1 | head -c 1500
+            echo
+          fi
+          echo
+          echo "===== ELASTICSEARCH HEALTH + INDICES ====="
+          kubectl delete pod obs-probe -n infra --ignore-not-found --wait=false 2>/dev/null
+          sleep 2
+          cat <<'SCRIPT' >/tmp/probe.sh
+          AUTH=elastic:elasticSearchPas42
+          BASE=http://infra-elasticsearch:9200
+          echo HEALTH
+          curl -sf -u "$AUTH" "$BASE/_cluster/health?pretty" || curl -sS -u "$AUTH" "$BASE/_cluster/health?pretty"
+          echo
+          echo NODES
+          curl -sf -u "$AUTH" "$BASE/_cat/nodes?v"
+          echo
+          echo INDICES_LOGS
+          curl -sf -u "$AUTH" "$BASE/_cat/indices/logs-*?v&s=index"
+          echo
+          echo INDICES_ALL_HEAD
+          curl -sf -u "$AUTH" "$BASE/_cat/indices?v&s=index" | head -40
+          echo
+          echo COUNT_LOGS
+          curl -sf -u "$AUTH" "$BASE/logs-tn-*/_count"
+          echo
+          SCRIPT
+          kubectl create configmap obs-probe-script -n infra --from-file=probe.sh=/tmp/probe.sh --dry-run=client -o yaml | kubectl apply -f -
+          kubectl run obs-probe --rm -i --restart=Never -n infra \
+            --image=curlimages/curl:8.10.1 \
+            --overrides='{"spec":{"containers":[{"name":"obs-probe","image":"curlimages/curl:8.10.1","command":["sh","/scripts/probe.sh"],"volumeMounts":[{"name":"s","mountPath":"/scripts"}]}],"volumes":[{"name":"s","configMap":{"name":"obs-probe-script","defaultMode":365}}]}}' \
+            || true
