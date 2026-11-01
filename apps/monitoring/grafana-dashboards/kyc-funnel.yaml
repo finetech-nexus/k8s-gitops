@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-kyc-funnel
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  kyc-funnel.json: |-
+    {
+      "title": "KYC / Onboarding funnel",
+      "uid": "kyc-funnel",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["kyc", "functional", "clarity"],
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Customers",
+          "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_customers{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "In review",
+          "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_in_review{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Open tasks (stuck / backlog)",
+          "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_open_tasks{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "KYC sessions",
+          "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_kyc_sessions{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Open alerts",
+          "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_open_alerts{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Open cases",
+          "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+          "targets": [{"expr": "clarity_open_cases{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Nouveaux clients par status (canonical)",
+          "gridPos": {"x": 0, "y": 4, "w": 12, "h": 10},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [{
+            "expr": "clarity_customers_by_status{perimeter=\"kyc\"}",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "KYC progress (ou users stack)",
+          "gridPos": {"x": 12, "y": 4, "w": 12, "h": 10},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [{
+            "expr": "clarity_customers_by_kyc_progress{perimeter=\"kyc\"}",
+            "legendFormat": "{{kyc_status}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Funnel over time (by status)",
+          "gridPos": {"x": 0, "y": 14, "w": 24, "h": 8},
+          "targets": [{
+            "expr": "clarity_customers_by_status{perimeter=\"kyc\"}",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }]
+        }
+      ]
+    }

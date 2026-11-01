@@ -41,3 +41,15 @@ data:
     platform:
       namespaces: [infra, infra-eu, monitoring, logging, ingress-nginx, cert-manager]
       description: Shared platform (ES/Kibana, Kafka, observability)
+  business_kpis: |
+    Grafana folder "Perimetres fonctionnels":
+      - KYC / Onboarding funnel (Clarity statuses + stuck kyc_progress)
+      - Ops fonctionnelles (logs by functional_perimeter, Kong, restarts)
+      - Perimetres fonctionnels (CPU/mem by domain namespaces)
+    Kibana:
+      - Index logs-tn-* filter functional_perimeter:<domain>
+      - Index zeebe-* for payment/transfer workflows
+    Prometheus metrics (business-exporter):
+      - clarity_customers_by_status{status=...}
+      - clarity_customers_by_kyc_progress{kyc_status=...}
+      - logs_events_15m{perimeter=...}

@@ -4,6 +4,7 @@ namespace: infra
 resources:
   - ../../base
   - kibana-ingress.yaml
+  - elasticsearch-ingress.yaml
 configMapGenerator:
   - name: infra-values
     options:

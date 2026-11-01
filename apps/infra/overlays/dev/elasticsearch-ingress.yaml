@@ -1,0 +1,27 @@
+# Public ES host for ops (Kibana uses in-cluster service).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: elasticsearch-sandbox
+  namespace: infra
+  annotations:
+    cert-manager.io/cluster-issuer: nbank-dev
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - elasticsearch.api.dev.sandbox.internal.nbank.fr
+      secretName: elasticsearch-dev-tls
+  rules:
+    - host: elasticsearch.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: infra-elasticsearch
+                port:
+                  number: 9200

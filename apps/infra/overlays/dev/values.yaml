@@ -297,11 +297,10 @@ elasticsearch:
         cpu: "1" # 
 
 
+  # Single all-in-one master holds data. Extra data nodes refuse to join after
+  # master bootstrap and leave Kibana on "server is not ready yet".
   data:
-    replicaCount: 1
-    persistence:
-      enabled: true
-      size: 10Gi
+    replicaCount: 0
   coordinating:
     replicaCount: 0
   ingest:
@@ -319,17 +318,20 @@ elasticsearch:
       repository: bitnamilegacy/kibana
     persistence:
       enabled: false
+    elasticsearch:
+      hosts:
+        - http://infra-elasticsearch:9200
     env:
       - name: NODE_OPTIONS
-        value: "--max-old-space-size=128" # Set Kibana's JS heap to 128MB 
+        value: "--max-old-space-size=256"
 
     resources:
       requests:
-        memory: "300Mi"  # Request enough memory for the heap + overhead
+        memory: "400Mi"
         cpu: "200m"
       limits:
-        memory: "800Mi" # Allow some buffer over the heap for OS page cache and other overhead
-        cpu: "200m" # 
+        memory: "1Gi"
+        cpu: "500m"
     ingress:
       enabled: true
       ingressClassName: nginx
@@ -337,7 +339,6 @@ elasticsearch:
       annotations:
         cert-manager.io/cluster-issuer: nbank-dev
         nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-      # Keep bitnami object shape (enabled bool). TLS termination at ingress-nginx/Kong.
       tls:
         enabled: false
 

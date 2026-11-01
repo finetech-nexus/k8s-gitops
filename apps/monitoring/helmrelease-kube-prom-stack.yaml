@@ -56,6 +56,14 @@ spec:
                 replacement: ${1}:8100
               - target_label: functional_perimeter
                 replacement: gateway
+          - job_name: business-exporter
+            metrics_path: /metrics
+            scrape_interval: 30s
+            static_configs:
+              - targets:
+                  - business-exporter.monitoring.svc.cluster.local:9105
+                labels:
+                  functional_perimeter: platform
         resources:
           requests:
             cpu: 200m

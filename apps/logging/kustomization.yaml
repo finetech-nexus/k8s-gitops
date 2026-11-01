@@ -5,3 +5,4 @@ resources:
   - elastic-credentials-tn.yaml
   # TN only — EU Fluent Bit kept out so residency EU stays at 0 pods.
   - helmrelease-fluent-bit-tn.yaml
+  - kibana-data-views-job.yaml

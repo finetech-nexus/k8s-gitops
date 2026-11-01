@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-functional-ops
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  functional-ops.json: |-
+    {
+      "title": "Ops fonctionnelles (logs + perimetres)",
+      "uid": "functional-ops",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["perimeter", "logs", "payments", "cards", "transfers"],
+      "templating": {
+        "list": [
+          {
+            "name": "perimeter",
+            "type": "custom",
+            "label": "Perimetre",
+            "query": "kyc,payments,api,gateway,aml,core-banking,iam,treasury,reconciliation,platform,other",
+            "current": {"text": "kyc", "value": "kyc"},
+            "includeAll": true
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Log volume 15m by functional perimeter",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+          "targets": [{
+            "expr": "logs_events_15m{source=\"logs-tn\"}",
+            "legendFormat": "{{perimeter}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "text",
+          "title": "Logs par perimetre",
+          "gridPos": {"x": 0, "y": 8, "w": 24, "h": 4},
+          "options": {
+            "mode": "markdown",
+            "content": "Kibana → Discover on `logs-tn-*` with filter `functional_perimeter:$perimeter`\\n\\nGrafana Explore → datasource **Logs-TN** → Lucene: `functional_perimeter:$perimeter`\\n\\nPayments/transfers: also query `zeebe-*`. Cards/API: perimeter `api` + namespaces `api`,`app`."
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Pod restarts — payments / api / kyc / gateway",
+          "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+
+          "targets": [
+            {
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"payment-hub|payment-hub-eu\"}[1h]))",
+              "legendFormat": "payments",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"api|api-eu|app\"}[1h]))",
+              "legendFormat": "api",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"kyc|kyc-eu|kyc-aml\"}[1h]))",
+              "legendFormat": "kyc",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"kong\"}[1h])) or sum(increase(kube_pod_container_status_restarts_total{namespace=\"apim\"}[1h]))",
+              "legendFormat": "gateway",
+              "refId": "D"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Kong requests (gateway / transfers entrypoint)",
+          "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "sum(rate(kong_http_requests_total[5m])) or sum(rate(kong_http_status[5m]))",
+            "legendFormat": "kong rps",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "stat",
+          "title": "Exporter up",
+          "gridPos": {"x": 0, "y": 20, "w": 6, "h": 4},
+          "targets": [{"expr": "business_exporter_up", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Clarity transactions (AML/monitoring sample)",
+          "gridPos": {"x": 6, "y": 20, "w": 6, "h": 4},
+          "targets": [{"expr": "clarity_transactions{perimeter=\"kyc\"}", "refId": "A"}]
+        }
+      ]
+    }
