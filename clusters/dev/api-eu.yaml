@@ -5,7 +5,7 @@ metadata:
   name: api-eu
   namespace: flux-system
 spec:
-  suspend: false
+  suspend: true  # EU stack kept at 0 pods
   interval: 5m0s
   path: ./apps/api-eu/overlays/dev
   prune: true

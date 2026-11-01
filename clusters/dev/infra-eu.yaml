@@ -5,7 +5,7 @@ metadata:
   name: infra-eu
   namespace: flux-system
 spec:
-  suspend: false
+  suspend: true  # EU stack kept at 0 pods
   interval: 5m0s
   path: ./apps/infra-eu/overlays/dev
   prune: true

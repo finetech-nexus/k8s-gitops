@@ -125,20 +125,6 @@ spec:
             esVersion: "8.0.0"
             logMessageField: log
             logLevelField: level
-        - name: Logs-EU
-          type: elasticsearch
-          access: proxy
-          url: http://infra-elasticsearch.infra-eu.svc.cluster.local:9200
-          basicAuth: true
-          basicAuthUser: elastic
-          secureJsonData:
-            basicAuthPassword: elasticSearchPas42
-          jsonData:
-            index: "[logs-eu-]YYYY.MM.DD"
-            timeField: "@timestamp"
-            esVersion: "8.0.0"
-            logMessageField: log
-            logLevelField: level
       grafana.ini:
         server:
           root_url: https://grafana.api.dev.sandbox.internal.nbank.fr

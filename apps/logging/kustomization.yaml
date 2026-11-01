@@ -3,6 +3,5 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - elastic-credentials-tn.yaml
-  - elastic-credentials-eu.yaml
+  # TN only — EU Fluent Bit kept out so residency EU stays at 0 pods.
   - helmrelease-fluent-bit-tn.yaml
-  - helmrelease-fluent-bit-eu.yaml

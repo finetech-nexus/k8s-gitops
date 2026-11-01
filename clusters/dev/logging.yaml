@@ -1,5 +1,4 @@
-# Fluent Bit → Elasticsearch.
-# Residency (TN/EU ES) is the shipping axis; functional_perimeter is the log field for metier views.
+# Fluent Bit → Elasticsearch (TN residency only; EU shipper not deployed).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -17,7 +16,5 @@ spec:
     - name: sources
       namespace: flux-system
     - name: infra
-      namespace: flux-system
-    - name: infra-eu
       namespace: flux-system
   timeout: 10m
