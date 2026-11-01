@@ -1,0 +1,52 @@
+name: Reconcile fluent message
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Reconcile Fluent Bit and verify message
+        run: |
+          set -euo pipefail
+          kubectl annotate helmrelease -n logging fluent-bit-tn reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
+          # Wait for HR ready / config update
+          for i in $(seq 1 36); do
+            READY=$(kubectl get hr -n logging fluent-bit-tn -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo False)
+            echo "t=$i hr_ready=$READY"
+            if kubectl get cm -n logging -l app.kubernetes.io/name=fluent-bit -o yaml 2>/dev/null | grep -q 'record\["message"\]'; then
+              echo "lua message mapping present in configmap"
+              break
+            fi
+            # also check any fluent-bit cm
+            if kubectl get cm -n logging -o name | while read c; do kubectl get -n logging "$c" -o yaml; done | grep -q 'record\["message"\]'; then
+              echo "found message lua"
+              break
+            fi
+            sleep 10
+          done
+          kubectl rollout restart ds/fluent-bit-tn -n logging
+          kubectl rollout status ds/fluent-bit-tn -n logging --timeout=3m
+          sleep 20
+          kubectl delete pod v-msg -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run v-msg --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            BASE=http://infra-elasticsearch:9200
+            echo "=== docs WITH message ==="
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_count" -H "Content-Type: application/json" -d "{\"query\":{\"exists\":{\"field\":\"message\"}}}"
+            echo
+            echo "=== latest with message ==="
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_search?size=1&sort=@timestamp:desc" -H "Content-Type: application/json" \
+              -d "{\"query\":{\"exists\":{\"field\":\"message\"}},\"_source\":[\"message\",\"log\",\"functional_perimeter\",\"@timestamp\"]}" | head -c 1200
+            echo
+            echo "=== latest overall ==="
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_search?size=1&sort=@timestamp:desc" -H "Content-Type: application/json" \
+              -d "{\"_source\":[\"message\",\"log\",\"functional_perimeter\",\"@timestamp\"]}" | head -c 1200
+            echo
+            # Refresh Kibana fields
+            curl -sf -u "$AUTH" -H "kbn-xsrf: true" -X POST \
+              "http://infra-kibana.infra.svc.cluster.local:5601/api/index_patterns/_fields_for_wildcard?pattern=logs-tn-*" | head -c 200 || true
+            echo
+          '
