@@ -278,6 +278,8 @@ elasticsearch:
     repository: bitnamilegacy/os-shell
 
   master:
+    # Single-node cluster: master also stores data. A separate data STS
+    # (1.2Gi+) cannot schedule on this sandbox alongside Prometheus/Kibana.
     masterOnly: false
     replicaCount: 1
     # UUID lives in this data dir. An empty master volume bootstraps a new
@@ -286,22 +288,21 @@ elasticsearch:
       enabled: true
       size: 10Gi
     # Master was CrashLoopBackOff on Java heap space at chart default 128m.
-    # Keep requests modest so Kibana can schedule on the same node.
-    heapSize: 1536m
+    heapSize: 1024m
     extraEnvVars:
       - name: ELASTICSEARCH_HEAP_SIZE
-        value: "1536m"
+        value: "1024m"
     resources:
       requests:
-        memory: "1800Mi"
-        cpu: "300m"
+        memory: "1500Mi"
+        cpu: "250m"
       limits:
-        memory: "4Gi"
+        memory: "3Gi"
         cpu: "2"
 
-  # Data STS holds shard data; master must stay up (was OOM at 128m heap).
+  # Dedicated data nodes disabled — not enough node memory in sandbox-dev.
   data:
-    replicaCount: 1
+    replicaCount: 0
     heapSize: 1024m
     resources:
       requests:

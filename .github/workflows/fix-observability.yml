@@ -1,0 +1,107 @@
+name: Fix observability (logs+metrics)
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Free memory and restore ES+Prometheus
+        run: |
+          set -euo pipefail
+          echo "===== nodes ====="
+          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -E 'Name:|Allocatable:|Allocated resources:|memory' | head -80
+          echo "===== before pods ====="
+          kubectl get pods -A -o wide | grep -iE 'Pending|elastic|kibana|prometheus|fluent|grafana|mongo|rpconsole|marble' || true
+
+          # Free RAM: non-essential UIs + single-node ES (drop dedicated data STS)
+          kubectl scale deploy -n infra mongo-express --replicas=0 2>/dev/null || true
+          kubectl scale deploy -n infra rpconsole --replicas=0 2>/dev/null || true
+          # marble ES is heavy and not needed for sandbox observability
+          kubectl scale sts -n aml marble-elasticsearch --replicas=0 2>/dev/null || true
+
+          # Single-node ES: master holds data (masterOnly=false). Data STS was Pending forever.
+          kubectl scale sts -n infra infra-elasticsearch-data --replicas=0 || true
+          kubectl patch sts infra-elasticsearch-master -n infra --type='json' -p='[
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"1500Mi"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"3Gi"}
+          ]' || true
+          kubectl set env sts/infra-elasticsearch-master -n infra ELASTICSEARCH_HEAP_SIZE=1024m
+          kubectl scale sts -n infra infra-elasticsearch-master --replicas=1
+          # If Pending, delete so scheduler retries after frees
+          kubectl delete pod -n infra infra-elasticsearch-master-0 --force --grace-period=0 2>/dev/null || true
+
+          echo "===== wait master ====="
+          for i in $(seq 1 60); do
+            PHASE=$(kubectl get pod -n infra infra-elasticsearch-master-0 -o jsonpath='{.status.phase}' 2>/dev/null || echo Missing)
+            READY=$(kubectl get pod -n infra infra-elasticsearch-master-0 -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null || echo false)
+            echo "t=$i phase=$PHASE ready=$READY"
+            if [ "$READY" = "true" ]; then break; fi
+            if [ "$PHASE" = "Pending" ] && [ "$i" -eq 5 ]; then
+              echo "===== pending describe ====="
+              kubectl describe pod -n infra infra-elasticsearch-master-0 | tail -40
+            fi
+            sleep 10
+          done
+          kubectl get pods -n infra | grep elastic || true
+
+          echo "===== heal indices + health ====="
+          kubectl delete pod es-fix -n infra --ignore-not-found --wait=false 2>/dev/null || true
+          sleep 2
+          kubectl run es-fix --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- \
+            sh -c 'for i in $(seq 1 36); do
+              if curl -sf -u elastic:elasticSearchPas42 http://infra-elasticsearch:9200/_cluster/health; then
+                curl -sf -u elastic:elasticSearchPas42 -X PUT http://infra-elasticsearch:9200/_all/_settings \
+                  -H "Content-Type: application/json" -d "{\"index\":{\"number_of_replicas\":0}}"
+                echo
+                curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"
+                curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cat/indices/logs-*?v" || true
+                exit 0
+              fi
+              sleep 5
+            done; echo ES_DOWN; exit 1'
+
+          kubectl scale deploy -n infra infra-kibana --replicas=1 || true
+
+          echo "===== prometheus: emptyDir + lower mem ====="
+          # Patch Prometheus CR to drop broken Hetzner PVC and use emptyDir; lower requests
+          kubectl patch prometheus -n monitoring kube-prometheus-stack-prometheus --type=merge -p '{
+            "spec": {
+              "replicas": 1,
+              "resources": {
+                "requests": {"cpu":"100m","memory":"512Mi"},
+                "limits": {"cpu":"1","memory":"1536Mi"}
+              },
+              "storage": {"emptyDir": {}}
+            }
+          }' || true
+          # Delete stuck Pending pod + failed PVC so STS recreates with emptyDir
+          kubectl delete pod -n monitoring prometheus-kube-prometheus-stack-prometheus-0 --force --grace-period=0 2>/dev/null || true
+          kubectl delete pvc -n monitoring prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0 --wait=false 2>/dev/null || true
+
+          echo "===== wait prometheus ====="
+          for i in $(seq 1 60); do
+            READY=$(kubectl get pod -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null || echo false)
+            PHASE=$(kubectl get pod -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -o jsonpath='{.status.phase}' 2>/dev/null || echo Missing)
+            echo "t=$i phase=$PHASE ready=$READY"
+            if [ "$READY" = "true" ]; then break; fi
+            if [ "$PHASE" = "Pending" ] && [ $((i % 6)) -eq 0 ]; then
+              kubectl describe pod -n monitoring prometheus-kube-prometheus-stack-prometheus-0 | tail -30
+            fi
+            sleep 10
+          done
+
+          echo "===== after ====="
+          kubectl get pods -A | grep -iE 'elastic|kibana|prometheus|fluent|grafana|business-exporter' || true
+          PROM=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "${PROM:-}" ]; then
+            kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/-/ready' || true
+            echo
+            kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=up' | head -c 800 || true
+            echo
+          fi
+          kubectl delete pod es-verify -n infra --ignore-not-found --wait=false 2>/dev/null || true
+          sleep 1
+          kubectl run es-verify --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- \
+            sh -c 'curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"; echo; curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/logs-tn-*/_count"; echo' || true

@@ -19,20 +19,17 @@ jobs:
           # Non-essential UI can wait — free RAM so Kibana schedules.
           kubectl scale deploy -n infra mongo-express --replicas=0 2>/dev/null || true
           kubectl scale deploy -n infra rpconsole --replicas=0 2>/dev/null || true
-          # Force heap on master (GitOps chart was leaving default 128m).
-          kubectl set env sts/infra-elasticsearch-master -n infra ELASTICSEARCH_HEAP_SIZE=1536m
-          kubectl set env sts/infra-elasticsearch-data -n infra ELASTICSEARCH_HEAP_SIZE=1024m
+          # Single-node ES (data STS=0) — sandbox cannot schedule master+data+Prometheus.
+          kubectl scale sts infra-elasticsearch-data -n infra --replicas=0 || true
+          kubectl set env sts/infra-elasticsearch-master -n infra ELASTICSEARCH_HEAP_SIZE=1024m
           kubectl patch sts infra-elasticsearch-master -n infra --type='json' -p='[
-            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"1800Mi"},
-            {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"4Gi"}
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"1500Mi"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"3Gi"}
           ]' || true
           kubectl scale sts infra-elasticsearch-master -n infra --replicas=1
-          kubectl scale sts infra-elasticsearch-data -n infra --replicas=1
           kubectl delete pod -n infra infra-elasticsearch-master-0 --force --grace-period=0 || true
           echo "===== wait master"
           kubectl rollout status sts/infra-elasticsearch-master -n infra --timeout=10m
-          echo "===== wait data"
-          kubectl rollout status sts/infra-elasticsearch-data -n infra --timeout=10m
           kubectl get pods -n infra | grep -i elastic
           kubectl delete pod es-probe -n infra --ignore-not-found
           kubectl run es-probe --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '

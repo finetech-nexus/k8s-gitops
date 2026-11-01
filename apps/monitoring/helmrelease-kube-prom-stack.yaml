@@ -66,18 +66,15 @@ spec:
                   functional_perimeter: platform
         resources:
           requests:
-            cpu: 200m
-            memory: 1Gi
+            cpu: 100m
+            memory: 512Mi
           limits:
             cpu: "1"
-            memory: 3Gi
+            memory: 1536Mi
+        # Hetzner CSI rejects operator PVC labels (ProvisioningFailed).
+        # emptyDir is fine for sandbox retention; swap back to PVC when nodes grow.
         storageSpec:
-          volumeClaimTemplate:
-            spec:
-              accessModes: ["ReadWriteOnce"]
-              resources:
-                requests:
-                  storage: 20Gi
+          emptyDir: {}
 
     alertmanager:
       enabled: true
