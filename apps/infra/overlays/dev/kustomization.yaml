@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: infra
 resources:
   - ../../base
+  - kibana-ingress.yaml
 configMapGenerator:
   - name: infra-values
     options:

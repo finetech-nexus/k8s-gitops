@@ -6,8 +6,8 @@ metadata:
   name: kibana-internal
   namespace: apim
   annotations:
-    # Ingress still publishes kibana.mifos.gazelle.test until infra HR rolls the new host.
-    konghq.com/host-header: kibana.mifos.gazelle.test
+    konghq.com/host-header: kibana.api.dev.sandbox.internal.nbank.fr
+
 
     konghq.com/protocol: "https"
     konghq.com/tls-verify: "false"

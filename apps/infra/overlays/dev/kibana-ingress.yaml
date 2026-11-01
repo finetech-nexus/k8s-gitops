@@ -1,0 +1,26 @@
+# Explicit sandbox Ingress — bitnami chart still publishes kibana.mifos.gazelle.test.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana-sandbox
+  namespace: infra
+  annotations:
+    cert-manager.io/cluster-issuer: nbank-dev
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - kibana.api.dev.sandbox.internal.nbank.fr
+      secretName: kibana-dev-tls
+  rules:
+    - host: kibana.api.dev.sandbox.internal.nbank.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: infra-kibana
+                port:
+                  number: 5601
