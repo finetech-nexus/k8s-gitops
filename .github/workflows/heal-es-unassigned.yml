@@ -1,0 +1,67 @@
+name: Heal ES unassigned shards
+on: workflow_dispatch
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Drop unrecoverable primaries; keep logs-tn
+        run: |
+          set -euo pipefail
+          kubectl delete pod es-u -n infra --ignore-not-found --wait=false 2>/dev/null || true
+          sleep 2
+          kubectl run es-u --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH="elastic:elasticSearchPas42"
+            BASE=http://infra-elasticsearch:9200
+            curl -sf -u "$AUTH" -X PUT "$BASE/_all/_settings" -H "Content-Type: application/json" \
+              -d "{\"index\":{\"number_of_replicas\":0}}"
+            echo
+            echo "=== UNASSIGNED ==="
+            curl -sf -u "$AUTH" "$BASE/_cat/shards?h=index,shard,prirep,state,unassigned.reason" | awk "NR==1 || /UNASSIGNED/" | head -100
+            echo "=== EXPLAIN ==="
+            curl -sf -u "$AUTH" "$BASE/_cluster/allocation/explain?pretty" | head -60
+            # Delete non-logs indices that still have UNASSIGNED primaries (data lived on retired data STS).
+            curl -sf -u "$AUTH" "$BASE/_cat/shards?h=index,prirep,state" | awk "\$2==\"p\" && \$3==\"UNASSIGNED\" {print \$1}" | sort -u | while read idx; do
+              case "$idx" in
+                logs-tn*|*.ds-logs-tn*|logs-*)
+                  echo "KEEP $idx"
+                  ;;
+                *)
+                  echo "DELETE $idx"
+                  curl -sf -u "$AUTH" -X DELETE "$BASE/$idx" || true
+                  echo
+                  ;;
+              esac
+            done
+            # For any remaining unassigned primaries on logs, allocate empty (accept data loss on old day shards).
+            curl -sf -u "$AUTH" "$BASE/_cat/shards?h=index,shard,prirep,state" | awk "\$3==\"p\" && \$4==\"UNASSIGNED\" {print \$1,\$2}" | while read idx shard; do
+              echo "allocate_empty_primary $idx $shard"
+              curl -sf -u "$AUTH" -X POST "$BASE/_cluster/reroute?pretty" -H "Content-Type: application/json" -d "{
+                \"commands\":[{
+                  \"allocate_empty_primary\":{
+                    \"index\":\"$idx\",
+                    \"shard\":$shard,
+                    \"node\":\"infra-elasticsearch-master-0\",
+                    \"accept_data_loss\":true
+                  }
+                }]
+              }" || true
+            done
+            sleep 3
+            curl -sf -u "$AUTH" -X PUT "$BASE/_all/_settings" -H "Content-Type: application/json" \
+              -d "{\"index\":{\"number_of_replicas\":0}}" || true
+            echo
+            curl -sf -u "$AUTH" "$BASE/_cluster/health?pretty"
+            echo
+            curl -sf -u "$AUTH" "$BASE/_cat/indices/logs-*?v"
+            echo
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_count"; echo
+          '
+          # Bounce fluent-bit so buffered chunks retry against healthy ES
+          kubectl rollout restart ds/fluent-bit-tn -n logging || true
+          # Recreate Kibana data views
+          kubectl delete job -n logging kibana-data-views-v1 --ignore-not-found || true
+          kubectl delete job -n logging kibana-data-views-v2 --ignore-not-found || true
+          echo done

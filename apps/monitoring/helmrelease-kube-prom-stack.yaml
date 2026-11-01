@@ -125,11 +125,14 @@ spec:
           secureJsonData:
             basicAuthPassword: elasticSearchPas42
           jsonData:
-            index: "[logs-tn-]YYYY.MM.DD"
+            # Fluent Bit Logstash prefix; ES 8 may expose as data stream (.ds-logs-tn-*).
+            index: "logs-tn-*"
             timeField: "@timestamp"
             esVersion: "8.0.0"
             logMessageField: log
             logLevelField: level
+            includeFrozen: false
+            maxConcurrentShardRequests: 5
       grafana.ini:
         server:
           root_url: https://grafana.api.dev.sandbox.internal.nbank.fr

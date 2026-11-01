@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kibana-data-views-v1
+  name: kibana-data-views-v2
   namespace: logging
   labels:
     nexus.bank/functional-perimeter: platform
