@@ -336,9 +336,10 @@ elasticsearch:
       hostname: kibana.api.dev.sandbox.internal.nbank.fr
       annotations:
         cert-manager.io/cluster-issuer: nbank-dev
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      # Keep bitnami object shape (enabled bool). TLS termination at ingress-nginx/Kong.
       tls:
-        enabled: true
-        secretName: kibana-dev-tls
+        enabled: false
 
 
 ############### MySQL  ####################
