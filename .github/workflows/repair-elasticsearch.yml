@@ -11,45 +11,46 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Install Flux CLI
-        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
-      - name: Reconcile infra HelmRelease
+      - name: Patch ES heap and free memory for Kibana
         run: |
-          flux reconcile source git flux-system -n flux-system --timeout=1m || true
-          flux reconcile kustomization infra -n flux-system --timeout=3m || true
-          flux reconcile helmrelease infra -n infra --timeout=5m || true
-      - name: Restore ES topology (master + data) and heal indices
-        run: |
-          set +e
+          set -e
           echo "===== before"
-          kubectl get pods,sts -n infra | grep -i elastic || true
-          # Data node was healthy; master OOM'd at 128m. Keep both with fixed master heap.
+          kubectl get pods -n infra -o wide | grep -E 'NAME|elastic|kibana|mongo|rpconsole' || kubectl get pods -n infra
+          # Non-essential UI can wait — free RAM so Kibana schedules.
+          kubectl scale deploy -n infra mongo-express --replicas=0 2>/dev/null || true
+          kubectl scale deploy -n infra rpconsole --replicas=0 2>/dev/null || true
+          # Force heap on master (GitOps chart was leaving default 128m).
+          kubectl set env sts/infra-elasticsearch-master -n infra ELASTICSEARCH_HEAP_SIZE=1536m
+          kubectl set env sts/infra-elasticsearch-data -n infra ELASTICSEARCH_HEAP_SIZE=1024m
+          kubectl patch sts infra-elasticsearch-master -n infra --type='json' -p='[
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"1800Mi"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"4Gi"}
+          ]' || true
           kubectl scale sts infra-elasticsearch-master -n infra --replicas=1
           kubectl scale sts infra-elasticsearch-data -n infra --replicas=1
-          kubectl delete pod -n infra infra-elasticsearch-master-0 --force --grace-period=0 2>/dev/null || true
+          kubectl delete pod -n infra infra-elasticsearch-master-0 --force --grace-period=0 || true
           echo "===== wait master"
-          kubectl rollout status sts/infra-elasticsearch-master -n infra --timeout=8m
+          kubectl rollout status sts/infra-elasticsearch-master -n infra --timeout=10m
           echo "===== wait data"
-          kubectl rollout status sts/infra-elasticsearch-data -n infra --timeout=8m
-          kubectl get pods -n infra | grep -i elastic || true
+          kubectl rollout status sts/infra-elasticsearch-data -n infra --timeout=10m
+          kubectl get pods -n infra | grep -i elastic
           kubectl delete pod es-probe -n infra --ignore-not-found
           kubectl run es-probe --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
-            set -e
-            for i in $(seq 1 20); do
-              if curl -sf -u elastic:elasticSearchPas42 http://infra-elasticsearch:9200/_cluster/health?pretty; then
-                break
+            for i in $(seq 1 24); do
+              if curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"; then
+                curl -sf -u elastic:elasticSearchPas42 -X PUT "http://infra-elasticsearch:9200/_all/_settings" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"index\":{\"number_of_replicas\":0}}" || true
+                curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"
+                exit 0
               fi
-              sleep 15
+              sleep 10
             done
-            # Single-replica sandbox: drop replica requirement so RED→YELLOW/GREEN.
-            curl -sf -u elastic:elasticSearchPas42 -X PUT "http://infra-elasticsearch:9200/_all/_settings" \
-              -H "Content-Type: application/json" \
-              -d "{\"index\":{\"number_of_replicas\":0}}" || true
-            sleep 5
-            curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"
-            curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cat/indices?v" | head -40
+            echo "ES never became healthy"; exit 1
           '
-          kubectl rollout restart deploy/infra-kibana -n infra || true
+          kubectl scale deploy -n infra infra-kibana --replicas=1
+          kubectl delete pod -n infra -l app.kubernetes.io/name=kibana --force --grace-period=0 2>/dev/null || true
           kubectl rollout status deploy/infra-kibana -n infra --timeout=5m || true
           echo "===== after"
-          kubectl get pods -n infra | grep -E "elastic|kibana" || true
+          kubectl get pods -n infra | grep -E 'elastic|kibana' || true
+          kubectl get sts infra-elasticsearch-master -n infra -o jsonpath='{.spec.template.spec.containers[0].env}' | tr ',' '\n' | grep -i heap || true

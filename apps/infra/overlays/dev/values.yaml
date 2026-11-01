@@ -288,6 +288,9 @@ elasticsearch:
     # Master was CrashLoopBackOff on Java heap space at chart default 128m.
     # Keep requests modest so Kibana can schedule on the same node.
     heapSize: 1536m
+    extraEnvVars:
+      - name: ELASTICSEARCH_HEAP_SIZE
+        value: "1536m"
     resources:
       requests:
         memory: "1800Mi"
@@ -341,10 +344,10 @@ elasticsearch:
 
     resources:
       requests:
-        memory: "400Mi"
-        cpu: "200m"
+        memory: "256Mi"
+        cpu: "50m"
       limits:
-        memory: "1Gi"
+        memory: "768Mi"
         cpu: "500m"
     ingress:
       enabled: true
