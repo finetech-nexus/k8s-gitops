@@ -13,6 +13,7 @@ jobs:
           set -euo pipefail
           kubectl delete job -n logging kibana-data-views-v3 --ignore-not-found
           kubectl delete job -n logging kibana-data-views-v4 --ignore-not-found
+          kubectl delete job -n logging kibana-data-views-v5 --ignore-not-found
           kubectl apply -f apps/logging/kibana-data-views-job.yaml
-          kubectl wait -n logging --for=condition=complete job/kibana-data-views-v4 --timeout=5m
-          kubectl logs -n logging job/kibana-data-views-v4 | tail -80
+          kubectl wait -n logging --for=condition=complete job/kibana-data-views-v5 --timeout=5m
+          kubectl logs -n logging job/kibana-data-views-v5 | tr '}' '\n' | grep -E 'alias |data_view |search |verify|ready|FAILED|k8s_namespace' | head -80
