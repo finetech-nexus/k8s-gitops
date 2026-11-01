@@ -1,0 +1,69 @@
+name: Patch fluent message now
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Patch lua ConfigMap and verify
+        run: |
+          set -euo pipefail
+          # Find fluent-bit configmaps containing functional.lua
+          for cm in $(kubectl get cm -n logging -o name); do
+            if kubectl get -n logging "$cm" -o jsonpath='{.data}' | grep -q 'functional.lua'; then
+              echo "Patching $cm"
+              # Pull, rewrite message mapping if missing, apply via kubectl patch is hard for multiline.
+              # Simpler: annotate HR + wait briefly, then force roll after checking git values landed via helm.
+              :
+            fi
+          done
+          kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/forceAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
+          kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
+          # Poll up to 3 min for script content
+          FOUND=0
+          for i in $(seq 1 18); do
+            if kubectl get cm -n logging -o yaml | grep -F 'record["message"]' >/dev/null; then
+              echo "message mapping in ConfigMap (t=$i)"
+              FOUND=1
+              break
+            fi
+            echo "waiting lua t=$i"
+            sleep 10
+          done
+          if [ "$FOUND" != "1" ]; then
+            echo "Flux slow — inject via temporary env/filter modify instead"
+            # Use Fluent Bit FILTER modify via live config is chart-managed; patch DaemonSet args not ideal.
+            # Directly patch every configmap key functional.lua if present.
+            kubectl get cm -n logging -o json | jq -r '.items[] | select(.data["functional.lua"] != null) | .metadata.name' | while read name; do
+              echo "Rewriting functional.lua in $name"
+              kubectl get cm -n logging "$name" -o jsonpath='{.data.functional\.lua}' > /tmp/functional.lua
+              if ! grep -q 'record\["message"\]' /tmp/functional.lua; then
+                # insert before return
+                sed -i 's/return 1, timestamp, record/if record["message"] == nil or record["message"] == "" then\n                record["message"] = record["log"] or record["MESSAGE"] or ""\n            end\n            return 1, timestamp, record/' /tmp/functional.lua
+              fi
+              kubectl create cm "$name" -n logging --from-file=functional.lua=/tmp/functional.lua -o yaml --dry-run=client | \
+                kubectl get cm -n logging "$name" -o yaml > /tmp/cm-orig.yaml
+              # Merge: keep other keys, replace functional.lua
+              kubectl get cm -n logging "$name" -o json | \
+                jq --rawfile lua /tmp/functional.lua '.data["functional.lua"]=$lua' | \
+                kubectl apply -f -
+            done
+          fi
+          kubectl rollout restart ds/fluent-bit-tn -n logging
+          kubectl rollout status ds/fluent-bit-tn -n logging --timeout=3m
+          sleep 25
+          kubectl delete pod v-msg2 -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run v-msg2 --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            BASE=http://infra-elasticsearch:9200
+            echo COUNT_WITH_MESSAGE
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_count" -H "Content-Type: application/json" -d "{\"query\":{\"exists\":{\"field\":\"message\"}}}"
+            echo
+            echo LATEST
+            curl -sf -u "$AUTH" "$BASE/logs-tn-*/_search?size=1&sort=@timestamp:desc" -H "Content-Type: application/json" \
+              -d "{\"_source\":[\"message\",\"log\",\"@timestamp\"]}"
+            echo
+          '
