@@ -285,13 +285,14 @@ elasticsearch:
     persistence:
       enabled: true
       size: 10Gi
-    heapSize: 1024m
+    # Master was CrashLoopBackOff on Java heap space at chart default 128m.
+    heapSize: 1536m
     resources:
       requests:
         memory: "2Gi"
         cpu: "500m"
       limits:
-        memory: "3Gi"
+        memory: "4Gi"
         cpu: "2"
 
   # Single all-in-one master holds data. Extra data nodes refuse to join after

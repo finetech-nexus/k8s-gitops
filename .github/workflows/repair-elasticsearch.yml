@@ -1,0 +1,40 @@
+name: Repair — elasticsearch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Install Flux CLI
+        run: curl -sSL https://fluxcd.io/install.sh | bash && flux version
+      - name: Reconcile infra HelmRelease
+        run: |
+          flux reconcile source git flux-system -n flux-system --timeout=1m || true
+          flux reconcile kustomization infra -n flux-system --timeout=3m || true
+          flux reconcile helmrelease infra -n infra --timeout=5m || true
+      - name: Scale data nodes to 0 and bounce master
+        run: |
+          set -e
+          echo "===== before"
+          kubectl get pods,sts -n infra | grep -i elastic || true
+          # Keep single all-in-one master; data STS fights UUID / eats heap path.
+          kubectl scale sts infra-elasticsearch-data -n infra --replicas=0 || true
+          # Ensure master STS desired = 1 and pick up new heap/resources.
+          kubectl scale sts infra-elasticsearch-master -n infra --replicas=1 || true
+          kubectl delete pod -n infra infra-elasticsearch-master-0 --force --grace-period=0 || true
+          echo "===== waiting for master Ready"
+          kubectl rollout status sts/infra-elasticsearch-master -n infra --timeout=8m || true
+          kubectl get pods -n infra | grep -i elastic || true
+          kubectl delete pod es-probe -n infra --ignore-not-found
+          kubectl run es-probe --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- \
+            sh -c 'for i in 1 2 3 4 5 6 7 8 9 10; do curl -sf -u elastic:elasticSearchPas42 http://infra-elasticsearch:9200/_cluster/health?pretty && break; sleep 15; done'
+          kubectl rollout restart deploy/infra-kibana -n infra || true
+          kubectl rollout status deploy/infra-kibana -n infra --timeout=3m || true
+          echo "===== after"
+          kubectl get pods -n infra | grep -E 'elastic|kibana' || true
