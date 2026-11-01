@@ -121,3 +121,23 @@ spec:
   secretRef:
     name: ghcr-auth
 # docs-oci HelmRepository is defined in apps/docs/base/helmrepository.yaml (applied with docs Kustomization).
+---
+# Prometheus / Grafana (kube-prometheus-stack)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://prometheus-community.github.io/helm-charts
+---
+# Fluent Bit log shipper → Elasticsearch (residency TN/EU; field functional_perimeter)
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: fluent
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://fluent.github.io/helm-charts

@@ -26,7 +26,7 @@ kind: Kustomization
 resources:
   - priorityclass.yaml
   - namespace.yaml
-  #- kong-cluster-plugin-prometheus.yaml
+  - kong-cluster-plugin-prometheus.yaml
   #- kong-cluster-plugin-request-transformer-adv.yaml
   #- kong-cluster-plugin-response-transformer-adv.yaml
   #- kong-consumer.yaml

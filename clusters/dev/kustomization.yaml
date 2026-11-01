@@ -13,7 +13,8 @@ resources:
   - infra.yaml
   - kong.yaml
   - kong-routes.yaml
-  # - monitoring.yaml  # disabled
+  - monitoring.yaml
+  - logging.yaml
   - core-banking.yaml
   - payment-hub.yaml
   - apis.yaml

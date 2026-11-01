@@ -333,9 +333,13 @@ elasticsearch:
     ingress:
       enabled: true
       ingressClassName: nginx
-      hostname: kibana1.mifos.gazelle.test
+      hostname: kibana-eu.api.dev.sandbox.internal.nbank.fr
+      annotations:
+        cert-manager.io/cluster-issuer: nbank-dev
       tls:
-        enabled: false
+        enabled: true
+        secretName: kibana-eu-dev-tls
+
 
 ############### MySQL  ####################
 mysql:

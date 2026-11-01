@@ -1,0 +1,43 @@
+# Canonical map: functional perimeter → Kubernetes namespaces (TN + EU where mirrored).
+# Used as documentation + Grafana/Fluent Bit contract.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: functional-perimeters
+  namespace: monitoring
+  labels:
+    nexus.bank/observability: "true"
+data:
+  map.yaml: |
+    # Perimetres fonctionnels (metier), not geographic TN/EU.
+    # TN/EU remains a residency/deployment axis inside each domain.
+    payments:
+      namespaces: [payment-hub, payment-hub-eu]
+      description: Payment Hub / Mojaloop / Zeebe payment flows
+    core-banking:
+      namespaces: [core-banking, core-banking-eu]
+      description: Fineract + webapp + hooks
+    kyc:
+      namespaces: [kyc, kyc-eu, kyc-aml]
+      description: KYC APIs, Ballerine/Clarity workflows
+    aml:
+      namespaces: [aml]
+      description: Marble AML screening
+    api:
+      namespaces: [api, api-eu, app]
+      description: Banking APIs + BFF (nexus-bank-api)
+    iam:
+      namespaces: [iam]
+      description: Keycloak / identity
+    gateway:
+      namespaces: [kong]
+      description: Kong API gateway / APIM
+    treasury:
+      namespaces: [treasury]
+      description: Treasury services
+    reconciliation:
+      namespaces: [reconciliation]
+      description: Reconciliation services
+    platform:
+      namespaces: [infra, infra-eu, monitoring, logging, ingress-nginx, cert-manager]
+      description: Shared platform (ES/Kibana, Kafka, observability)

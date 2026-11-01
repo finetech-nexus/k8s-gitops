@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-perimeter-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  functional-perimeter-overview.json: |-
+    {
+      "title": "Perimetres fonctionnels",
+      "uid": "functional-perimeter-overview",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["perimeter", "functional", "payments", "kyc", "core-banking"],
+      "templating": {
+        "list": [
+          {
+            "name": "perimeter",
+            "type": "custom",
+            "label": "Perimetre fonctionnel",
+            "query": "payments : ^(payment-hub|payment-hub-eu)$,core-banking : ^(core-banking|core-banking-eu)$,kyc : ^(kyc|kyc-eu|kyc-aml)$,aml : ^aml$,api : ^(api|api-eu|app)$,iam : ^iam$,gateway : ^kong$,treasury : ^treasury$,reconciliation : ^reconciliation$,platform : ^(infra|infra-eu|monitoring|logging|ingress-nginx|cert-manager)$",
+            "current": {
+              "text": "payments",
+              "value": "^(payment-hub|payment-hub-eu)$"
+            },
+            "options": [
+              { "text": "payments", "value": "^(payment-hub|payment-hub-eu)$", "selected": true },
+              { "text": "core-banking", "value": "^(core-banking|core-banking-eu)$", "selected": false },
+              { "text": "kyc", "value": "^(kyc|kyc-eu|kyc-aml)$", "selected": false },
+              { "text": "aml", "value": "^aml$", "selected": false },
+              { "text": "api", "value": "^(api|api-eu|app)$", "selected": false },
+              { "text": "iam", "value": "^iam$", "selected": false },
+              { "text": "gateway", "value": "^kong$", "selected": false },
+              { "text": "treasury", "value": "^treasury$", "selected": false },
+              { "text": "reconciliation", "value": "^reconciliation$", "selected": false },
+              { "text": "platform", "value": "^(infra|infra-eu|monitoring|logging|ingress-nginx|cert-manager)$", "selected": false }
+            ]
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "CPU by namespace (perimetre)",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=~\"$perimeter\",container!=\"\",container!=\"POD\"}[5m]))",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory by namespace (perimetre)",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"$perimeter\",container!=\"\",container!=\"POD\"})",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Restarts (1h) by namespace",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"$perimeter\"}[1h]))",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Pods not ready",
+          "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+          "targets": [
+            {
+              "expr": "sum(kube_pod_status_ready{namespace=~\"$perimeter\",condition=\"false\"}) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Pods running",
+          "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+          "targets": [
+            {
+              "expr": "sum(kube_pod_status_phase{namespace=~\"$perimeter\",phase=\"Running\"}) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Network receive by namespace",
+          "gridPos": { "x": 12, "y": 12, "w": 12, "h": 4 },
+          "targets": [
+            {
+              "expr": "sum by (namespace) (rate(container_network_receive_bytes_total{namespace=~\"$perimeter\"}[5m]))",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
