@@ -1,0 +1,13 @@
+name: Heal ES replicas
+on: workflow_dispatch
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - run: |
+          kubectl delete pod es-heal -n infra --ignore-not-found
+          kubectl run es-heal --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- \
+            sh -c 'curl -sf -u elastic:elasticSearchPas42 -X PUT "http://infra-elasticsearch:9200/_all/_settings" -H "Content-Type: application/json" -d "{\"index\":{\"number_of_replicas\":0}}"; echo; curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/_cluster/health?pretty"'
