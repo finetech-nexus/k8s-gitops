@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Wait reconcile and scrape metrics
         run: |
-          set +e
+          set -e
           # Apply exporter script immediately (don't wait for Flux) so verify hits the commit under test.
           kubectl -n monitoring create configmap business-exporter \
             --from-file=exporter.py=apps/monitoring/business-exporter/exporter.py \

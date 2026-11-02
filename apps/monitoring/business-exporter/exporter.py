@@ -330,8 +330,55 @@ def _terms_agg_first_working(
     return last_empty
 
 
+def _zeebe_nested_bpmn_intent() -> list[dict]:
+    """One ES query: bpmnProcessId × intent over the window (keyword-first)."""
+    intent_fields = sorted(_field_candidates("intent"), key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+    bpmn_fields = sorted(_field_candidates("value.bpmnProcessId"), key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+    last_err = None
+    for index in ("zeebe-*", "zeebe-record_job*", "zeebe-record_process-instance*"):
+        for bpmn_field in bpmn_fields:
+            for intent_field in intent_fields:
+                try:
+                    res = _es(
+                        f"{index}/_search",
+                        {
+                            "size": 0,
+                            "query": {"bool": {"must": [_zeebe_time_range()]}},
+                            "aggs": {
+                                "bpmn": {
+                                    "terms": {"field": bpmn_field, "size": 40},
+                                    "aggs": {
+                                        "by_intent": {"terms": {"field": intent_field, "size": 25}},
+                                    },
+                                }
+                            },
+                        },
+                        timeout=35,
+                    )
+                    buckets = res.get("aggregations", {}).get("bpmn", {}).get("buckets", []) or []
+                    if buckets:
+                        return buckets
+                except Exception as exc:  # noqa: BLE001
+                    last_err = exc
+                    continue
+    if last_err:
+        raise last_err
+    return []
+
+
+def _outcome_from_intent(intent: str) -> str:
+    intent = (intent or "").upper()
+    if intent in {"ELEMENT_COMPLETED", "COMPLETED", "FULLY_DISTRIBUTED"}:
+        return "completed"
+    if intent in {"FAILED", "TIMED_OUT", "ERROR_THROWN", "ELEMENT_TERMINATED", "CANCELED", "CANCELLED"}:
+        return "failed"
+    if intent in {"CREATED", "ELEMENT_ACTIVATING", "ELEMENT_ACTIVATED", "ELEMENT_COMPLETING"}:
+        return "in_progress"
+    return "other"
+
+
 def scrape_zeebe_transfers():
-    """Transfer / card rails from Zeebe process instances + job problems."""
+    """Transfer / card rails from Zeebe process/job records + problems."""
     series = (
         "payment_ops_count",
         "payment_ops_problems",
@@ -344,50 +391,22 @@ def scrape_zeebe_transfers():
         {},
         {"intent": "intent.keyword", "value.bpmnElementType": "value.bpmnElementType.keyword"},
     ]
-    # Prefer broad zeebe-* then typed indices; keyword fields first (TN mapping).
-    indices = ["zeebe-*", "zeebe-record_process-instance*", "zeebe-record_process-instance-creation*"]
-    bpmn_fields = _field_candidates("value.bpmnProcessId")
-    # keyword first
-    bpmn_fields = sorted(bpmn_fields, key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+    bpmn_fields = sorted(_field_candidates("value.bpmnProcessId"), key=lambda f: (0 if f.endswith(".keyword") else 1, f))
 
-    # Completed + failed root process instances in window
-    outcomes = {
-        "completed": ["ELEMENT_COMPLETED"],
-        "failed": ["ELEMENT_TERMINATED"],
-        "activated": ["ELEMENT_ACTIVATED"],
-    }
-    for outcome, intents in outcomes.items():
-        must = [
-            {"terms": {"intent": intents}},
-            {"term": {"value.bpmnElementType": "PROCESS"}},
-            _zeebe_time_range(),
-        ]
-        buckets: list[dict] = []
-        # Fallback without bpmnElementType filter (mapping differences across Zeebe record types).
-        must_loose = [
-            {"terms": {"intent": intents}},
-            _zeebe_time_range(),
-        ]
-        for must_try in (must, must_loose):
-            for index in indices:
-                try:
-                    buckets = _terms_agg_first_working(
-                        index,
-                        must_try,
-                        bpmn_fields,
-                        size=40,
-                        must_field_variants=intent_variants,
-                    )
-                except Exception:
-                    buckets = []
-                if buckets:
-                    break
-            if buckets:
-                break
-        for bucket in buckets:
-            bpmn = str(bucket.get("key") or "unknown")
-            ctx, direction, perimeter, family, process = _classify_process(bpmn)
-            count = float(bucket.get("doc_count") or 0)
+    # Volume + outcome from nested bpmn × intent (same source that already yields job problems).
+    try:
+        bpmn_buckets = _zeebe_nested_bpmn_intent()
+    except Exception:
+        bpmn_buckets = []
+
+    rollups: dict[tuple, float] = defaultdict(float)
+    for bucket in bpmn_buckets:
+        bpmn = str(bucket.get("key") or "unknown")
+        ctx, direction, perimeter, family, process = _classify_process(bpmn)
+        for ib in bucket.get("by_intent", {}).get("buckets", []):
+            intent = str(ib.get("key") or "unknown")
+            outcome = _outcome_from_intent(intent)
+            count = float(ib.get("doc_count") or 0)
             labels = {
                 "perimeter": perimeter,
                 "context": ctx,
@@ -395,23 +414,25 @@ def scrape_zeebe_transfers():
                 "family": family,
                 "process": process,
                 "outcome": outcome,
+                "intent": intent,
                 "window": WINDOW,
             }
             _set_gauge("payment_ops_by_process", count, labels)
-            rollup = {
+            rollups[(perimeter, ctx, direction, family, outcome)] += count
+
+    for (perimeter, ctx, direction, family, outcome), count in rollups.items():
+        _set_gauge(
+            "payment_ops_count",
+            count,
+            {
                 "perimeter": perimeter,
                 "context": ctx,
                 "direction": direction,
                 "family": family,
                 "outcome": outcome,
                 "window": WINDOW,
-            }
-            existing = 0.0
-            for lab, val in _labels.get("payment_ops_count", []):
-                if lab == rollup:
-                    existing = val
-                    break
-            _set_gauge("payment_ops_count", existing + count, rollup)
+            },
+        )
 
     # Job failures / timeouts → operational problems
     must_jobs = [
