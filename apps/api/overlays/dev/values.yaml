@@ -320,11 +320,11 @@ notification-app:
   replicaCount: 1
   image:
     repository: nexusbank/notification-app
-    tag: "latest"
+    tag: "b02cef2"
     pullPolicy: Always
   env:
     API_UPSTREAM: "http://core-api-notification-api"
-    DEPLOYED_AT: "2026-10-13T18:10:00Z"
+    DEPLOYED_AT: "2026-11-02T21:28:49Z"
   service:
     type: ClusterIP
     port: 80
@@ -369,7 +369,7 @@ notification-api:
   replicaCount: 1
   image:
     repository: nexusbank/notification-api
-    tag: "0570e5d"
+    tag: "33cf982"
     pullPolicy: Always
   env:
     PORT: "8080"
