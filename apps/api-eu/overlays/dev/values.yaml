@@ -266,7 +266,7 @@ notification-api:
   replicaCount: 1
   image:
     repository: nexusbank/notification-api
-    tag: "33cf982"
+    tag: "6946a4c"
     pullPolicy: Always
   env:
     PORT: "8080"
@@ -280,7 +280,7 @@ notification-api:
     FCM_PROJECT_ID: "nexus-bank-7c301"
     APNS_TEAM_ID: "5GA8M3M44L"
     APNS_KEY_ID: "DR87HJDF7P"
-    APNS_BUNDLE_ID: "com.deepmind.fintech.nexusbank"
+    APNS_BUNDLE_ID: "com.finexus.nexusbank"
     APNS_PRODUCTION: "false"
   extraEnv: |
     - name: APNS_PRIVATE_KEY
@@ -391,6 +391,8 @@ mt-api:
     MT_EXTERNAL_BASE_URL: "http://ph-ee-simulator.payment-hub-eu.svc.cluster.local:8090"
     MT_CALLBACK_BASE_URL: "http://core-api-mt-api.api-eu.svc.cluster.local"
     MT_EXTERNAL_ENABLED: "true"
+    MT_ISO_HOST: "ph-ee-simulator.payment-hub-eu.svc.cluster.local"
+    MT_ISO_PORT: "8584"
     CHANNEL_BASE_URL: "http://ph-ee-connector-channel.payment-hub-eu.svc.cluster.local:82"
     CHANNEL_TENANT: "nexusbank"
     DEPLOYED_AT: "2026-10-14T20:10:00Z"
