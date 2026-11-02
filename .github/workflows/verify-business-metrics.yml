@@ -20,6 +20,11 @@ jobs:
           sleep 2
           kubectl run be-metrics --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- \
             sh -c 'curl -sf http://business-exporter.monitoring.svc.cluster.local:9105/metrics' \
-            | tee /tmp/m.txt | rg -n 'payment_ops_|card_payment_|topup_|subscription_|product_ops_|perimeter_problems_|transfer_amount_|business_exporter_' | head -120
+            | tee /tmp/m.txt | grep -E 'payment_ops_|card_payment_|topup_|subscription_|product_ops_|perimeter_problems_|transfer_amount_|business_exporter_' | head -160
           echo "---- counts ----"
-          rg -c 'payment_ops_count|card_payment_amount|topup_events|subscription_events' /tmp/m.txt || true
+          grep -cE 'payment_ops_count\{|card_payment_amount\{|topup_events\{|subscription_events\{' /tmp/m.txt || true
+          echo "---- sample payment_ops ----"
+          grep 'payment_ops_count{' /tmp/m.txt | head -30 || true
+          echo "---- sample card ----"
+          grep 'card_payment_' /tmp/m.txt | head -30 || true
+          test -s /tmp/m.txt
