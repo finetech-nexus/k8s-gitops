@@ -3,108 +3,108 @@ on:
   workflow_dispatch:
 jobs:
   probe:
-    runs-on: [self-hosted, tn]
+    runs-on: ubuntu-latest
     steps:
       - uses: azure/k8s-set-context@v4
         with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.TN_KUBECONFIG }}
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
       - name: Probe
         run: |
           set +e
+          kubectl delete pod pay-probe2 -n monitoring --ignore-not-found --wait=false
+          sleep 2
+          kubectl run pay-probe2 --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- sh -c '
           ES="http://infra-elasticsearch.infra.svc.cluster.local:9200"
           AUTH="-u elastic:elasticSearchPas42"
 
           echo "=== mt-api /api/transactions sample ==="
           curl -sS "http://core-api-mt-api.api.svc.cluster.local/api/transactions?size=3&page=0" | head -c 4000
           echo
-          echo "=== mt-api openapi paths (grep) ==="
-          curl -sS "http://core-api-mt-api.api.svc.cluster.local/v3/api-docs" 2>/dev/null | head -c 200 || true
-          curl -sS "http://core-api-mt-api.api.svc.cluster.local/swagger-ui/index.html" -o /dev/null -w "swagger %{http_code}\n"
-          for p in /api/transactions /api/v1/transactions /actuator/prometheus /actuator/metrics /metrics; do
+          for p in /api/transactions /actuator/prometheus /actuator/metrics /metrics; do
             code=$(curl -s -o /tmp/b -w "%{http_code}" "http://core-api-mt-api.api.svc.cluster.local$p")
             echo "mt $code $p bytes=$(wc -c </tmp/b)"
           done
 
           echo "=== subscription openapi / actuator ==="
-          for p in /actuator/prometheus /actuator/metrics /metrics /v3/api-docs /api/subscriptions; do
+          for p in /actuator/prometheus /actuator/metrics /metrics /v3/api-docs /api/subscriptions /health; do
             code=$(curl -s -o /tmp/b -w "%{http_code}" "http://core-api-subscription-api.api.svc.cluster.local$p")
             echo "sub $code $p bytes=$(wc -c </tmp/b)"
           done
           echo "=== card openapi / actuator ==="
-          for p in /actuator/prometheus /actuator/metrics /metrics /v3/api-docs /api/cards /api/card-transactions /api/payments; do
+          for p in /actuator/prometheus /actuator/metrics /metrics /health /api/cards /internal/cards; do
             code=$(curl -s -o /tmp/b -w "%{http_code}" "http://core-api-card-management-api.api.svc.cluster.local$p")
             echo "card $code $p bytes=$(wc -c </tmp/b)"
           done
 
           echo "=== zeebe process-instance COMPLETED by bpmn last 7d ==="
-          curl -sf $AUTH "$ES/zeebe-record_process-instance*/_search" -H 'Content-Type: application/json' -d '{
-            "size":0,
-            "query":{"bool":{"must":[
-              {"term":{"intent":"ELEMENT_COMPLETED"}},
-              {"term":{"value.bpmnElementType":"PROCESS"}},
-              {"range":{"timestamp":{"gte":"now-7d"}}}
+          curl -sf $AUTH "$ES/zeebe-record_process-instance*/_search" -H "Content-Type: application/json" -d "{
+            \"size\":0,
+            \"query\":{\"bool\":{\"must\":[
+              {\"term\":{\"intent\":\"ELEMENT_COMPLETED\"}},
+              {\"term\":{\"value.bpmnElementType\":\"PROCESS\"}},
+              {\"range\":{\"timestamp\":{\"gte\":\"now-7d\"}}}
             ]}},
-            "aggs":{"bpmn":{"terms":{"field":"value.bpmnProcessId","size":30}}}
-          }' | head -c 3000
+            \"aggs\":{\"bpmn\":{\"terms\":{\"field\":\"value.bpmnProcessId\",\"size\":30}}}
+          }" | head -c 3000
           echo
           echo "=== zeebe FAILED jobs by type last 7d ==="
-          curl -sf $AUTH "$ES/zeebe-record_job*/_search" -H 'Content-Type: application/json' -d '{
-            "size":0,
-            "query":{"bool":{"must":[
-              {"terms":{"intent":["FAILED","TIMED_OUT"]}},
-              {"range":{"timestamp":{"gte":"now-7d"}}}
+          curl -sf $AUTH "$ES/zeebe-record_job*/_search" -H "Content-Type: application/json" -d "{
+            \"size\":0,
+            \"query\":{\"bool\":{\"must\":[
+              {\"terms\":{\"intent\":[\"FAILED\",\"TIMED_OUT\"]}},
+              {\"range\":{\"timestamp\":{\"gte\":\"now-7d\"}}}
             ]}},
-            "aggs":{
-              "by_type":{"terms":{"field":"value.type","size":30}},
-              "by_intent":{"terms":{"field":"intent","size":10}},
-              "by_bpmn":{"terms":{"field":"value.bpmnProcessId","size":20}}
+            \"aggs\":{
+              \"by_type\":{\"terms\":{\"field\":\"value.type\",\"size\":30}},
+              \"by_intent\":{\"terms\":{\"field\":\"intent\",\"size\":10}},
+              \"by_bpmn\":{\"terms\":{\"field\":\"value.bpmnProcessId\",\"size\":20}}
             }
-          }' | head -c 3500
+          }" | head -c 3500
           echo
           echo "=== zeebe variable names sample (amount-like) ==="
-          curl -sf $AUTH "$ES/zeebe-record_variable*/_search" -H 'Content-Type: application/json' -d '{
-            "size":0,
-            "query":{"bool":{"should":[
-              {"wildcard":{"value.name":"*amount*"}},
-              {"wildcard":{"value.name":"*Amount*"}},
-              {"wildcard":{"value.name":"*currency*"}},
-              {"wildcard":{"value.name":"*Currency*"}},
-              {"wildcard":{"value.name":"*transfer*"}},
-              {"wildcard":{"value.name":"*channel*"}}
-            ],"minimum_should_match":1}},
-            "aggs":{"names":{"terms":{"field":"value.name","size":40}}}
-          }' | head -c 2500
+          curl -sf $AUTH "$ES/zeebe-record_variable*/_search" -H "Content-Type: application/json" -d "{
+            \"size\":0,
+            \"query\":{\"bool\":{\"should\":[
+              {\"wildcard\":{\"value.name\":\"*amount*\"}},
+              {\"wildcard\":{\"value.name\":\"*Amount*\"}},
+              {\"wildcard\":{\"value.name\":\"*currency*\"}},
+              {\"wildcard\":{\"value.name\":\"*Currency*\"}},
+              {\"wildcard\":{\"value.name\":\"*transfer*\"}},
+              {\"wildcard\":{\"value.name\":\"*channel*\"}}
+            ],\"minimum_should_match\":1}},
+            \"aggs\":{\"names\":{\"terms\":{\"field\":\"value.name\",\"size\":40}}}
+          }" | head -c 2500
           echo
           echo "=== logs-tn payment/card/topup/subscription keywords 24h ==="
-          curl -sf $AUTH "$ES/logs-tn-*/_search" -H 'Content-Type: application/json' -d '{
-            "size":0,
-            "query":{"bool":{"must":[{"range":{"@timestamp":{"gte":"now-24h"}}}],
-              "should":[
-                {"match_phrase":{"message":"top-up"}},
-                {"match_phrase":{"message":"topup"}},
-                {"match_phrase":{"message":"create-topup"}},
-                {"match_phrase":{"message":"subscription"}},
-                {"match_phrase":{"message":"card payment"}},
-                {"match_phrase":{"message":"cardPayment"}},
-                {"wildcard":{"k8s_pod_name":"*subscription*"}},
-                {"wildcard":{"k8s_pod_name":"*card*"}},
-                {"wildcard":{"k8s_pod_name":"*stripe*"}},
-                {"wildcard":{"k8s_pod_name":"*mt-api*"}}
-              ],"minimum_should_match":1}},
-            "aggs":{
-              "by_ns":{"terms":{"field":"k8s_namespace_name","size":20}},
-              "by_pod":{"terms":{"field":"k8s_pod_name","size":30}},
-              "by_perimeter":{"terms":{"field":"functional_perimeter","size":20,"missing":"unknown"}},
-              "errors":{"filter":{"terms":{"level":["error","ERROR","fatal","FATAL"]}},
-                "aggs":{"by_pod":{"terms":{"field":"k8s_pod_name","size":20}}}}
+          curl -sf $AUTH "$ES/logs-tn-*/_search" -H "Content-Type: application/json" -d "{
+            \"size\":0,
+            \"query\":{\"bool\":{\"must\":[{\"range\":{\"@timestamp\":{\"gte\":\"now-24h\"}}}],
+              \"should\":[
+                {\"match_phrase\":{\"message\":\"top-up\"}},
+                {\"match_phrase\":{\"message\":\"topup\"}},
+                {\"match_phrase\":{\"message\":\"create-topup\"}},
+                {\"match_phrase\":{\"message\":\"subscription\"}},
+                {\"match_phrase\":{\"message\":\"card payment\"}},
+                {\"wildcard\":{\"k8s_pod_name\":\"*subscription*\"}},
+                {\"wildcard\":{\"k8s_pod_name\":\"*card*\"}},
+                {\"wildcard\":{\"k8s_pod_name\":\"*stripe*\"}},
+                {\"wildcard\":{\"k8s_pod_name\":\"*mt-api*\"}}
+              ],\"minimum_should_match\":1}},
+            \"aggs\":{
+              \"by_ns\":{\"terms\":{\"field\":\"k8s_namespace_name\",\"size\":20}},
+              \"by_pod\":{\"terms\":{\"field\":\"k8s_pod_name\",\"size\":30}},
+              \"by_perimeter\":{\"terms\":{\"field\":\"functional_perimeter\",\"size\":20,\"missing\":\"unknown\"}},
+              \"errors\":{\"filter\":{\"terms\":{\"level\":[\"error\",\"ERROR\",\"fatal\",\"FATAL\"]}},
+                \"aggs\":{\"by_pod\":{\"terms\":{\"field\":\"k8s_pod_name\",\"size\":20}}}}
             }
-          }' | head -c 3500
+          }" | head -c 3500
           echo
-          echo "=== ph-ee ops metrics? ==="
-          for svc in ph-ee-operations-app ph-ee-importer-es ph-ee-zeebe-ops; do
-            for p in /actuator/prometheus /metrics /prometheus; do
-              code=$(curl -s -o /tmp/b -w "%{http_code}" --connect-timeout 2 "http://$svc.payment-hub.svc.cluster.local$p")
-              echo "$svc $code $p bytes=$(wc -c </tmp/b 2>/dev/null || echo 0)"
-            done
+          echo "=== ops transfers with basic auth attempts ==="
+          for u in \
+            "http://ph-ee-operations-app.payment-hub.svc.cluster.local/api/v1/transfers?size=3&page=0" \
+            "http://ph-ee-operations-app.payment-hub.svc.cluster.local/actuator/health"
+          do
+            code=$(curl -s -o /tmp/b -w "%{http_code}" -m 5 "$u")
+            echo "HTTP $code $u"; head -c 400 /tmp/b; echo
           done
+          '
