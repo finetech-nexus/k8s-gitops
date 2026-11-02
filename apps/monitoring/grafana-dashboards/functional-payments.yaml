@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-functional-payments
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  functional-payments.json: |-
+    {
+      "title": "Fonctionnel — Virements & paiements",
+      "uid": "functional-payments",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["perimeter", "payments", "transfers", "virements"],
+      "templating": {
+        "list": [
+          {
+            "name": "context",
+            "type": "custom",
+            "label": "Contexte",
+            "query": "nexus,local,international,card,other",
+            "includeAll": true,
+            "multi": true,
+            "current": {"text": "All", "value": "$__all"}
+          },
+          {
+            "name": "direction",
+            "type": "custom",
+            "label": "Direction",
+            "query": "inbound,outbound,internal,unknown",
+            "includeAll": true,
+            "multi": true,
+            "current": {"text": "All", "value": "$__all"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "row",
+          "title": "Volumes par rail (Zeebe)",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 1}
+        },
+        {
+          "type": "stat",
+          "title": "Nexus (internal)",
+          "gridPos": {"x": 0, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(payment_ops_count{context=\"nexus\",outcome=\"completed\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Local SIBTEL",
+          "gridPos": {"x": 4, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(payment_ops_count{context=\"local\",outcome=\"completed\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "International SWIFT",
+          "gridPos": {"x": 8, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(payment_ops_count{context=\"international\",outcome=\"completed\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Card rails",
+          "gridPos": {"x": 12, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(payment_ops_count{context=\"card\",outcome=\"completed\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Problems (jobs)",
+          "gridPos": {"x": 16, "y": 1, "w": 4, "h": 4},
+          "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+          "targets": [{"expr": "sum(payment_ops_problems) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Exporter up",
+          "gridPos": {"x": 20, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "business_exporter_up", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Completed ops by context × direction",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "options": {"orientation": "horizontal", "displayMode": "gradient"},
+          "targets": [{
+            "expr": "sum by (context, direction) (payment_ops_count{outcome=\"completed\",context=~\"$context\",direction=~\"$direction\"})",
+            "legendFormat": "{{context}} / {{direction}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Inbound vs outbound (completed)",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [{
+            "expr": "sum by (direction, context) (payment_ops_count{outcome=\"completed\",context=~\"$context\",direction=~\"$direction\"})",
+            "legendFormat": "{{direction}} · {{context}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Ops by BPMN process (completed)",
+          "gridPos": {"x": 0, "y": 13, "w": 24, "h": 8},
+          "targets": [{
+            "expr": "sum by (process, context, direction) (payment_ops_by_process{outcome=\"completed\",context=~\"$context\",direction=~\"$direction\"})",
+            "legendFormat": "{{process}} ({{context}}/{{direction}})",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "row",
+          "title": "Montants (approx Zeebe variables + card mt-api)",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 1}
+        },
+        {
+          "type": "bargauge",
+          "title": "Transfer amount sum (approx) by context",
+          "gridPos": {"x": 0, "y": 22, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "sum by (context, direction, process) (transfer_amount_sum_approx{context=~\"$context\",direction=~\"$direction\"})",
+            "legendFormat": "{{context}}/{{direction}} {{process}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "stat",
+          "title": "Amount samples (Zeebe vars)",
+          "gridPos": {"x": 12, "y": 22, "w": 6, "h": 4},
+          "targets": [{"expr": "sum(transfer_amount_samples) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Card amount total (mt-api)",
+          "gridPos": {"x": 18, "y": 22, "w": 6, "h": 4},
+          "targets": [{"expr": "sum(card_payment_amount) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Card payment amount by operation / direction",
+          "gridPos": {"x": 12, "y": 26, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "sum by (operation, direction, currency) (card_payment_amount)",
+            "legendFormat": "{{operation}} {{direction}} {{currency}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "row",
+          "title": "Problemes d'operations",
+          "gridPos": {"x": 0, "y": 34, "w": 24, "h": 1}
+        },
+        {
+          "type": "table",
+          "title": "Job problems by process",
+          "gridPos": {"x": 0, "y": 35, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "payment_ops_problems",
+            "legendFormat": "{{process}} {{context}} {{direction}}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Job problems by type",
+          "gridPos": {"x": 12, "y": 35, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "topk(15, payment_job_problems)",
+            "legendFormat": "{{job_type}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Zeebe intents (incl. FAILED / TIMED_OUT)",
+          "gridPos": {"x": 0, "y": 43, "w": 24, "h": 7},
+          "targets": [{
+            "expr": "payment_zeebe_intent_count{intent=~\"FAILED|TIMED_OUT|ERROR_THROWN|COMPLETED|CREATED\"}",
+            "legendFormat": "{{intent}}",
+            "refId": "A"
+          }]
+        }
+      ]
+    }

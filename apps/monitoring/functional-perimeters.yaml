@@ -44,6 +44,8 @@ data:
   business_kpis: |
     Grafana folder "Perimetres fonctionnels":
       - Fonctionnel — parcours utilisateurs (success / stopped / in_progress)
+      - Fonctionnel — Virements & paiements (nexus/local/international/card × inbound/outbound + montants + problems)
+      - Fonctionnel — Cartes, top-up & abonnements (mt-api amounts, stripe/telecom topup, subscription types)
       - KYC / Onboarding funnel (Clarity statuses + stuck kyc_progress)
       - Ops fonctionnelles (logs by functional_perimeter, Kong, restarts)
       - Perimetres fonctionnels (CPU/mem by domain namespaces)
@@ -60,3 +62,12 @@ data:
       - clarity_customers_by_kyc_progress{kyc_status=...}
       - logs_events_15m{perimeter=...}
       - logs_events_15m_by_ns / logs_errors_15m_by_ns
+      - payment_ops_count{context,direction,family,outcome}  # nexus|local|international|card
+      - payment_ops_by_process / payment_ops_problems / payment_job_problems
+      - transfer_amount_sum_approx{context,direction}  # Zeebe variable samples
+      - card_payment_count|amount{direction,operation,status,currency}
+      - card_payment_problems{response_code}
+      - topup_events{channel=stripe|telecom}
+      - subscription_events{type=BANK_PLAN|INSURANCE|...}
+      - product_ops_events / product_ops_problems
+      - perimeter_problems_15m{perimeter,namespace}

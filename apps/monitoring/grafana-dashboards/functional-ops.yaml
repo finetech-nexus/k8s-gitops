@@ -90,14 +90,58 @@ data:
         {
           "type": "stat",
           "title": "Exporter up",
-          "gridPos": {"x": 0, "y": 20, "w": 6, "h": 4},
+          "gridPos": {"x": 0, "y": 20, "w": 4, "h": 4},
           "targets": [{"expr": "business_exporter_up", "refId": "A"}]
         },
         {
           "type": "stat",
-          "title": "Clarity transactions (AML/monitoring sample)",
-          "gridPos": {"x": 6, "y": 20, "w": 6, "h": 4},
+          "title": "Clarity transactions",
+          "gridPos": {"x": 4, "y": 20, "w": 4, "h": 4},
           "targets": [{"expr": "clarity_transactions{perimeter=\"kyc\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Payment problems",
+          "gridPos": {"x": 8, "y": 20, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(payment_ops_problems) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Card amount sum",
+          "gridPos": {"x": 12, "y": 20, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(card_payment_amount) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Top-up signals",
+          "gridPos": {"x": 16, "y": 20, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(topup_events) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Perimeter errors 15m",
+          "gridPos": {"x": 20, "y": 20, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(perimeter_problems_15m{namespace=\"all\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Transfers completed by context (nexus/local/international/card)",
+          "gridPos": {"x": 0, "y": 24, "w": 12, "h": 7},
+          "targets": [{
+            "expr": "sum by (context, direction) (payment_ops_count{outcome=\"completed\"})",
+            "legendFormat": "{{context}} / {{direction}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Problems by perimeter (15m)",
+          "gridPos": {"x": 12, "y": 24, "w": 12, "h": 7},
+          "targets": [{
+            "expr": "perimeter_problems_15m{namespace=\"all\"}",
+            "legendFormat": "{{perimeter}}",
+            "refId": "A"
+          }]
         }
       ]
     }

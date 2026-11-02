@@ -1,0 +1,187 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-functional-cards-topup
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  functional-cards-topup.json: |-
+    {
+      "title": "Fonctionnel — Cartes, top-up & abonnements",
+      "uid": "functional-cards-topup",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["perimeter", "cards", "topup", "subscriptions"],
+      "panels": [
+        {
+          "type": "row",
+          "title": "Paiements carte (mt-api)",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 1}
+        },
+        {
+          "type": "stat",
+          "title": "Card txs scraped",
+          "gridPos": {"x": 0, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "card_payment_total or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Amount sum",
+          "gridPos": {"x": 4, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "sum(card_payment_amount) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Max amount",
+          "gridPos": {"x": 8, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "max(card_payment_amount_max) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Problem rows",
+          "gridPos": {"x": 12, "y": 1, "w": 4, "h": 4},
+          "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}}},
+          "targets": [{"expr": "sum(card_payment_problems) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "mt-api scrape",
+          "gridPos": {"x": 16, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "card_payment_scrape_up or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Partial scrape errors",
+          "gridPos": {"x": 20, "y": 1, "w": 4, "h": 4},
+          "targets": [{"expr": "business_exporter_partial_errors or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "piechart",
+          "title": "Card payments by operation",
+          "gridPos": {"x": 0, "y": 5, "w": 8, "h": 8},
+          "targets": [{
+            "expr": "sum by (operation) (card_payment_count)",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "piechart",
+          "title": "Card payments by direction",
+          "gridPos": {"x": 8, "y": 5, "w": 8, "h": 8},
+          "targets": [{
+            "expr": "sum by (direction) (card_payment_count)",
+            "legendFormat": "{{direction}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "piechart",
+          "title": "Card payments by status",
+          "gridPos": {"x": 16, "y": 5, "w": 8, "h": 8},
+          "targets": [{
+            "expr": "sum by (status) (card_payment_count)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Amount by operation × status × currency",
+          "gridPos": {"x": 0, "y": 13, "w": 16, "h": 8},
+          "targets": [{
+            "expr": "sum by (operation, status, currency, direction) (card_payment_amount)",
+            "legendFormat": "{{operation}} {{direction}} {{status}} {{currency}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "table",
+          "title": "Card problems (response codes)",
+          "gridPos": {"x": 16, "y": 13, "w": 8, "h": 8},
+          "targets": [{
+            "expr": "card_payment_problems",
+            "legendFormat": "{{operation}} {{status}} {{response_code}}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "row",
+          "title": "Top-up (ways) & subscriptions by type",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 1}
+        },
+        {
+          "type": "bargauge",
+          "title": "Top-up by channel (stripe / telecom)",
+          "gridPos": {"x": 0, "y": 22, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "sum by (channel) (topup_events)",
+            "legendFormat": "{{channel}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Subscriptions by product type",
+          "gridPos": {"x": 12, "y": 22, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "sum by (type) (subscription_events)",
+            "legendFormat": "{{type}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Product ops signals (cards / topup / subscription)",
+          "gridPos": {"x": 0, "y": 30, "w": 16, "h": 8},
+          "targets": [{
+            "expr": "sum by (product, channel) (product_ops_events)",
+            "legendFormat": "{{product}} · {{channel}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "bargauge",
+          "title": "Product problems (error logs)",
+          "gridPos": {"x": 16, "y": 30, "w": 8, "h": 8},
+          "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+          "targets": [{
+            "expr": "sum by (product, channel, problem) (product_ops_problems)",
+            "legendFormat": "{{product}}/{{channel}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "row",
+          "title": "Problemes par perimetre",
+          "gridPos": {"x": 0, "y": 38, "w": 24, "h": 1}
+        },
+        {
+          "type": "bargauge",
+          "title": "Error/fatal logs 15m by perimeter",
+          "gridPos": {"x": 0, "y": 39, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "perimeter_problems_15m{namespace=\"all\"}",
+            "legendFormat": "{{perimeter}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Error/fatal by perimeter × namespace",
+          "gridPos": {"x": 12, "y": 39, "w": 12, "h": 8},
+          "targets": [{
+            "expr": "perimeter_problems_15m{namespace!=\"all\"}",
+            "legendFormat": "{{perimeter}}/{{namespace}}",
+            "refId": "A"
+          }]
+        }
+      ]
+    }

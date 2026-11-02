@@ -12,6 +12,8 @@ resources:
   - grafana-dashboards/kyc-funnel.yaml
   - grafana-dashboards/functional-ops.yaml
   - grafana-dashboards/functional-users.yaml
+  - grafana-dashboards/functional-payments.yaml
+  - grafana-dashboards/functional-cards-topup.yaml
   - grafana-dashboards/technical-cluster.yaml
   - grafana-dashboards/technical-apis.yaml
 configMapGenerator:

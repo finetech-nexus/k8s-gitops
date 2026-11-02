@@ -41,6 +41,10 @@ spec:
               value: elastic
             - name: ES_PASSWORD
               value: elasticSearchPas42
+            - name: MT_API_URL
+              value: http://core-api-mt-api.api.svc.cluster.local
+            - name: METRICS_WINDOW
+              value: "24h"
             - name: SCRAPE_SECONDS
               value: "60"
           volumeMounts:

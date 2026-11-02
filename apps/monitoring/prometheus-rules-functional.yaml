@@ -54,3 +54,44 @@ spec:
           annotations:
             summary: "Scrape target down in {{ $labels.namespace }}"
             description: "Prometheus target {{ $labels.job }} / {{ $labels.instance }} is down."
+
+    - name: nexus.payments
+      rules:
+        - alert: PaymentJobProblemsHigh
+          expr: sum(payment_ops_problems) > 100
+          for: 20m
+          labels:
+            severity: warning
+            functional_perimeter: payments
+          annotations:
+            summary: "Payment Zeebe job failures/timeouts elevated"
+            description: "payment_ops_problems sum is {{ $value }} over the metrics window."
+
+        - alert: CardPaymentScrapeDown
+          expr: card_payment_scrape_up == 0
+          for: 15m
+          labels:
+            severity: warning
+            functional_perimeter: payments
+          annotations:
+            summary: "mt-api card payment scrape failed"
+            description: "business-exporter cannot reach mt-api /api/transactions."
+
+        - alert: PerimeterErrorBurst
+          expr: perimeter_problems_15m{namespace="all"} > 200
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Error log burst on perimeter {{ $labels.perimeter }}"
+            description: "{{ $value }} error/fatal logs in 15m for {{ $labels.perimeter }}."
+
+        - alert: ProductOpsProblems
+          expr: sum by (product, channel) (product_ops_problems) > 20
+          for: 20m
+          labels:
+            severity: warning
+            functional_perimeter: api
+          annotations:
+            summary: "Product errors {{ $labels.product }}/{{ $labels.channel }}"
+            description: "Error logs for {{ $labels.product }} via {{ $labels.channel }} = {{ $value }}."

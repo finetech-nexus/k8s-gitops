@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Export functional + technical business KPIs to Prometheus (Clarity KYC + ES + API pods)."""
+"""Export functional + technical business KPIs to Prometheus.
+
+Sources:
+  - Clarity (KYC funnel)
+  - Elasticsearch logs-tn-* (perimeter volume / errors)
+  - Elasticsearch zeebe-* (transfer rails by context + problems)
+  - mt-api /api/transactions (card payments amount / status)
+  - Elasticsearch keyword signals (top-up channels, subscriptions, card ops)
+"""
 from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
 import urllib.request
-from collections import Counter
+from collections import Counter, defaultdict
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 CLARITY_URL = os.environ.get("CLARITY_URL", "http://clarity-api.kyc-aml.svc.cluster.local:8000").rstrip("/")
@@ -17,8 +26,10 @@ CLARITY_PASSWORD = os.environ.get("CLARITY_PASSWORD", "password")
 ES_URL = os.environ.get("ES_URL", "http://infra-elasticsearch.infra.svc.cluster.local:9200").rstrip("/")
 ES_USER = os.environ.get("ES_USER", "elastic")
 ES_PASSWORD = os.environ.get("ES_PASSWORD", "elasticSearchPas42")
+MT_API_URL = os.environ.get("MT_API_URL", "http://core-api-mt-api.api.svc.cluster.local").rstrip("/")
 SCRAPE_SECONDS = int(os.environ.get("SCRAPE_SECONDS", "60"))
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "9105"))
+WINDOW = os.environ.get("METRICS_WINDOW", "24h")
 
 # Funnel buckets for Grafana functional dashboard.
 SUCCESS_STATUSES = {"approved", "approved-partially"}
@@ -33,10 +44,29 @@ IN_PROGRESS_STATUSES = {
     "pending",
 }
 
+# BPMN process id prefix → (rail_context, direction, perimeter, family)
+# context: nexus | local | international | card
+# direction: inbound | outbound | internal
+PROCESS_MAP: list[tuple[str, tuple[str, str, str, str]]] = [
+    ("internal_transfer", ("nexus", "internal", "payments", "transfer")),
+    ("sibtel_domestic_inbound_transfer", ("local", "inbound", "payments", "transfer")),
+    ("sibtel_domestic_transfer", ("local", "outbound", "payments", "transfer")),
+    ("swift_inbound_credit", ("international", "inbound", "payments", "transfer")),
+    ("swift_international_transfer", ("international", "outbound", "payments", "transfer")),
+    ("mt_inbound_authorization", ("card", "inbound", "payments", "card_auth")),
+    ("mt_inbound_capture", ("card", "inbound", "payments", "card_capture")),
+    ("mt_inbound_refund", ("card", "inbound", "payments", "card_refund")),
+    ("mt_inbound_void", ("card", "inbound", "payments", "card_void")),
+    ("mt_card_payment", ("card", "outbound", "payments", "card_payment")),
+    ("mt-card-refund", ("card", "outbound", "payments", "card_refund")),
+    ("party_registration", ("nexus", "internal", "payments", "party")),
+]
+
 _lock = threading.Lock()
 _metrics: dict[str, float] = {}
 _labels: dict[str, list[tuple[dict[str, str], float]]] = {}
 _last_error = ""
+_help_lines: list[str] = []
 
 
 def _http_json(url: str, *, method: str = "GET", data: dict | None = None, headers: dict | None = None, auth: tuple[str, str] | None = None, timeout: int = 30):
@@ -56,6 +86,16 @@ def _http_json(url: str, *, method: str = "GET", data: dict | None = None, heade
         return json.loads(raw)
 
 
+def _es(path: str, query: dict, timeout: int = 25) -> dict:
+    return _http_json(
+        f"{ES_URL}/{path}",
+        method="POST",
+        data=query,
+        auth=(ES_USER, ES_PASSWORD),
+        timeout=timeout,
+    )
+
+
 def _set_gauge(name: str, value: float, labels: dict[str, str] | None = None):
     if labels:
         _labels.setdefault(name, [])
@@ -69,6 +109,20 @@ def _set_gauge(name: str, value: float, labels: dict[str, str] | None = None):
 def _reset_series(*names: str):
     for name in names:
         _labels[name] = []
+
+
+def _classify_process(bpmn: str) -> tuple[str, str, str, str, str]:
+    """Return context, direction, perimeter, family, process_key."""
+    raw = (bpmn or "unknown").strip()
+    key = raw
+    if key.endswith("-nexusbank"):
+        key = key[: -len("-nexusbank")]
+    # longest prefix wins
+    for prefix, mapped in sorted(PROCESS_MAP, key=lambda x: len(x[0]), reverse=True):
+        if key == prefix or key.startswith(prefix):
+            ctx, direction, perimeter, family = mapped
+            return ctx, direction, perimeter, family, key
+    return "other", "unknown", "payments", "other", key or "unknown"
 
 
 def scrape_clarity():
@@ -131,7 +185,6 @@ def scrape_clarity():
 
     success = sum(status_counts.get(s, 0) for s in SUCCESS_STATUSES)
     stopped = sum(status_counts.get(s, 0) for s in STOPPED_STATUSES)
-    # KYC cycle expired/abandoned may only appear on kyc_status.
     for s in ("expired", "abandoned", "cancelled"):
         if status_counts.get(s, 0) == 0:
             stopped += kyc_status_counts.get(s, 0)
@@ -161,13 +214,7 @@ def scrape_es_functional_logs():
         },
     }
     try:
-        res = _http_json(
-            f"{ES_URL}/logs-tn-*/_search",
-            method="POST",
-            data=query,
-            auth=(ES_USER, ES_PASSWORD),
-            timeout=20,
-        )
+        res = _es("logs-tn-*/_search", query, timeout=20)
     except Exception:
         return
     _reset_series("logs_events_15m", "logs_events_15m_by_ns", "logs_events_15m_by_level", "logs_errors_15m_by_ns")
@@ -198,46 +245,684 @@ def scrape_es_functional_logs():
         )
 
 
+def _field_candidates(*names: str) -> list[str]:
+    out: list[str] = []
+    for n in names:
+        out.append(n)
+        if not n.endswith(".keyword"):
+            out.append(f"{n}.keyword")
+    return out
+
+
+def _terms_agg_first_working(index: str, query_must: list, field_candidates: list[str], size: int = 40) -> list[dict]:
+    """Try keyword/non-keyword field variants until one aggregation returns."""
+    last_err = None
+    for field in field_candidates:
+        try:
+            res = _es(
+                f"{index}/_search",
+                {
+                    "size": 0,
+                    "query": {"bool": {"must": query_must}},
+                    "aggs": {"t": {"terms": {"field": field, "size": size}}},
+                },
+            )
+            return res.get("aggregations", {}).get("t", {}).get("buckets", [])
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            continue
+    if last_err:
+        raise last_err
+    return []
+
+
+def scrape_zeebe_transfers():
+    """Transfer / card rails from Zeebe process instances + job problems."""
+    series = (
+        "payment_ops_count",
+        "payment_ops_problems",
+        "payment_ops_by_process",
+        "payment_job_problems",
+    )
+    _reset_series(*series)
+
+    # Completed + failed root process instances in window
+    outcomes = {
+        "completed": ["ELEMENT_COMPLETED"],
+        "failed": ["ELEMENT_TERMINATED"],
+        "activated": ["ELEMENT_ACTIVATED"],
+    }
+    for outcome, intents in outcomes.items():
+        must = [
+            {"terms": {"intent": intents}},
+            {"term": {"value.bpmnElementType": "PROCESS"}},
+            {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+        ]
+        try:
+            buckets = _terms_agg_first_working(
+                "zeebe-record_process-instance*",
+                must,
+                _field_candidates("value.bpmnProcessId"),
+                size=40,
+            )
+        except Exception:
+            buckets = []
+        for bucket in buckets:
+            bpmn = str(bucket.get("key") or "unknown")
+            ctx, direction, perimeter, family, process = _classify_process(bpmn)
+            count = float(bucket.get("doc_count") or 0)
+            labels = {
+                "perimeter": perimeter,
+                "context": ctx,
+                "direction": direction,
+                "family": family,
+                "process": process,
+                "outcome": outcome,
+                "window": WINDOW,
+            }
+            _set_gauge("payment_ops_by_process", count, labels)
+            # Rollup without process label for dashboard stats
+            rollup = {
+                "perimeter": perimeter,
+                "context": ctx,
+                "direction": direction,
+                "family": family,
+                "outcome": outcome,
+                "window": WINDOW,
+            }
+            # accumulate into payment_ops_count by merging same labels
+            existing = 0.0
+            for lab, val in _labels.get("payment_ops_count", []):
+                if lab == rollup:
+                    existing = val
+                    break
+            _set_gauge("payment_ops_count", existing + count, rollup)
+
+    # Job failures / timeouts → operational problems
+    must_jobs = [
+        {"terms": {"intent": ["FAILED", "TIMED_OUT", "ERROR_THROWN"]}},
+        {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+    ]
+    try:
+        by_bpmn = _terms_agg_first_working(
+            "zeebe-record_job*",
+            must_jobs,
+            _field_candidates("value.bpmnProcessId"),
+            size=40,
+        )
+    except Exception:
+        by_bpmn = []
+    for bucket in by_bpmn:
+        bpmn = str(bucket.get("key") or "unknown")
+        ctx, direction, perimeter, family, process = _classify_process(bpmn)
+        _set_gauge(
+            "payment_ops_problems",
+            float(bucket.get("doc_count") or 0),
+            {
+                "perimeter": perimeter,
+                "context": ctx,
+                "direction": direction,
+                "family": family,
+                "process": process,
+                "problem": "job_failed_or_timeout",
+                "window": WINDOW,
+            },
+        )
+
+    try:
+        by_type = _terms_agg_first_working(
+            "zeebe-record_job*",
+            must_jobs,
+            _field_candidates("value.type"),
+            size=40,
+        )
+    except Exception:
+        by_type = []
+    for bucket in by_type:
+        job_type = str(bucket.get("key") or "unknown")
+        _set_gauge(
+            "payment_job_problems",
+            float(bucket.get("doc_count") or 0),
+            {
+                "perimeter": "payments",
+                "job_type": job_type,
+                "problem": "failed_or_timeout",
+                "window": WINDOW,
+            },
+        )
+
+    # Intent breakdown for problem severity
+    try:
+        by_intent = _terms_agg_first_working(
+            "zeebe-record_job*",
+            [{"range": {"timestamp": {"gte": f"now-{WINDOW}"}}}],
+            _field_candidates("intent"),
+            size=20,
+        )
+    except Exception:
+        by_intent = []
+    _reset_series("payment_zeebe_intent_count")
+    for bucket in by_intent:
+        intent = str(bucket.get("key") or "unknown")
+        _set_gauge(
+            "payment_zeebe_intent_count",
+            float(bucket.get("doc_count") or 0),
+            {"perimeter": "payments", "intent": intent, "window": WINDOW},
+        )
+
+
+def _parse_amount(value) -> float:
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def scrape_mt_card_payments():
+    """Card payment amounts from mt-api console (unauthenticated in TN sandbox)."""
+    series = (
+        "card_payment_count",
+        "card_payment_amount",
+        "card_payment_amount_max",
+        "card_payment_problems",
+    )
+    _reset_series(*series)
+
+    counts: Counter[tuple] = Counter()
+    amounts: defaultdict[tuple, float] = defaultdict(float)
+    maxima: dict[tuple, float] = {}
+    problems: Counter[tuple] = Counter()
+    total = 0
+    page = 0
+    page_size = 100
+    max_pages = 50  # cap scrape
+
+    while page < max_pages:
+        try:
+            data = _http_json(
+                f"{MT_API_URL}/api/transactions?page={page}&size={page_size}",
+                timeout=20,
+            )
+        except Exception:
+            _set_gauge("card_payment_scrape_up", 0, {"perimeter": "payments", "source": "mt-api"})
+            return
+        content = data.get("content") if isinstance(data, dict) else None
+        if content is None and isinstance(data, list):
+            content = data
+        if not content:
+            break
+        for row in content:
+            direction = str(row.get("direction") or "unknown").lower()
+            operation = str(row.get("operation") or "unknown").lower()
+            status = str(row.get("status") or "unknown").lower()
+            currency = str(row.get("currency") or "UNK").upper()
+            amount = _parse_amount(row.get("amount"))
+            key = (direction, operation, status, currency)
+            counts[key] += 1
+            amounts[key] += amount
+            maxima[key] = max(maxima.get(key, 0.0), amount)
+            total += 1
+            # problem heuristics
+            if status in {"failed", "declined", "error", "rejected", "voided"} or (
+                row.get("responseCode") and str(row.get("responseCode")) not in {"00", "000", "0", "None", "null", ""}
+                and status not in {"authorized", "captured", "approved", "success", "completed"}
+            ):
+                problems[(direction, operation, status, currency, str(row.get("responseCode") or "unknown"))] += 1
+        total_pages = int(data.get("totalPages") or 0) if isinstance(data, dict) else 0
+        page += 1
+        if total_pages and page >= total_pages:
+            break
+        if len(content) < page_size:
+            break
+
+    _set_gauge("card_payment_scrape_up", 1, {"perimeter": "payments", "source": "mt-api"})
+    _set_gauge("card_payment_total", float(total), {"perimeter": "payments", "source": "mt-api"})
+
+    for (direction, operation, status, currency), count in counts.items():
+        labels = {
+            "perimeter": "payments",
+            "context": "card",
+            "direction": direction,
+            "operation": operation,
+            "status": status,
+            "currency": currency,
+            "source": "mt-api",
+        }
+        _set_gauge("card_payment_count", float(count), labels)
+        _set_gauge("card_payment_amount", amounts[(direction, operation, status, currency)], labels)
+        _set_gauge("card_payment_amount_max", maxima.get((direction, operation, status, currency), 0.0), labels)
+
+    for (direction, operation, status, currency, code), count in problems.items():
+        _set_gauge(
+            "card_payment_problems",
+            float(count),
+            {
+                "perimeter": "payments",
+                "context": "card",
+                "direction": direction,
+                "operation": operation,
+                "status": status,
+                "currency": currency,
+                "response_code": code,
+                "source": "mt-api",
+            },
+        )
+
+
+def scrape_zeebe_transfer_amounts():
+    """Best-effort amount sums from Zeebe variables named amount / transactionAmount."""
+    _reset_series("transfer_amount_samples", "transfer_amount_sum_approx")
+    # Pull recent amount variables; classify via linked process instance when possible.
+    try:
+        res = _es(
+            "zeebe-record_variable*/_search",
+            {
+                "size": 200,
+                "sort": [{"timestamp": {"order": "desc"}}],
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+                            {
+                                "bool": {
+                                    "should": [
+                                        {"term": {"value.name": "amount"}},
+                                        {"term": {"value.name.keyword": "amount"}},
+                                        {"term": {"value.name": "transactionAmount"}},
+                                        {"term": {"value.name.keyword": "transactionAmount"}},
+                                        {"wildcard": {"value.name": "*Amount*"}},
+                                    ],
+                                    "minimum_should_match": 1,
+                                }
+                            },
+                        ]
+                    }
+                },
+                "_source": ["value.name", "value.value", "value.processInstanceKey", "value.bpmnProcessId", "intent"],
+            },
+            timeout=30,
+        )
+    except Exception:
+        return
+
+    sums: defaultdict[tuple, float] = defaultdict(float)
+    counts: Counter[tuple] = Counter()
+    for hit in res.get("hits", {}).get("hits", []):
+        src = hit.get("_source") or {}
+        value = src.get("value") or {}
+        raw = value.get("value")
+        amount = None
+        if isinstance(raw, (int, float)):
+            amount = float(raw)
+        elif isinstance(raw, str):
+            raw_s = raw.strip().strip('"')
+            # JSON object with amount field
+            if raw_s.startswith("{"):
+                try:
+                    obj = json.loads(raw_s)
+                    amount = _parse_amount(obj.get("amount") or obj.get("value") or obj.get("transactionAmount"))
+                except Exception:
+                    amount = None
+            else:
+                # plain number or "10.5 TND"
+                m = re.search(r"[-+]?\d+(?:\.\d+)?", raw_s.replace(",", ""))
+                amount = float(m.group(0)) if m else None
+        if amount is None:
+            continue
+        bpmn = str(value.get("bpmnProcessId") or src.get("bpmnProcessId") or "unknown")
+        ctx, direction, perimeter, family, process = _classify_process(bpmn)
+        if process == "unknown" and bpmn == "unknown":
+            # unclassified sample — still count under payments/other
+            ctx, direction, perimeter, family, process = "other", "unknown", "payments", "transfer", "unlinked"
+        key = (ctx, direction, perimeter, family, process)
+        sums[key] += amount
+        counts[key] += 1
+
+    for key, total in sums.items():
+        ctx, direction, perimeter, family, process = key
+        labels = {
+            "perimeter": perimeter,
+            "context": ctx,
+            "direction": direction,
+            "family": family,
+            "process": process,
+            "window": WINDOW,
+            "source": "zeebe-variable",
+        }
+        _set_gauge("transfer_amount_sum_approx", total, labels)
+        _set_gauge("transfer_amount_samples", float(counts[key]), labels)
+
+
+def scrape_product_signals_from_logs():
+    """Top-up / subscription / card product signals + problems from application logs."""
+    series = (
+        "product_ops_events",
+        "product_ops_problems",
+        "topup_events",
+        "subscription_events",
+    )
+    _reset_series(*series)
+
+    filters = {
+        "topup_stripe": {
+            "perimeter": "api",
+            "product": "topup",
+            "channel": "stripe",
+            "query": {
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"message": "create-topup"}},
+                        {"match_phrase": {"message": "POST /api/stripe/create-topup"}},
+                        {"match_phrase": {"message": "Stripe create-topup"}},
+                        {"match_phrase": {"message": "payment_intent"}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+        },
+        "topup_telecom": {
+            "perimeter": "api",
+            "product": "topup",
+            "channel": "telecom",
+            "query": {
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"message": "telecom recharge"}},
+                        {"match_phrase": {"message": "TOPUP-"}},
+                        {"match_phrase": {"message": "rechargeNumber"}},
+                        {"wildcard": {"k8s_pod_name": "*produit*"}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+        },
+        "subscription": {
+            "perimeter": "api",
+            "product": "subscription",
+            "channel": "subscription-api",
+            "query": {
+                "bool": {
+                    "should": [
+                        {"wildcard": {"k8s_pod_name": "*subscription*"}},
+                        {"match_phrase": {"message": "productType"}},
+                        {"match_phrase": {"message": "BANK_PLAN"}},
+                        {"match_phrase": {"message": "CreateSubscription"}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+        },
+        "card_mgmt": {
+            "perimeter": "api",
+            "product": "card",
+            "channel": "card-management",
+            "query": {
+                "bool": {
+                    "should": [
+                        {"wildcard": {"k8s_pod_name": "*card-management*"}},
+                        {"match_phrase": {"message": "LIMIT_DAILY_AMOUNT"}},
+                        {"match_phrase": {"message": "CardUseDecision"}},
+                        {"match_phrase": {"message": "/api/cards"}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+        },
+        "card_payment_api": {
+            "perimeter": "payments",
+            "product": "card",
+            "channel": "mt-api",
+            "query": {
+                "bool": {
+                    "should": [
+                        {"wildcard": {"k8s_pod_name": "*mt-api*"}},
+                        {"match_phrase": {"message": "AUTHORIZATION"}},
+                        {"match_phrase": {"message": "CAPTURE"}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+        },
+    }
+
+    # Subscription product types hinted in logs
+    type_filters = {
+        "BANK_PLAN": "BANK_PLAN",
+        "INSURANCE": "INSURANCE",
+        "AUTO": "AUTO",
+        "TELECOM": "TELECOM",
+        "PRODUCT": "PRODUCT",
+    }
+
+    for name, cfg in filters.items():
+        must = [{"range": {"@timestamp": {"gte": f"now-{WINDOW}"}}}, cfg["query"]]
+        try:
+            res = _es(
+                "logs-tn-*/_search",
+                {
+                    "size": 0,
+                    "query": {"bool": {"must": must}},
+                    "aggs": {
+                        "errors": {
+                            "filter": {"terms": {"level": ["error", "fatal", "ERROR", "FATAL"]}},
+                        }
+                    },
+                },
+            )
+        except Exception:
+            continue
+        total = float((res.get("hits") or {}).get("total", {}).get("value") or 0)
+        # ES may return total as int on older clusters
+        if isinstance((res.get("hits") or {}).get("total"), int):
+            total = float(res["hits"]["total"])
+        err = float(res.get("aggregations", {}).get("errors", {}).get("doc_count") or 0)
+        labels = {
+            "perimeter": cfg["perimeter"],
+            "product": cfg["product"],
+            "channel": cfg["channel"],
+            "signal": name,
+            "window": WINDOW,
+            "source": "logs-tn",
+        }
+        _set_gauge("product_ops_events", total, labels)
+        if cfg["product"] == "topup":
+            _set_gauge(
+                "topup_events",
+                total,
+                {
+                    "perimeter": "api",
+                    "channel": cfg["channel"],
+                    "window": WINDOW,
+                    "source": "logs-tn",
+                },
+            )
+        if cfg["product"] == "subscription":
+            _set_gauge(
+                "subscription_events",
+                total,
+                {
+                    "perimeter": "api",
+                    "channel": cfg["channel"],
+                    "type": "all",
+                    "window": WINDOW,
+                    "source": "logs-tn",
+                },
+            )
+        if err:
+            _set_gauge(
+                "product_ops_problems",
+                err,
+                {
+                    **labels,
+                    "problem": "error_logs",
+                },
+            )
+
+    for type_key, type_label in type_filters.items():
+        try:
+            res = _es(
+                "logs-tn-*/_search",
+                {
+                    "size": 0,
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {"range": {"@timestamp": {"gte": f"now-{WINDOW}"}}},
+                                {"wildcard": {"k8s_pod_name": "*subscription*"}},
+                                {"match_phrase": {"message": type_key}},
+                            ]
+                        }
+                    },
+                },
+            )
+        except Exception:
+            continue
+        total = (res.get("hits") or {}).get("total", {})
+        count = float(total.get("value") if isinstance(total, dict) else (total or 0))
+        _set_gauge(
+            "subscription_events",
+            count,
+            {
+                "perimeter": "api",
+                "channel": "subscription-api",
+                "type": type_label,
+                "window": WINDOW,
+                "source": "logs-tn",
+            },
+        )
+
+
+def scrape_perimeter_problem_heatmap():
+    """Cross-perimeter error density for ops dashboards."""
+    _reset_series("perimeter_problems_15m")
+    try:
+        res = _es(
+            "logs-tn-*/_search",
+            {
+                "size": 0,
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"range": {"@timestamp": {"gte": "now-15m"}}},
+                            {"terms": {"level": ["error", "fatal", "ERROR", "FATAL"]}},
+                        ]
+                    }
+                },
+                "aggs": {
+                    "by_perimeter": {
+                        "terms": {"field": "functional_perimeter", "size": 20, "missing": "unknown"},
+                        "aggs": {
+                            "by_ns": {"terms": {"field": "k8s_namespace_name", "size": 15}},
+                        },
+                    }
+                },
+            },
+        )
+    except Exception:
+        return
+    for bucket in res.get("aggregations", {}).get("by_perimeter", {}).get("buckets", []):
+        perimeter = str(bucket.get("key") or "unknown")
+        _set_gauge(
+            "perimeter_problems_15m",
+            float(bucket.get("doc_count") or 0),
+            {"perimeter": perimeter, "namespace": "all", "source": "logs-tn"},
+        )
+        for ns in bucket.get("by_ns", {}).get("buckets", []):
+            _set_gauge(
+                "perimeter_problems_15m",
+                float(ns.get("doc_count") or 0),
+                {
+                    "perimeter": perimeter,
+                    "namespace": str(ns.get("key") or "unknown"),
+                    "source": "logs-tn",
+                },
+            )
+
+
 def scrape_loop():
     global _last_error
     while True:
+        errors: list[str] = []
         try:
             scrape_clarity()
-            scrape_es_functional_logs()
-            with _lock:
-                _last_error = ""
-                _set_gauge("business_exporter_up", 1)
-                _set_gauge("business_exporter_scrape_timestamp", time.time())
         except Exception as exc:  # noqa: BLE001
-            with _lock:
-                _last_error = str(exc)
-                _set_gauge("business_exporter_up", 0)
+            errors.append(f"clarity:{exc}")
+        try:
+            scrape_es_functional_logs()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"logs:{exc}")
+        try:
+            scrape_zeebe_transfers()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"zeebe:{exc}")
+        try:
+            scrape_zeebe_transfer_amounts()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"amounts:{exc}")
+        try:
+            scrape_mt_card_payments()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"mt:{exc}")
+        try:
+            scrape_product_signals_from_logs()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"products:{exc}")
+        try:
+            scrape_perimeter_problem_heatmap()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"perimeter:{exc}")
+
+        with _lock:
+            _last_error = " | ".join(errors)
+            _set_gauge("business_exporter_up", 0 if errors and "clarity:" in _last_error else 1)
+            # stay up if clarity works; partial scrapes still useful
+            if not any(e.startswith("clarity:") for e in errors):
+                _set_gauge("business_exporter_up", 1)
+            _set_gauge("business_exporter_scrape_timestamp", time.time())
+            _set_gauge("business_exporter_partial_errors", float(len(errors)))
         time.sleep(SCRAPE_SECONDS)
 
 
+HELP = [
+    ("business_exporter_up", "gauge", "1 if last scrape succeeded (clarity required)"),
+    ("business_exporter_partial_errors", "gauge", "Number of partial scrape failures in last cycle"),
+    ("clarity_customers", "gauge", "Clarity customers total"),
+    ("clarity_customers_by_status", "gauge", "Customers by canonical status"),
+    ("clarity_customers_by_kyc_progress", "gauge", "Customers by KYC cycle status"),
+    ("clarity_customers_by_kind", "gauge", "Customers by kind (individual/business)"),
+    ("clarity_users_funnel", "gauge", "User onboarding funnel stages"),
+    ("logs_events_15m", "gauge", "Log events in last 15m by functional perimeter"),
+    ("logs_events_15m_by_ns", "gauge", "Log events in last 15m by namespace"),
+    ("logs_events_15m_by_level", "gauge", "Log events in last 15m by level"),
+    ("logs_errors_15m_by_ns", "gauge", "Error/fatal log events in last 15m by namespace"),
+    ("payment_ops_count", "gauge", "Payment operations by rail context/direction/outcome"),
+    ("payment_ops_by_process", "gauge", "Payment operations by BPMN process"),
+    ("payment_ops_problems", "gauge", "Payment job failures/timeouts by process"),
+    ("payment_job_problems", "gauge", "Payment job failures by Zeebe job type"),
+    ("payment_zeebe_intent_count", "gauge", "Zeebe job intents volume"),
+    ("transfer_amount_sum_approx", "gauge", "Approx transfer amount sum from Zeebe variables"),
+    ("transfer_amount_samples", "gauge", "Number of amount variable samples"),
+    ("card_payment_count", "gauge", "Card payments count from mt-api"),
+    ("card_payment_amount", "gauge", "Card payments amount sum from mt-api"),
+    ("card_payment_amount_max", "gauge", "Card payments max amount from mt-api"),
+    ("card_payment_problems", "gauge", "Card payment problem rows from mt-api"),
+    ("card_payment_total", "gauge", "Total card payment rows scraped"),
+    ("card_payment_scrape_up", "gauge", "1 if mt-api scrape succeeded"),
+    ("product_ops_events", "gauge", "Product operation log signals (topup/card/subscription)"),
+    ("product_ops_problems", "gauge", "Product operation error log signals"),
+    ("topup_events", "gauge", "Top-up events by channel (stripe/telecom)"),
+    ("subscription_events", "gauge", "Subscription log events by product type"),
+    ("perimeter_problems_15m", "gauge", "Error/fatal logs by functional perimeter (15m)"),
+]
+
+
 def render_prometheus() -> str:
-    lines = [
-        "# HELP business_exporter_up 1 if last scrape succeeded",
-        "# TYPE business_exporter_up gauge",
-        "# HELP clarity_customers Clarity customers total",
-        "# TYPE clarity_customers gauge",
-        "# HELP clarity_customers_by_status Customers by canonical status",
-        "# TYPE clarity_customers_by_status gauge",
-        "# HELP clarity_customers_by_kyc_progress Customers by KYC cycle status",
-        "# TYPE clarity_customers_by_kyc_progress gauge",
-        "# HELP clarity_customers_by_kind Customers by kind (individual/business)",
-        "# TYPE clarity_customers_by_kind gauge",
-        "# HELP clarity_users_funnel User onboarding funnel stages",
-        "# TYPE clarity_users_funnel gauge",
-        "# HELP logs_events_15m Log events in last 15m by functional perimeter",
-        "# TYPE logs_events_15m gauge",
-        "# HELP logs_events_15m_by_ns Log events in last 15m by namespace",
-        "# TYPE logs_events_15m_by_ns gauge",
-        "# HELP logs_events_15m_by_level Log events in last 15m by level",
-        "# TYPE logs_events_15m_by_level gauge",
-        "# HELP logs_errors_15m_by_ns Error/fatal log events in last 15m by namespace",
-        "# TYPE logs_errors_15m_by_ns gauge",
-    ]
+    lines: list[str] = []
+    for name, typ, help_txt in HELP:
+        lines.append(f"# HELP {name} {help_txt}")
+        lines.append(f"# TYPE {name} {typ}")
     with _lock:
         for name, value in sorted(_metrics.items()):
             lines.append(f"{name} {value}")
