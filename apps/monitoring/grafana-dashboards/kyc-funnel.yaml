@@ -22,7 +22,8 @@ data:
           "type": "stat",
           "title": "Customers",
           "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
-          "targets": [{"expr": "clarity_customers{perimeter=\"kyc\"}", "refId": "A"}]
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_customers{perimeter=\"kyc\"}", "refId": "A"}]
         },
         {
           "type": "stat",

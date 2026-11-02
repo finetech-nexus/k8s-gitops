@@ -8,12 +8,17 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Run data-views job
+      - name: Run data-views job + check app ns
         run: |
           set -euo pipefail
           kubectl delete job -n logging kibana-data-views-v3 --ignore-not-found
           kubectl delete job -n logging kibana-data-views-v4 --ignore-not-found
           kubectl delete job -n logging kibana-data-views-v5 --ignore-not-found
+          kubectl delete job -n logging kibana-data-views-v6 --ignore-not-found
           kubectl apply -f apps/logging/kibana-data-views-job.yaml
-          kubectl wait -n logging --for=condition=complete job/kibana-data-views-v5 --timeout=5m
-          kubectl logs -n logging job/kibana-data-views-v5 2>/dev/null | tr "}" "\n" | grep -E "alias |data_view |search |verify|ready|FAILED" | head -80 || true
+          kubectl wait -n logging --for=condition=complete job/kibana-data-views-v6 --timeout=5m
+          kubectl logs -n logging job/kibana-data-views-v6 2>/dev/null | tr '}' '\n' | grep -E 'alias |data_view |app namespace|api namespace|deduped|FAILED|count' | head -60 || true
+          echo "===== app namespace pods ====="
+          kubectl get ns app 2>/dev/null || echo "namespace app missing"
+          kubectl get pods -n app -o wide 2>/dev/null || true
+          kubectl get pods -n api -o wide 2>/dev/null | head -20 || true

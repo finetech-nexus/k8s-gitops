@@ -5,11 +5,13 @@ resources:
   - namespace.yaml
   - functional-perimeters.yaml
   - helmrelease-kube-prom-stack.yaml
+  - prometheus-rules-functional.yaml
   - business-exporter/deployment.yaml
   - grafana-dashboards/kong-dashboard.yaml
   - grafana-dashboards/perimeter-overview.yaml
   - grafana-dashboards/kyc-funnel.yaml
   - grafana-dashboards/functional-ops.yaml
+  - grafana-dashboards/technical-cluster.yaml
 configMapGenerator:
   - name: business-exporter
     files:

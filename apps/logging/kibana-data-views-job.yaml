@@ -1,8 +1,8 @@
-# Creates per-namespace Kibana data views backed by ES filtered aliases.
+# One data view per namespace (filtered ES alias). No duplicate perimeter views.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kibana-data-views-v5
+  name: kibana-data-views-v6
   namespace: logging
   labels:
     nexus.bank/functional-perimeter: platform
@@ -33,95 +33,56 @@ spec:
               echo "Waiting for Kibana..."
               until curl -sf "$KIBANA_URL/api/status" | grep -q available; do sleep 15; done
 
-              es() {
-                curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'Content-Type: application/json' "$@"
-              }
-              kbn() {
-                curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' "$@"
-              }
+              es() { curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'Content-Type: application/json' "$@"; }
+              kbn() { curl -sf -u "$ES_USER:$ES_PASSWORD" -H 'kbn-xsrf: true' -H 'Content-Type: application/json' "$@"; }
 
-              # Filtered alias so the Kibana data view itself only returns that namespace.
+              # Remove duplicate perimeter data views + old saved searches.
+              for id in logs-perimeter-payments logs-perimeter-kyc logs-perimeter-aml logs-perimeter-api \
+                         logs-perimeter-gateway logs-perimeter-iam logs-perimeter-core-banking \
+                         logs-perimeter-treasury logs-perimeter-reconciliation logs-perimeter-platform \
+                         logs-tn-kyc; do
+                kbn -X DELETE "$KIBANA_URL/api/data_views/data_view/$id" >/dev/null 2>&1 || true
+              done
+              for id in perimeter-payments perimeter-kyc perimeter-aml perimeter-api perimeter-gateway \
+                         perimeter-iam perimeter-core-banking perimeter-treasury perimeter-reconciliation \
+                         perimeter-platform ns-payment-hub ns-api ns-core-banking ns-kyc ns-infra ns-kyc-aml \
+                         ns-aml ns-app ns-kong ns-iam ns-treasury ns-reconciliation ns-webapp ns-docs; do
+                kbn -X DELETE "$KIBANA_URL/api/saved_objects/search/$id" >/dev/null 2>&1 || true
+              done
+              # Drop perimeter aliases (keep only namespace aliases).
+              for p in payments kyc aml api gateway iam core-banking treasury reconciliation platform; do
+                es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"remove\":{\"index\":\"logs-tn-*\",\"alias\":\"logs-perimeter-${p}\"}}]}" >/dev/null 2>&1 || true
+              done
+
               ensure_ns_alias() {
                 ns="$1"
                 alias="logs-ns-${ns}"
-                # Drop previous alias (ignore missing), then bind filtered alias to log indices/streams.
                 es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"remove\":{\"index\":\"logs-tn-*\",\"alias\":\"${alias}\"}}]}" >/dev/null 2>&1 || true
-                es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"remove\":{\"index\":\".ds-logs-tn-*\",\"alias\":\"${alias}\"}}]}" >/dev/null 2>&1 || true
-                if es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"add\":{\"index\":\"logs-tn-*\",\"alias\":\"${alias}\",\"filter\":{\"bool\":{\"should\":[
-                    {\"term\":{\"k8s_namespace_name.keyword\":\"${ns}\"}},
-                    {\"term\":{\"k8s_namespace_name\":\"${ns}\"}},
-                    {\"match_phrase\":{\"k8s_namespace_name\":\"${ns}\"}}
-                  ],\"minimum_should_match\":1}}}}]}"; then
-                  echo "alias ${alias} OK"
-                else
-                  # Fallback: data-stream backing indices
-                  es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"add\":{\"index\":\".ds-logs-tn-*\",\"alias\":\"${alias}\",\"filter\":{\"match_phrase\":{\"k8s_namespace_name\":\"${ns}\"}}}}]}" \
-                    && echo "alias ${alias} OK (ds)" || echo "alias ${alias} FAILED"
-                fi
+                es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"add\":{\"index\":\"logs-tn-*\",\"alias\":\"${alias}\",\"filter\":{\"term\":{\"k8s_namespace_name\":\"${ns}\"}}}}]}" \
+                  && echo "alias ${alias} OK" || echo "alias ${alias} FAILED"
               }
 
-              ensure_perimeter_alias() {
-                p="$1"
-                alias="logs-perimeter-${p}"
-                es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"remove\":{\"index\":\"logs-tn-*\",\"alias\":\"${alias}\"}}]}" >/dev/null 2>&1 || true
-                es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"remove\":{\"index\":\".ds-logs-tn-*\",\"alias\":\"${alias}\"}}]}" >/dev/null 2>&1 || true
-                if es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"add\":{\"index\":\"logs-tn-*\",\"alias\":\"${alias}\",\"filter\":{\"bool\":{\"should\":[
-                    {\"term\":{\"functional_perimeter.keyword\":\"${p}\"}},
-                    {\"term\":{\"functional_perimeter\":\"${p}\"}},
-                    {\"match_phrase\":{\"functional_perimeter\":\"${p}\"}}
-                  ],\"minimum_should_match\":1}}}}]}"; then
-                  echo "alias ${alias} OK"
-                else
-                  es -X POST "$ES_URL/_aliases" -d "{\"actions\":[{\"add\":{\"index\":\".ds-logs-tn-*\",\"alias\":\"${alias}\",\"filter\":{\"match_phrase\":{\"functional_perimeter\":\"${p}\"}}}}]}" \
-                    && echo "alias ${alias} OK (ds)" || echo "alias ${alias} FAILED"
-                fi
-              }
-
-              # Delete + recreate data view so title/pattern updates stick.
               ensure_data_view() {
                 id="$1"; name="$2"; pattern="$3"
                 kbn -X DELETE "$KIBANA_URL/api/data_views/data_view/$id" >/dev/null 2>&1 || true
                 body="{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$name\",\"timeFieldName\":\"@timestamp\",\"allowNoIndex\":true}}"
                 kbn -X POST "$KIBANA_URL/api/data_views/data_view" -d "$body" \
-                  && echo "data_view $id -> $pattern OK" \
-                  || echo "data_view $id FAILED"
-              }
-
-              ensure_ns_search() {
-                ns="$1"
-                id="ns-${ns}"
-                title="NS / ${ns}"
-                # Point saved search at the filtered alias data view id.
-                search_source=$(printf '%s' "{\"index\":\"logs-ns-${ns}\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"highlightAll\":true,\"version\":true}")
-                search_source_esc=$(printf '%s' "$search_source" | sed 's/\\/\\\\/g; s/"/\\"/g')
-                body=$(printf '%s' "{\"attributes\":{\"title\":\"${title}\",\"description\":\"Logs for namespace ${ns} (filtered alias)\",\"columns\":[\"message\",\"k8s_pod_name\",\"functional_perimeter\",\"k8s_namespace_name\"],\"sort\":[[\"@timestamp\",\"desc\"]],\"kibanaSavedObjectMeta\":{\"searchSourceJSON\":\"${search_source_esc}\"}}}")
-                kbn -X POST "$KIBANA_URL/api/saved_objects/search/${id}?overwrite=true" -d "$body" \
-                  && echo "search $id OK" || echo "search $id FAILED"
+                  && echo "data_view $id OK" || echo "data_view $id FAILED"
               }
 
               ensure_data_view "logs-tn" "Logs TN (all namespaces)" "logs-tn-*"
               ensure_data_view "zeebe" "Zeebe / payments" "zeebe-*"
 
-              NAMESPACES="payment-hub api core-banking kyc infra kyc-aml aml app kong iam treasury reconciliation webapp docs"
-              for ns in $NAMESPACES; do
+              # Namespace views only (functional perimeter = field filter in Discover, not a second view).
+              for ns in payment-hub api core-banking kyc infra kyc-aml aml app kong iam treasury reconciliation webapp docs; do
                 ensure_ns_alias "$ns"
                 ensure_data_view "logs-ns-${ns}" "Logs · ${ns}" "logs-ns-${ns}"
-                ensure_ns_search "$ns"
               done
 
-              for p in payments kyc aml api gateway iam core-banking treasury reconciliation platform; do
-                ensure_perimeter_alias "$p"
-                ensure_data_view "logs-perimeter-${p}" "Perimeter · ${p}" "logs-perimeter-${p}"
-                id="perimeter-${p}"
-                title="Perimeter / ${p}"
-                search_source=$(printf '%s' "{\"index\":\"logs-perimeter-${p}\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"highlightAll\":true,\"version\":true}")
-                search_source_esc=$(printf '%s' "$search_source" | sed 's/\\/\\\\/g; s/"/\\"/g')
-                body=$(printf '%s' "{\"attributes\":{\"title\":\"${title}\",\"description\":\"Logs for functional_perimeter=${p}\",\"columns\":[\"message\",\"k8s_namespace_name\",\"k8s_pod_name\",\"functional_perimeter\"],\"sort\":[[\"@timestamp\",\"desc\"]],\"kibanaSavedObjectMeta\":{\"searchSourceJSON\":\"${search_source_esc}\"}}}")
-                kbn -X POST "$KIBANA_URL/api/saved_objects/search/${id}?overwrite=true" -d "$body" \
-                  && echo "search $id OK" || echo "search $id FAILED"
-              done
-
-              # Sanity: iam alias must not return other namespaces.
-              echo "=== verify iam alias sample namespaces ==="
-              es "$ES_URL/logs-ns-iam/_search?size=5&_source=k8s_namespace_name,message" | tr ',' '\n' | grep -E 'k8s_namespace_name|hits' | head -30
-              echo "Kibana namespace-filtered views ready."
+              echo "=== app namespace doc count ==="
+              es "$ES_URL/logs-ns-app/_count" || true
+              echo
+              echo "=== api namespace doc count ==="
+              es "$ES_URL/logs-ns-api/_count" || true
+              echo
+              echo "Kibana views deduped (namespace-only)."

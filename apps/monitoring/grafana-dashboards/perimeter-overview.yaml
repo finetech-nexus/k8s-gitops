@@ -48,8 +48,10 @@ data:
           "type": "timeseries",
           "title": "CPU by namespace (perimetre)",
           "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
             {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
               "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=~\"$perimeter\",container!=\"\",container!=\"POD\"}[5m]))",
               "legendFormat": "{{namespace}}",
               "refId": "A"
@@ -60,8 +62,10 @@ data:
           "type": "timeseries",
           "title": "Memory by namespace (perimetre)",
           "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
             {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
               "expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"$perimeter\",container!=\"\",container!=\"POD\"})",
               "legendFormat": "{{namespace}}",
               "refId": "A"
@@ -72,8 +76,10 @@ data:
           "type": "timeseries",
           "title": "Restarts (1h) by namespace",
           "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
             {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
               "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"$perimeter\"}[1h]))",
               "legendFormat": "{{namespace}}",
               "refId": "A"

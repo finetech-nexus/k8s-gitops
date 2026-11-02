@@ -55,6 +55,26 @@ spec:
             if record["message"] == nil or record["message"] == "" then
                 record["message"] = record["log"] or record["MESSAGE"] or ""
             end
+            local lvl = record["level"] or record["severity"] or record["log_level"] or record["LEVEL"]
+            if lvl == nil or lvl == "" then
+                local msg = string.upper(tostring(record["message"] or ""))
+                if string.find(msg, "FATAL", 1, true) or string.find(msg, "CRITICAL", 1, true) then
+                    lvl = "fatal"
+                elseif string.find(msg, "ERROR", 1, true) or string.find(msg, " ERR", 1, true) then
+                    lvl = "error"
+                elseif string.find(msg, "WARN", 1, true) then
+                    lvl = "warn"
+                elseif string.find(msg, "DEBUG", 1, true) then
+                    lvl = "debug"
+                elseif string.find(msg, "INFO", 1, true) then
+                    lvl = "info"
+                else
+                    lvl = "unknown"
+                end
+            else
+                lvl = string.lower(tostring(lvl))
+            end
+            record["level"] = lvl
             return 1, timestamp, record
         end
     config:

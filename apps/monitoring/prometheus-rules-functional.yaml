@@ -1,0 +1,56 @@
+# Functional / platform alerts → Alertmanager (from kube-prometheus-stack).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nexus-functional-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/part-of: nexus-observability
+spec:
+  groups:
+    - name: nexus.platform
+      rules:
+        - alert: BusinessExporterDown
+          expr: up{job="business-exporter"} == 0
+          for: 10m
+          labels:
+            severity: warning
+            functional_perimeter: platform
+          annotations:
+            summary: "business-exporter scrape down"
+            description: "KYC/business metrics exporter is not being scraped."
+
+        - alert: PodCrashLoopingPerimeter
+          expr: |
+            sum by (namespace) (
+              increase(kube_pod_container_status_restarts_total{
+                namespace=~"payment-hub|api|app|kyc|kyc-aml|aml|kong|iam|core-banking|treasury|reconciliation|infra"
+              }[15m])
+            ) > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pods restarting in {{ $labels.namespace }}"
+            description: "More than 3 restarts in 15m in namespace {{ $labels.namespace }}."
+
+        - alert: ClarityKycBacklogHigh
+          expr: clarity_in_review{perimeter="kyc"} > 50
+          for: 30m
+          labels:
+            severity: warning
+            functional_perimeter: kyc
+          annotations:
+            summary: "KYC in_review backlog high"
+            description: "clarity_in_review is {{ $value }} (>50 for 30m)."
+
+        - alert: TargetDownCriticalNamespace
+          expr: |
+            up{namespace=~"payment-hub|kyc-aml|kong|iam|api"} == 0
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Scrape target down in {{ $labels.namespace }}"
+            description: "Prometheus target {{ $labels.job }} / {{ $labels.instance }} is down."

@@ -76,6 +76,7 @@ spec:
         storageSpec:
           emptyDir: {}
 
+    # Alertmanager is shipped by kube-prometheus-stack (routes PrometheusRule firings).
     alertmanager:
       enabled: true
       alertmanagerSpec:
@@ -86,10 +87,15 @@ spec:
           limits:
             memory: 256Mi
 
+    # Built-in k8s/node/prometheus recording+alerting rules (→ Alertmanager).
+    defaultRules:
+      create: true
+
     grafana:
       enabled: true
       adminUser: admin
       adminPassword: grafanaSandb0x
+      defaultDashboardsEnabled: true
       defaultDashboardsTimezone: browser
       sidecar:
         dashboards:
@@ -98,8 +104,9 @@ spec:
           labelValue: "1"
           searchNamespace: ALL
           folderAnnotation: grafana_folder
+          # false → honour grafana_folder annotation (functional dashboards).
           provider:
-            foldersFromFilesStructure: true
+            foldersFromFilesStructure: false
         datasources:
           enabled: true
           searchNamespace: ALL
