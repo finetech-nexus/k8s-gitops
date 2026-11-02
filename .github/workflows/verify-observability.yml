@@ -1,43 +1,18 @@
 name: Verify observability
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Inject level + verify dashboards and logs
+      - name: Inject level and verify
         run: |
           set +e
-          kubectl get cm -n logging -o json | python3 -c '
-          import json, subprocess, sys
-          data = json.load(sys.stdin)
-          sn = """            local lvl = record[\"level\"] or record[\"severity\"] or record[\"log_level\"] or record[\"LEVEL\"]
-            if lvl == nil or lvl == \"\" then
-                local msg = string.upper(tostring(record[\"message\"] or \"\"))
-                if string.find(msg, \"FATAL\", 1, true) or string.find(msg, \"CRITICAL\", 1, true) then lvl = \"fatal\"
-                elseif string.find(msg, \"ERROR\", 1, true) or string.find(msg, \" ERR\", 1, true) then lvl = \"error\"
-                elseif string.find(msg, \"WARN\", 1, true) then lvl = \"warn\"
-                elseif string.find(msg, \"DEBUG\", 1, true) then lvl = \"debug\"
-                elseif string.find(msg, \"INFO\", 1, true) then lvl = \"info\"
-                else lvl = \"unknown\" end
-            else lvl = string.lower(tostring(lvl)) end
-            record[\"level\"] = lvl
-"""
-          for item in data["items"]:
-              lua = (item.get("data") or {}).get("functional.lua")
-              if not lua: continue
-              name = item["metadata"]["name"]
-              if "record[\"level\"]" in lua:
-                  print(name, "already ok"); continue
-              if "return 1, timestamp, record" not in lua:
-                  continue
-              new = lua.replace("return 1, timestamp, record", sn + "\n            return 1, timestamp, record", 1)
-              payload = {"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":name,"namespace":"logging"},"data":{**item["data"],"functional.lua":new}}
-              p = subprocess.run(["kubectl","apply","-f","-"], input=json.dumps(payload).encode(), capture_output=True)
-              print("patched", name, p.returncode)
-          '
+          python3 apps/logging/scripts/inject_level.py
           kubectl rollout restart ds/fluent-bit-tn -n logging
           sleep 25
           kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring

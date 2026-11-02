@@ -1,5 +1,6 @@
 name: Fix observability UX
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 jobs:
   fix:
     runs-on: ubuntu-latest
@@ -8,71 +9,21 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Reconcile monitoring + fluent-bit; verify dashboards
+      - name: Reconcile monitoring and Fluent Bit
         run: |
           set -euo pipefail
           kubectl apply -k apps/monitoring
           kubectl annotate hr -n monitoring kube-prometheus-stack reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
-          kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
-          kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/forceAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
-
-          # Inject level mapping into live lua ConfigMaps (Flux chart often lags).
-          for name in $(kubectl get cm -n logging -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
-            LUA=$(kubectl get cm -n logging "$name" -o jsonpath='{.data.functional\.lua}' 2>/dev/null || true)
-            [ -z "$LUA" ] && continue
-            echo "$LUA" | grep -q 'record\["level"\]' && echo "$name already has level" && continue
-            kubectl get cm -n logging "$name" -o json > /tmp/cm.json
-            python3 - <<'PY'
-          import json
-          o=json.load(open("/tmp/cm.json"))
-          lua=o["data"]["functional.lua"]
-          sn='''            local lvl = record["level"] or record["severity"] or record["log_level"] or record["LEVEL"]
-            if lvl == nil or lvl == "" then
-                local msg = string.upper(tostring(record["message"] or ""))
-                if string.find(msg, "FATAL", 1, true) or string.find(msg, "CRITICAL", 1, true) then lvl = "fatal"
-                elseif string.find(msg, "ERROR", 1, true) or string.find(msg, " ERR", 1, true) then lvl = "error"
-                elseif string.find(msg, "WARN", 1, true) then lvl = "warn"
-                elseif string.find(msg, "DEBUG", 1, true) then lvl = "debug"
-                elseif string.find(msg, "INFO", 1, true) then lvl = "info"
-                else lvl = "unknown" end
-            else lvl = string.lower(tostring(lvl)) end
-            record["level"] = lvl
-'''
-            if 'record["level"]' not in lua and "return 1, timestamp, record" in lua:
-              o["data"]["functional.lua"]=lua.replace("return 1, timestamp, record", sn+"\n            return 1, timestamp, record",1)
-              open("/tmp/cm-out.json","w").write(json.dumps({
-                "apiVersion":"v1","kind":"ConfigMap",
-                "metadata":{"name":o["metadata"]["name"],"namespace":"logging"},
-                "data":o["data"]
-              }))
-              print("patched", o["metadata"]["name"])
-          PY
-            [ -f /tmp/cm-out.json ] && kubectl apply -f /tmp/cm-out.json && rm -f /tmp/cm-out.json
-          done
+          python3 apps/logging/scripts/inject_level.py
           kubectl rollout restart ds/fluent-bit-tn -n logging || true
           kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring || true
           kubectl rollout status deploy/kube-prometheus-stack-grafana -n monitoring --timeout=5m || true
-
           echo "===== PrometheusRules ====="
           kubectl get prometheusrule -n monitoring
-
           echo "===== Grafana dashboard CMs ====="
           kubectl get cm -n monitoring -l grafana_dashboard=1 -o custom-columns=NAME:.metadata.name,FOLDER:.metadata.annotations.grafana_folder
-
-          echo "===== Grafana search API ====="
           GF=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
           AUTH=$(printf 'admin:grafanaSandb0x' | base64 | tr -d '\n')
+          echo "===== Grafana search ====="
           kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
-            'http://127.0.0.1:3000/api/search?type=dash-db' | tr ',' '\n' | grep -E '"title"|"folderTitle"|"uid"' | head -80
-
-          echo "===== app vs api log counts ====="
-          kubectl delete pod v-app -n infra --ignore-not-found --wait=false
-          sleep 2
-          kubectl run v-app --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
-            AUTH=elastic:elasticSearchPas42
-            for a in logs-ns-app logs-ns-api logs-tn; do
-              echo -n "$a "; curl -sf -u $AUTH "http://infra-elasticsearch:9200/$a/_count"; echo
-            done
-            echo sample level:
-            curl -sf -u $AUTH "http://infra-elasticsearch:9200/logs-tn-*/_search?size=1&sort=@timestamp:desc&_source=level,message,k8s_namespace_name" | head -c 600; echo
-          ' || true
+            'http://127.0.0.1:3000/api/search?type=dash-db' | tr ',' '\n' | grep -E '"title"|"folderTitle"' | head -80 || true
