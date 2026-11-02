@@ -16,12 +16,38 @@ jobs:
           kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
           kubectl annotate hr -n logging fluent-bit-tn reconcile.fluxcd.io/forceAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
 
-          # Inject level mapping into live lua if Flux slow
-          for i in $(seq 1 24); do
-            if kubectl get cm -n logging -o yaml 2>/dev/null | grep -q 'record\["level"\]'; then
-              echo "level mapping present t=$i"; break
-            fi
-            echo "wait level lua t=$i"; sleep 10
+          # Inject level mapping into live lua ConfigMaps (Flux chart often lags).
+          for name in $(kubectl get cm -n logging -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+            LUA=$(kubectl get cm -n logging "$name" -o jsonpath='{.data.functional\.lua}' 2>/dev/null || true)
+            [ -z "$LUA" ] && continue
+            echo "$LUA" | grep -q 'record\["level"\]' && echo "$name already has level" && continue
+            kubectl get cm -n logging "$name" -o json > /tmp/cm.json
+            python3 - <<'PY'
+          import json
+          o=json.load(open("/tmp/cm.json"))
+          lua=o["data"]["functional.lua"]
+          sn='''            local lvl = record["level"] or record["severity"] or record["log_level"] or record["LEVEL"]
+            if lvl == nil or lvl == "" then
+                local msg = string.upper(tostring(record["message"] or ""))
+                if string.find(msg, "FATAL", 1, true) or string.find(msg, "CRITICAL", 1, true) then lvl = "fatal"
+                elseif string.find(msg, "ERROR", 1, true) or string.find(msg, " ERR", 1, true) then lvl = "error"
+                elseif string.find(msg, "WARN", 1, true) then lvl = "warn"
+                elseif string.find(msg, "DEBUG", 1, true) then lvl = "debug"
+                elseif string.find(msg, "INFO", 1, true) then lvl = "info"
+                else lvl = "unknown" end
+            else lvl = string.lower(tostring(lvl)) end
+            record["level"] = lvl
+'''
+            if 'record["level"]' not in lua and "return 1, timestamp, record" in lua:
+              o["data"]["functional.lua"]=lua.replace("return 1, timestamp, record", sn+"\n            return 1, timestamp, record",1)
+              open("/tmp/cm-out.json","w").write(json.dumps({
+                "apiVersion":"v1","kind":"ConfigMap",
+                "metadata":{"name":o["metadata"]["name"],"namespace":"logging"},
+                "data":o["data"]
+              }))
+              print("patched", o["metadata"]["name"])
+          PY
+            [ -f /tmp/cm-out.json ] && kubectl apply -f /tmp/cm-out.json && rm -f /tmp/cm-out.json
           done
           kubectl rollout restart ds/fluent-bit-tn -n logging || true
           kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring || true
