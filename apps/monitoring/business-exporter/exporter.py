@@ -31,6 +31,32 @@ SCRAPE_SECONDS = int(os.environ.get("SCRAPE_SECONDS", "60"))
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "9105"))
 WINDOW = os.environ.get("METRICS_WINDOW", "24h")
 
+
+def _window_ms(window: str | None = None) -> int:
+    """Convert 15m/24h/7d style windows to milliseconds lookback."""
+    raw = (window or WINDOW).strip().lower()
+    try:
+        if raw.endswith("ms"):
+            return max(int(raw[:-2]), 1000)
+        if raw.endswith("s"):
+            return max(int(raw[:-1]), 1) * 1000
+        if raw.endswith("m"):
+            return max(int(raw[:-1]), 1) * 60_000
+        if raw.endswith("h"):
+            return max(int(raw[:-1]), 1) * 3_600_000
+        if raw.endswith("d"):
+            return max(int(raw[:-1]), 1) * 86_400_000
+        return int(raw)
+    except ValueError:
+        return 86_400_000
+
+
+def _zeebe_time_range(window: str | None = None) -> dict:
+    """Zeebe exporter stores timestamp as epoch millis (not a date field)."""
+    gte = int(time.time() * 1000) - _window_ms(window)
+    return {"range": {"timestamp": {"gte": gte}}}
+
+
 # Funnel buckets for Grafana functional dashboard.
 SUCCESS_STATUSES = {"approved", "approved-partially"}
 STOPPED_STATUSES = {"rejected", "expired", "cancelled", "abandoned"}
@@ -328,20 +354,28 @@ def scrape_zeebe_transfers():
         must = [
             {"terms": {"intent": intents}},
             {"term": {"value.bpmnElementType": "PROCESS"}},
-            {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+            _zeebe_time_range(),
         ]
         buckets: list[dict] = []
-        for index in indices:
-            try:
-                buckets = _terms_agg_first_working(
-                    index,
-                    must,
-                    bpmn_fields,
-                    size=40,
-                    must_field_variants=intent_variants,
-                )
-            except Exception:
-                buckets = []
+        # Fallback without bpmnElementType filter (mapping differences across Zeebe record types).
+        must_loose = [
+            {"terms": {"intent": intents}},
+            _zeebe_time_range(),
+        ]
+        for must_try in (must, must_loose):
+            for index in indices:
+                try:
+                    buckets = _terms_agg_first_working(
+                        index,
+                        must_try,
+                        bpmn_fields,
+                        size=40,
+                        must_field_variants=intent_variants,
+                    )
+                except Exception:
+                    buckets = []
+                if buckets:
+                    break
             if buckets:
                 break
         for bucket in buckets:
@@ -376,7 +410,7 @@ def scrape_zeebe_transfers():
     # Job failures / timeouts → operational problems
     must_jobs = [
         {"terms": {"intent": ["FAILED", "TIMED_OUT", "ERROR_THROWN"]}},
-        {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+        _zeebe_time_range(),
     ]
     job_indices = ["zeebe-*", "zeebe-record_job*"]
     by_bpmn: list[dict] = []
@@ -445,7 +479,7 @@ def scrape_zeebe_transfers():
         try:
             by_intent = _terms_agg_first_working(
                 index,
-                [{"range": {"timestamp": {"gte": f"now-{WINDOW}"}}}],
+                [_zeebe_time_range()],
                 intent_fields,
                 size=20,
             )
@@ -516,11 +550,24 @@ def scrape_mt_card_payments():
             amounts[key] += amount
             maxima[key] = max(maxima.get(key, 0.0), amount)
             total += 1
-            # problem heuristics
-            if status in {"failed", "declined", "error", "rejected", "voided"} or (
-                row.get("responseCode") and str(row.get("responseCode")) not in {"00", "000", "0", "None", "null", ""}
-                and status not in {"authorized", "captured", "approved", "success", "completed"}
-            ):
+            # problem heuristics (voided/refunded/issued with 00 are normal lifecycle states)
+            bad_status = status in {"failed", "declined", "error", "rejected"}
+            bad_code = (
+                row.get("responseCode")
+                and str(row.get("responseCode")) not in {"00", "000", "0", "None", "null", ""}
+                and status not in {
+                    "authorized",
+                    "captured",
+                    "approved",
+                    "success",
+                    "completed",
+                    "settled",
+                    "refunded",
+                    "issued",
+                    "pending",
+                }
+            )
+            if bad_status or bad_code:
                 problems[(direction, operation, status, currency, str(row.get("responseCode") or "unknown"))] += 1
         total_pages = int(data.get("totalPages") or 0) if isinstance(data, dict) else 0
         page += 1
@@ -576,7 +623,7 @@ def scrape_zeebe_transfer_amounts():
                 "query": {
                     "bool": {
                         "must": [
-                            {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
+                            _zeebe_time_range(),
                             {
                                 "bool": {
                                     "should": [
@@ -683,8 +730,15 @@ def scrape_product_signals_from_logs():
                     "should": [
                         {"match_phrase": {"message": "telecom recharge"}},
                         {"match_phrase": {"message": "TOPUP-"}},
-                        {"match_phrase": {"message": "rechargeNumber"}},
-                        {"wildcard": {"k8s_pod_name": "*produit*"}},
+                        {"match_phrase": {"message": "TelecomRecharge"}},
+                        {
+                            "bool": {
+                                "must": [
+                                    {"wildcard": {"k8s_pod_name": "*produit*"}},
+                                    {"match_phrase": {"message": "recharge"}},
+                                ]
+                            }
+                        },
                     ],
                     "minimum_should_match": 1,
                 }

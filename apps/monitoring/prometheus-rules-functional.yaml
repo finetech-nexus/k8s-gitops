@@ -78,13 +78,23 @@ spec:
             description: "business-exporter cannot reach mt-api /api/transactions."
 
         - alert: PerimeterErrorBurst
-          expr: perimeter_problems_15m{namespace="all"} > 200
+          expr: perimeter_problems_15m{namespace="all",perimeter!="payments"} > 500
           for: 15m
           labels:
             severity: warning
           annotations:
             summary: "Error log burst on perimeter {{ $labels.perimeter }}"
             description: "{{ $value }} error/fatal logs in 15m for {{ $labels.perimeter }}."
+
+        - alert: PaymentsErrorBurst
+          expr: perimeter_problems_15m{namespace="all",perimeter="payments"} > 50000
+          for: 30m
+          labels:
+            severity: warning
+            functional_perimeter: payments
+          annotations:
+            summary: "Payment-hub error log burst"
+            description: "{{ $value }} error/fatal logs in 15m on payments (noisy connectors baseline is high)."
 
         - alert: ProductOpsProblems
           expr: sum by (product, channel) (product_ops_problems) > 20
