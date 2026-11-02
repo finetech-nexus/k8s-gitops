@@ -1,0 +1,34 @@
+name: Probe Clarity KPIs
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Sample Clarity + API pods
+        run: |
+          set +e
+          echo "===== api pods ====="
+          kubectl get deploy,pods -n api -o wide | head -40
+          echo "===== app pods ====="
+          kubectl get deploy,pods -n app | head -20
+          echo "===== clarity dashboard + status facets ====="
+          kubectl delete pod c-probe -n monitoring --ignore-not-found --wait=false
+          sleep 2
+          kubectl run c-probe --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- sh -c '
+            LOGIN=$(curl -sf -X POST http://clarity-api.kyc-aml.svc.cluster.local:8000/api/clarity/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"admin\",\"password\":\"password\"}")
+            echo "$LOGIN" | head -c 200; echo
+            TOKEN=$(echo "$LOGIN" | sed -n "s/.*\"access_token\":\"\([^\"]*\)\".*/\1/p")
+            echo "=== dashboard ==="
+            curl -sf -H "Authorization: Bearer $TOKEN" http://clarity-api.kyc-aml.svc.cluster.local:8000/api/clarity/v1/dashboard
+            echo
+            echo "=== customers sample statuses ==="
+            curl -sf -H "Authorization: Bearer $TOKEN" "http://clarity-api.kyc-aml.svc.cluster.local:8000/api/clarity/v1/customers?limit=50&offset=0" | head -c 4000
+            echo
+            echo "=== business exporter metrics ==="
+            curl -sf http://business-exporter.monitoring.svc.cluster.local:9105/metrics | head -80
+          '
