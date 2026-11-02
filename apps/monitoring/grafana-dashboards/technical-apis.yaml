@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-technical-apis
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Technique
+data:
+  technical-apis.json: |-
+    {
+      "title": "Technique — APIs (par service)",
+      "uid": "technical-apis",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["technical", "api", "kubernetes"],
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "custom",
+            "label": "Namespace",
+            "query": "api,app,kyc-aml,payment-hub,iam,kong",
+            "current": {"text": "api", "value": "api"},
+            "includeAll": false
+          },
+          {
+            "name": "api",
+            "type": "query",
+            "label": "API / Deployment",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "query": "label_values(kube_deployment_labels{namespace=\"$namespace\"}, deployment)",
+            "refresh": 2,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {"text": "All", "value": "$__all"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Pods ready",
+          "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(kube_deployment_status_replicas_ready{namespace=\"$namespace\", deployment=~\"$api\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Pods desired",
+          "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(kube_deployment_spec_replicas{namespace=\"$namespace\", deployment=~\"$api\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Restarts (1h)",
+          "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"$api.*\"}[1h])) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Unavailable replicas",
+          "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(kube_deployment_status_replicas_unavailable{namespace=\"$namespace\", deployment=~\"$api\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Log events 15m (ns)",
+          "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(logs_events_15m_by_ns{namespace=\"$namespace\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Error logs 15m (ns)",
+          "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(logs_errors_15m_by_ns{namespace=\"$namespace\"}) or vector(0)", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU by pod",
+          "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$api.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory by pod",
+          "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$api.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Restarts by pod (1h)",
+          "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"$api.*\"}[1h]))", "legendFormat": "{{pod}}", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Deployment ready vs desired",
+          "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_deployment_status_replicas_ready{namespace=\"$namespace\", deployment=~\"$api\"}", "legendFormat": "{{deployment}} ready", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_deployment_spec_replicas{namespace=\"$namespace\", deployment=~\"$api\"}", "legendFormat": "{{deployment}} desired", "refId": "B"}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Kong HTTP request rate (gateway)",
+          "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(kong_http_requests_total[1m])) or vector(0)", "legendFormat": "kong rps", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Log volume 15m by level (cluster)",
+          "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "logs_events_15m_by_level", "legendFormat": "{{level}}", "refId": "A"}]
+        }
+      ]
+    }

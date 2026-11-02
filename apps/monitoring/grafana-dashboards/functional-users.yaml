@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-functional-users
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Perimetres fonctionnels
+data:
+  functional-users.json: |-
+    {
+      "title": "Fonctionnel — parcours utilisateurs",
+      "uid": "functional-users",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["functional", "kyc", "users", "funnel"],
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Utilisateurs créés avec succès",
+          "description": "canonical_status approved + approved-partially",
+          "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}]}}},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=\"created_success\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Utilisateurs stoppés / refusés",
+          "description": "rejected + expired/abandoned/cancelled",
+          "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "red", "value": null}]}}},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=\"stopped\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "En cours (collecte / review)",
+          "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "orange", "value": null}]}}},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=\"in_progress\"}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Total clients",
+          "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=\"total\"}", "refId": "A"}]
+        },
+        {
+          "type": "piechart",
+          "title": "Funnel (répartition)",
+          "gridPos": {"x": 0, "y": 4, "w": 8, "h": 10},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=~\"created_success|stopped|in_progress|other\"}", "legendFormat": "{{stage}}", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Par statut canonique",
+          "gridPos": {"x": 8, "y": 4, "w": 8, "h": 10},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_customers_by_status", "legendFormat": "{{status}}", "refId": "A"}]
+        },
+        {
+          "type": "bargauge",
+          "title": "Progression KYC (cycles)",
+          "gridPos": {"x": 16, "y": 4, "w": 8, "h": 10},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "options": {"orientation": "horizontal", "displayMode": "lcd"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_customers_by_kyc_progress", "legendFormat": "{{kyc_status}}", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "In review",
+          "gridPos": {"x": 0, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_in_review", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Open tasks",
+          "gridPos": {"x": 4, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_open_tasks", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Open alerts",
+          "gridPos": {"x": 8, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_open_alerts", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Individuals",
+          "gridPos": {"x": 12, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_individuals", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Businesses",
+          "gridPos": {"x": 16, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_businesses", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Taux de succès %",
+          "gridPos": {"x": 20, "y": 14, "w": 4, "h": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1}},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "100 * clarity_users_funnel{stage=\"created_success\"} / clamp_min(clarity_users_funnel{stage=\"total\"}, 1)", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Funnel dans le temps",
+          "gridPos": {"x": 0, "y": 18, "w": 24, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "clarity_users_funnel{stage=~\"created_success|stopped|in_progress|total\"}", "legendFormat": "{{stage}}", "refId": "A"}]
+        }
+      ]
+    }

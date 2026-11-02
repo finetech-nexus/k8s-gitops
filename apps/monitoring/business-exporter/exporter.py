@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export functional-perimeter business KPIs to Prometheus (Clarity KYC + log heuristics)."""
+"""Export functional + technical business KPIs to Prometheus (Clarity KYC + ES + API pods)."""
 from __future__ import annotations
 
 import json
@@ -19,6 +19,19 @@ ES_USER = os.environ.get("ES_USER", "elastic")
 ES_PASSWORD = os.environ.get("ES_PASSWORD", "elasticSearchPas42")
 SCRAPE_SECONDS = int(os.environ.get("SCRAPE_SECONDS", "60"))
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "9105"))
+
+# Funnel buckets for Grafana functional dashboard.
+SUCCESS_STATUSES = {"approved", "approved-partially"}
+STOPPED_STATUSES = {"rejected", "expired", "cancelled", "abandoned"}
+IN_PROGRESS_STATUSES = {
+    "draft",
+    "collecting",
+    "screening_pending",
+    "in_review",
+    "documents_requested",
+    "remediation",
+    "pending",
+}
 
 _lock = threading.Lock()
 _metrics: dict[str, float] = {}
@@ -46,12 +59,16 @@ def _http_json(url: str, *, method: str = "GET", data: dict | None = None, heade
 def _set_gauge(name: str, value: float, labels: dict[str, str] | None = None):
     if labels:
         _labels.setdefault(name, [])
-        # replace same label set
         kept = [item for item in _labels[name] if item[0] != labels]
         kept.append((labels, float(value)))
         _labels[name] = kept
     else:
         _metrics[name] = float(value)
+
+
+def _reset_series(*names: str):
+    for name in names:
+        _labels[name] = []
 
 
 def scrape_clarity():
@@ -76,6 +93,7 @@ def scrape_clarity():
 
     status_counts: Counter[str] = Counter()
     kyc_status_counts: Counter[str] = Counter()
+    kind_counts: Counter[str] = Counter()
     offset = 0
     while True:
         page = _http_json(
@@ -86,31 +104,60 @@ def scrape_clarity():
         if not items:
             break
         for row in items:
-            status_counts[str(row.get("status") or "unknown")] += 1
-            kyc_status_counts[str(row.get("kyc_status") or "unknown")] += 1
+            status = str(row.get("status") or "unknown")
+            kyc_st = str(row.get("kyc_status") or "unknown")
+            kind = str(row.get("kind") or "unknown")
+            status_counts[status] += 1
+            kyc_status_counts[kyc_st] += 1
+            kind_counts[kind] += 1
         offset += len(items)
         if offset >= int(page.get("total") or offset):
             break
         if offset > 5000:
             break
 
-    # reset series for these metrics
-    _labels["clarity_customers_by_status"] = []
-    _labels["clarity_customers_by_kyc_progress"] = []
+    _reset_series(
+        "clarity_customers_by_status",
+        "clarity_customers_by_kyc_progress",
+        "clarity_customers_by_kind",
+        "clarity_users_funnel",
+    )
     for status, count in status_counts.items():
         _set_gauge("clarity_customers_by_status", count, {"perimeter": "kyc", "status": status})
     for status, count in kyc_status_counts.items():
         _set_gauge("clarity_customers_by_kyc_progress", count, {"perimeter": "kyc", "kyc_status": status})
+    for kind, count in kind_counts.items():
+        _set_gauge("clarity_customers_by_kind", count, {"perimeter": "kyc", "kind": kind})
+
+    success = sum(status_counts.get(s, 0) for s in SUCCESS_STATUSES)
+    stopped = sum(status_counts.get(s, 0) for s in STOPPED_STATUSES)
+    # KYC cycle expired/abandoned may only appear on kyc_status.
+    for s in ("expired", "abandoned", "cancelled"):
+        if status_counts.get(s, 0) == 0:
+            stopped += kyc_status_counts.get(s, 0)
+    in_progress = sum(status_counts.get(s, 0) for s in IN_PROGRESS_STATUSES)
+    other = max(0, sum(status_counts.values()) - success - stopped - in_progress)
+
+    _set_gauge("clarity_users_funnel", success, {"perimeter": "kyc", "stage": "created_success"})
+    _set_gauge("clarity_users_funnel", stopped, {"perimeter": "kyc", "stage": "stopped"})
+    _set_gauge("clarity_users_funnel", in_progress, {"perimeter": "kyc", "stage": "in_progress"})
+    _set_gauge("clarity_users_funnel", other, {"perimeter": "kyc", "stage": "other"})
+    _set_gauge("clarity_users_funnel", sum(status_counts.values()), {"perimeter": "kyc", "stage": "total"})
 
 
 def scrape_es_functional_logs():
-    """Log volume by functional_perimeter over the last 15m (needs ES up)."""
+    """Log volume by perimeter / namespace / level over the last 15m."""
     query = {
         "size": 0,
         "query": {"range": {"@timestamp": {"gte": "now-15m"}}},
         "aggs": {
-            "by_perimeter": {"terms": {"field": "functional_perimeter.keyword", "size": 20, "missing": "unknown"}},
-            "by_ns": {"terms": {"field": "k8s_namespace_name.keyword", "size": 30}},
+            "by_perimeter": {"terms": {"field": "functional_perimeter", "size": 20, "missing": "unknown"}},
+            "by_ns": {"terms": {"field": "k8s_namespace_name", "size": 40}},
+            "by_level": {"terms": {"field": "level", "size": 10, "missing": "unknown"}},
+            "errors": {
+                "filter": {"terms": {"level": ["error", "fatal", "ERROR", "FATAL"]}},
+                "aggs": {"by_ns": {"terms": {"field": "k8s_namespace_name", "size": 30}}},
+            },
         },
     }
     try:
@@ -122,14 +169,32 @@ def scrape_es_functional_logs():
             timeout=20,
         )
     except Exception:
-        # ES may be recovering; keep previous values
         return
-    _labels["logs_events_15m"] = []
-    for bucket in res.get("aggregations", {}).get("by_perimeter", {}).get("buckets", []):
+    _reset_series("logs_events_15m", "logs_events_15m_by_ns", "logs_events_15m_by_level", "logs_errors_15m_by_ns")
+    aggs = res.get("aggregations", {})
+    for bucket in aggs.get("by_perimeter", {}).get("buckets", []):
         _set_gauge(
             "logs_events_15m",
             bucket.get("doc_count", 0),
             {"perimeter": str(bucket.get("key") or "unknown"), "source": "logs-tn"},
+        )
+    for bucket in aggs.get("by_ns", {}).get("buckets", []):
+        _set_gauge(
+            "logs_events_15m_by_ns",
+            bucket.get("doc_count", 0),
+            {"namespace": str(bucket.get("key") or "unknown"), "source": "logs-tn"},
+        )
+    for bucket in aggs.get("by_level", {}).get("buckets", []):
+        _set_gauge(
+            "logs_events_15m_by_level",
+            bucket.get("doc_count", 0),
+            {"level": str(bucket.get("key") or "unknown"), "source": "logs-tn"},
+        )
+    for bucket in aggs.get("errors", {}).get("by_ns", {}).get("buckets", []):
+        _set_gauge(
+            "logs_errors_15m_by_ns",
+            bucket.get("doc_count", 0),
+            {"namespace": str(bucket.get("key") or "unknown"), "source": "logs-tn"},
         )
 
 
@@ -154,16 +219,24 @@ def render_prometheus() -> str:
     lines = [
         "# HELP business_exporter_up 1 if last scrape succeeded",
         "# TYPE business_exporter_up gauge",
-        "# HELP business_exporter_scrape_timestamp unix time of last successful parts",
-        "# TYPE business_exporter_scrape_timestamp gauge",
         "# HELP clarity_customers Clarity customers total",
         "# TYPE clarity_customers gauge",
-        "# HELP clarity_customers_by_status Customers grouped by canonical_status",
+        "# HELP clarity_customers_by_status Customers by canonical status",
         "# TYPE clarity_customers_by_status gauge",
-        "# HELP clarity_customers_by_kyc_progress Customers grouped by kyc cycle status (stuck funnel)",
+        "# HELP clarity_customers_by_kyc_progress Customers by KYC cycle status",
         "# TYPE clarity_customers_by_kyc_progress gauge",
+        "# HELP clarity_customers_by_kind Customers by kind (individual/business)",
+        "# TYPE clarity_customers_by_kind gauge",
+        "# HELP clarity_users_funnel User onboarding funnel stages",
+        "# TYPE clarity_users_funnel gauge",
         "# HELP logs_events_15m Log events in last 15m by functional perimeter",
         "# TYPE logs_events_15m gauge",
+        "# HELP logs_events_15m_by_ns Log events in last 15m by namespace",
+        "# TYPE logs_events_15m_by_ns gauge",
+        "# HELP logs_events_15m_by_level Log events in last 15m by level",
+        "# TYPE logs_events_15m_by_level gauge",
+        "# HELP logs_errors_15m_by_ns Error/fatal log events in last 15m by namespace",
+        "# TYPE logs_errors_15m_by_ns gauge",
     ]
     with _lock:
         for name, value in sorted(_metrics.items()):

@@ -43,13 +43,20 @@ data:
       description: Shared platform (ES/Kibana, Kafka, observability)
   business_kpis: |
     Grafana folder "Perimetres fonctionnels":
+      - Fonctionnel — parcours utilisateurs (success / stopped / in_progress)
       - KYC / Onboarding funnel (Clarity statuses + stuck kyc_progress)
       - Ops fonctionnelles (logs by functional_perimeter, Kong, restarts)
       - Perimetres fonctionnels (CPU/mem by domain namespaces)
+    Grafana folder "Technique":
+      - Technique — APIs (par service) — pick namespace + deployment
+      - Technique — cluster & nodes
+      - Kong API Gateway Metrics
     Kibana:
-      - Index logs-tn-* filter functional_perimeter:<domain>
+      - Index logs-tn-* / Logs · <namespace>
       - Index zeebe-* for payment/transfer workflows
     Prometheus metrics (business-exporter):
+      - clarity_users_funnel{stage=created_success|stopped|in_progress|total}
       - clarity_customers_by_status{status=...}
       - clarity_customers_by_kyc_progress{kyc_status=...}
       - logs_events_15m{perimeter=...}
+      - logs_events_15m_by_ns / logs_errors_15m_by_ns

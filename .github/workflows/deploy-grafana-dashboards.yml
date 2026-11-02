@@ -1,0 +1,31 @@
+name: Deploy Grafana dashboards
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Apply monitoring and restart exporter/grafana
+        run: |
+          set -euo pipefail
+          kubectl apply -k apps/monitoring
+          kubectl rollout restart deploy/business-exporter -n monitoring
+          kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring
+          kubectl rollout status deploy/business-exporter -n monitoring --timeout=3m
+          kubectl rollout status deploy/kube-prometheus-stack-grafana -n monitoring --timeout=5m
+          sleep 70
+          echo "===== business metrics ====="
+          kubectl exec -n monitoring deploy/business-exporter -- wget -qO- http://127.0.0.1:9105/metrics | grep -E 'clarity_users_funnel|clarity_customers_by_status|logs_events_15m_by' | head -40
+          echo "===== grafana dashboards ====="
+          GF=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
+          AUTH=$(printf 'admin:grafanaSandb0x' | base64 | tr -d '\n')
+          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
+            'http://127.0.0.1:3000/api/search?type=dash-db&query=Technique' | tr ',' '\n' | grep -E '"title"|"uid"|"folderTitle"' | head -30
+          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
+            'http://127.0.0.1:3000/api/search?type=dash-db&query=Fonctionnel' | tr ',' '\n' | grep -E '"title"|"uid"|"folderTitle"' | head -30
+          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
+            'http://127.0.0.1:3000/api/search?query=parcours' | tr ',' '\n' | grep -E '"title"|"uid"' | head -20
