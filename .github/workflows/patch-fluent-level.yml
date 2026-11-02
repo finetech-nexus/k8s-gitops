@@ -1,0 +1,98 @@
+name: Patch fluent level field
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Inject level into functional.lua
+        run: |
+          set -euo pipefail
+          kubectl get cm -n logging -o json > /tmp/cms.json
+          python3 <<'PY'
+          import json,sys
+          data=json.load(open("/tmp/cms.json"))
+          snippet = '''
+            local lvl = record["level"] or record["severity"] or record["log_level"] or record["LEVEL"]
+            if lvl == nil or lvl == "" then
+                local msg = string.upper(tostring(record["message"] or ""))
+                if string.find(msg, "FATAL", 1, true) or string.find(msg, "CRITICAL", 1, true) then
+                    lvl = "fatal"
+                elseif string.find(msg, "ERROR", 1, true) or string.find(msg, " ERR", 1, true) then
+                    lvl = "error"
+                elseif string.find(msg, "WARN", 1, true) then
+                    lvl = "warn"
+                elseif string.find(msg, "DEBUG", 1, true) or string.find(msg, " TRACE", 1, true) then
+                    lvl = "debug"
+                elseif string.find(msg, "INFO", 1, true) then
+                    lvl = "info"
+                else
+                    lvl = "unknown"
+                end
+            else
+                lvl = string.lower(tostring(lvl))
+            end
+            record["level"] = lvl
+'''
+          for item in data["items"]:
+            lua = (item.get("data") or {}).get("functional.lua")
+            if not lua: continue
+            name=item["metadata"]["name"]
+            if 'record["level"]' in lua:
+              print(f"{name}: already has level")
+              continue
+            if "return 1, timestamp, record" not in lua:
+              print(f"{name}: no return marker"); continue
+            new = lua.replace(
+              "return 1, timestamp, record",
+              snippet + "\n            return 1, timestamp, record",
+              1,
+            )
+            item["data"]["functional.lua"] = new
+            open("/tmp/cm-patch.json","w").write(json.dumps({"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":name,"namespace":"logging"},"data":item["data"]}))
+            print(f"PATCH {name}")
+          PY
+          if [ -f /tmp/cm-patch.json ]; then
+            kubectl apply -f /tmp/cm-patch.json
+          fi
+          # Also try all cms with functional.lua via loop
+          for name in $(kubectl get cm -n logging -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+            if kubectl get cm -n logging "$name" -o jsonpath='{.data.functional\.lua}' 2>/dev/null | grep -q 'functional_perimeter'; then
+              if ! kubectl get cm -n logging "$name" -o jsonpath='{.data.functional\.lua}' | grep -q 'record\["level"\]'; then
+                kubectl get cm -n logging "$name" -o json > /tmp/one.json
+                python3 - <<'PY'
+          import json
+          o=json.load(open("/tmp/one.json"))
+          lua=o["data"]["functional.lua"]
+          sn='''            local lvl = record["level"] or record["severity"] or record["log_level"] or record["LEVEL"]
+            if lvl == nil or lvl == "" then
+                local msg = string.upper(tostring(record["message"] or ""))
+                if string.find(msg, "FATAL", 1, true) or string.find(msg, "CRITICAL", 1, true) then lvl = "fatal"
+                elseif string.find(msg, "ERROR", 1, true) or string.find(msg, " ERR", 1, true) then lvl = "error"
+                elseif string.find(msg, "WARN", 1, true) then lvl = "warn"
+                elseif string.find(msg, "DEBUG", 1, true) then lvl = "debug"
+                elseif string.find(msg, "INFO", 1, true) then lvl = "info"
+                else lvl = "unknown" end
+            else lvl = string.lower(tostring(lvl)) end
+            record["level"] = lvl
+'''
+                if 'record["level"]' not in lua:
+                  o["data"]["functional.lua"]=lua.replace("return 1, timestamp, record", sn+"\n            return 1, timestamp, record",1)
+                  json.dump({"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":o["metadata"]["name"],"namespace":"logging"},"data":o["data"]}, open("/tmp/out.json","w"))
+                  print("write", o["metadata"]["name"])
+          PY
+                [ -f /tmp/out.json ] && kubectl apply -f /tmp/out.json && rm -f /tmp/out.json
+              fi
+            fi
+          done
+          kubectl get cm -n logging -o yaml | grep -c 'record\["level"\]' || true
+          kubectl rollout restart ds/fluent-bit-tn -n logging
+          kubectl rollout status ds/fluent-bit-tn -n logging --timeout=3m
+          sleep 30
+          kubectl delete pod v-lvl -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run v-lvl --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch:9200/logs-tn-*/_search?size=3&sort=@timestamp:desc&_source=level,message,k8s_namespace_name"
+          '
