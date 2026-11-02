@@ -7,63 +7,53 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Verify logs + metrics paths
+      - name: Inject level + verify dashboards and logs
         run: |
           set +e
-          # Ensure Flux values land: restart grafana after ConfigMap/secret refresh
-          kubectl annotate helmrelease -n monitoring kube-prometheus-stack reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || true
-          kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring || true
-          sleep 20
-          kubectl rollout status deploy/kube-prometheus-stack-grafana -n monitoring --timeout=3m || true
-
-          echo "===== PODS ====="
-          kubectl get pods -n infra | grep -iE 'elastic|kibana'
-          kubectl get pods -n monitoring | grep -iE 'prometheus|grafana|business'
-          kubectl get pods -n logging | grep fluent
-
-          echo "===== ES ====="
-          kubectl delete pod v-es -n infra --ignore-not-found --wait=false
-          sleep 2
-          kubectl run v-es --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
-            AUTH=elastic:elasticSearchPas42
-            curl -sf -u $AUTH -X PUT "http://infra-elasticsearch:9200/.kibana*/_settings" -H "Content-Type: application/json" -d "{\"index\":{\"number_of_replicas\":0}}" || true
-            curl -sf -u $AUTH "http://infra-elasticsearch:9200/_cluster/health?pretty"
-            echo
-            curl -sf -u $AUTH "http://infra-elasticsearch:9200/logs-tn-*/_count"; echo
-            curl -sf -u $AUTH "http://infra-elasticsearch:9200/logs-tn-*/_search?size=1&sort=@timestamp:desc" | head -c 1200; echo
+          kubectl get cm -n logging -o json | python3 -c '
+          import json, subprocess, sys
+          data = json.load(sys.stdin)
+          sn = """            local lvl = record[\"level\"] or record[\"severity\"] or record[\"log_level\"] or record[\"LEVEL\"]
+            if lvl == nil or lvl == \"\" then
+                local msg = string.upper(tostring(record[\"message\"] or \"\"))
+                if string.find(msg, \"FATAL\", 1, true) or string.find(msg, \"CRITICAL\", 1, true) then lvl = \"fatal\"
+                elseif string.find(msg, \"ERROR\", 1, true) or string.find(msg, \" ERR\", 1, true) then lvl = \"error\"
+                elseif string.find(msg, \"WARN\", 1, true) then lvl = \"warn\"
+                elseif string.find(msg, \"DEBUG\", 1, true) then lvl = \"debug\"
+                elseif string.find(msg, \"INFO\", 1, true) then lvl = \"info\"
+                else lvl = \"unknown\" end
+            else lvl = string.lower(tostring(lvl)) end
+            record[\"level\"] = lvl
+"""
+          for item in data["items"]:
+              lua = (item.get("data") or {}).get("functional.lua")
+              if not lua: continue
+              name = item["metadata"]["name"]
+              if "record[\"level\"]" in lua:
+                  print(name, "already ok"); continue
+              if "return 1, timestamp, record" not in lua:
+                  continue
+              new = lua.replace("return 1, timestamp, record", sn + "\n            return 1, timestamp, record", 1)
+              payload = {"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":name,"namespace":"logging"},"data":{**item["data"],"functional.lua":new}}
+              p = subprocess.run(["kubectl","apply","-f","-"], input=json.dumps(payload).encode(), capture_output=True)
+              print("patched", name, p.returncode)
           '
-
-          echo "===== PROM ====="
-          PROM=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].metadata.name}')
-          echo "prom=$PROM"
-          kubectl get pod -n monitoring "$PROM" -o wide
-          kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/-/ready'
-          echo
-          kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=count(up)'
-          echo
-          kubectl exec -n monitoring "$PROM" -c prometheus -- wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=business_exporter_up%20or%20up{job="business-exporter"}'
-          echo
-
-          echo "===== GRAFANA DS (basic auth header) ====="
+          kubectl rollout restart ds/fluent-bit-tn -n logging
+          sleep 25
+          kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring
+          sleep 20
           GF=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
           AUTH=$(printf 'admin:grafanaSandb0x' | base64 | tr -d '\n')
-          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" http://127.0.0.1:3000/api/datasources
-          echo
-          echo "--- Prometheus query via Grafana ---"
-          # Discover prometheus datasource uid/id
-          DS=$(kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" http://127.0.0.1:3000/api/datasources)
-          echo "$DS" | head -c 2500; echo
-          # Try proxy by name path
+          echo "===== dashboards ====="
           kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
-            --header='Content-Type: application/json' \
-            --post-data='{"queries":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"count(up)","instant":true}],"from":"now-5m","to":"now"}' \
-            http://127.0.0.1:3000/api/ds/query | head -c 1500
-          echo
-          echo "--- ES Logs-TN via Grafana ---"
-          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
-            'http://127.0.0.1:3000/api/datasources/proxy/uid/Logs-TN/_cluster/health' 2>&1 | head -c 500
-          echo
-          # Fallback: find Logs-TN id
-          kubectl exec -n monitoring "$GF" -c grafana -- wget -qO- --header="Authorization: Basic $AUTH" \
-            'http://127.0.0.1:3000/api/datasources/name/Logs-TN' 2>&1 | head -c 800
-          echo
+            'http://127.0.0.1:3000/api/search?type=dash-db' | tr ',' '\n' | grep '"title"' | head -40
+          echo "===== rules ====="
+          kubectl get prometheusrule -n monitoring
+          echo "===== app/api counts + level sample ====="
+          kubectl delete pod v-obs -n infra --ignore-not-found --wait=false
+          sleep 2
+          kubectl run v-obs --rm -i --restart=Never -n infra --image=curlimages/curl:8.10.1 -- sh -c '
+            AUTH=elastic:elasticSearchPas42
+            for a in logs-ns-app logs-ns-api; do echo -n "$a "; curl -sf -u $AUTH http://infra-elasticsearch:9200/$a/_count; echo; done
+            curl -sf -u $AUTH "http://infra-elasticsearch:9200/logs-tn-*/_search?size=2&sort=@timestamp:desc&_source=level,message,k8s_namespace_name"
+          '
