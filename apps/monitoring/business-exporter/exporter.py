@@ -254,23 +254,45 @@ def _field_candidates(*names: str) -> list[str]:
     return out
 
 
-def _terms_agg_first_working(index: str, query_must: list, field_candidates: list[str], size: int = 40) -> list[dict]:
+def _rewrite_must_fields(must: list, mapping: dict[str, str]) -> list:
+    out = []
+    for clause in must:
+        cloned = json.loads(json.dumps(clause))
+        for kind in ("term", "terms"):
+            if kind in cloned:
+                key = next(iter(cloned[kind].keys()))
+                if key in mapping:
+                    cloned[kind] = {mapping[key]: cloned[kind][key]}
+        out.append(cloned)
+    return out
+
+
+def _terms_agg_first_working(
+    index: str,
+    query_must: list,
+    field_candidates: list[str],
+    size: int = 40,
+    must_field_variants: list[dict[str, str]] | None = None,
+) -> list[dict]:
     """Try keyword/non-keyword field variants until one aggregation returns."""
     last_err = None
-    for field in field_candidates:
-        try:
-            res = _es(
-                f"{index}/_search",
-                {
-                    "size": 0,
-                    "query": {"bool": {"must": query_must}},
-                    "aggs": {"t": {"terms": {"field": field, "size": size}}},
-                },
-            )
-            return res.get("aggregations", {}).get("t", {}).get("buckets", [])
-        except Exception as exc:  # noqa: BLE001
-            last_err = exc
-            continue
+    variants = must_field_variants or [{}]
+    for variant in variants:
+        must = _rewrite_must_fields(query_must, variant) if variant else query_must
+        for field in field_candidates:
+            try:
+                res = _es(
+                    f"{index}/_search",
+                    {
+                        "size": 0,
+                        "query": {"bool": {"must": must}},
+                        "aggs": {"t": {"terms": {"field": field, "size": size}}},
+                    },
+                )
+                return res.get("aggregations", {}).get("t", {}).get("buckets", [])
+            except Exception as exc:  # noqa: BLE001
+                last_err = exc
+                continue
     if last_err:
         raise last_err
     return []
@@ -286,6 +308,16 @@ def scrape_zeebe_transfers():
     )
     _reset_series(*series)
 
+    intent_variants = [
+        {},
+        {"intent": "intent.keyword", "value.bpmnElementType": "value.bpmnElementType.keyword"},
+    ]
+    # Prefer broad zeebe-* then typed indices; keyword fields first (TN mapping).
+    indices = ["zeebe-*", "zeebe-record_process-instance*", "zeebe-record_process-instance-creation*"]
+    bpmn_fields = _field_candidates("value.bpmnProcessId")
+    # keyword first
+    bpmn_fields = sorted(bpmn_fields, key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+
     # Completed + failed root process instances in window
     outcomes = {
         "completed": ["ELEMENT_COMPLETED"],
@@ -298,15 +330,20 @@ def scrape_zeebe_transfers():
             {"term": {"value.bpmnElementType": "PROCESS"}},
             {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
         ]
-        try:
-            buckets = _terms_agg_first_working(
-                "zeebe-record_process-instance*",
-                must,
-                _field_candidates("value.bpmnProcessId"),
-                size=40,
-            )
-        except Exception:
-            buckets = []
+        buckets: list[dict] = []
+        for index in indices:
+            try:
+                buckets = _terms_agg_first_working(
+                    index,
+                    must,
+                    bpmn_fields,
+                    size=40,
+                    must_field_variants=intent_variants,
+                )
+            except Exception:
+                buckets = []
+            if buckets:
+                break
         for bucket in buckets:
             bpmn = str(bucket.get("key") or "unknown")
             ctx, direction, perimeter, family, process = _classify_process(bpmn)
@@ -321,7 +358,6 @@ def scrape_zeebe_transfers():
                 "window": WINDOW,
             }
             _set_gauge("payment_ops_by_process", count, labels)
-            # Rollup without process label for dashboard stats
             rollup = {
                 "perimeter": perimeter,
                 "context": ctx,
@@ -330,7 +366,6 @@ def scrape_zeebe_transfers():
                 "outcome": outcome,
                 "window": WINDOW,
             }
-            # accumulate into payment_ops_count by merging same labels
             existing = 0.0
             for lab, val in _labels.get("payment_ops_count", []):
                 if lab == rollup:
@@ -343,15 +378,21 @@ def scrape_zeebe_transfers():
         {"terms": {"intent": ["FAILED", "TIMED_OUT", "ERROR_THROWN"]}},
         {"range": {"timestamp": {"gte": f"now-{WINDOW}"}}},
     ]
-    try:
-        by_bpmn = _terms_agg_first_working(
-            "zeebe-record_job*",
-            must_jobs,
-            _field_candidates("value.bpmnProcessId"),
-            size=40,
-        )
-    except Exception:
-        by_bpmn = []
+    job_indices = ["zeebe-*", "zeebe-record_job*"]
+    by_bpmn: list[dict] = []
+    for index in job_indices:
+        try:
+            by_bpmn = _terms_agg_first_working(
+                index,
+                must_jobs,
+                bpmn_fields,
+                size=40,
+                must_field_variants=intent_variants,
+            )
+        except Exception:
+            by_bpmn = []
+        if by_bpmn:
+            break
     for bucket in by_bpmn:
         bpmn = str(bucket.get("key") or "unknown")
         ctx, direction, perimeter, family, process = _classify_process(bpmn)
@@ -369,15 +410,21 @@ def scrape_zeebe_transfers():
             },
         )
 
-    try:
-        by_type = _terms_agg_first_working(
-            "zeebe-record_job*",
-            must_jobs,
-            _field_candidates("value.type"),
-            size=40,
-        )
-    except Exception:
-        by_type = []
+    type_fields = sorted(_field_candidates("value.type"), key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+    by_type: list[dict] = []
+    for index in job_indices:
+        try:
+            by_type = _terms_agg_first_working(
+                index,
+                must_jobs,
+                type_fields,
+                size=40,
+                must_field_variants=intent_variants,
+            )
+        except Exception:
+            by_type = []
+        if by_type:
+            break
     for bucket in by_type:
         job_type = str(bucket.get("key") or "unknown")
         _set_gauge(
@@ -392,15 +439,20 @@ def scrape_zeebe_transfers():
         )
 
     # Intent breakdown for problem severity
-    try:
-        by_intent = _terms_agg_first_working(
-            "zeebe-record_job*",
-            [{"range": {"timestamp": {"gte": f"now-{WINDOW}"}}}],
-            _field_candidates("intent"),
-            size=20,
-        )
-    except Exception:
-        by_intent = []
+    intent_fields = sorted(_field_candidates("intent"), key=lambda f: (0 if f.endswith(".keyword") else 1, f))
+    by_intent: list[dict] = []
+    for index in job_indices:
+        try:
+            by_intent = _terms_agg_first_working(
+                index,
+                [{"range": {"timestamp": {"gte": f"now-{WINDOW}"}}}],
+                intent_fields,
+                size=20,
+            )
+        except Exception:
+            by_intent = []
+        if by_intent:
+            break
     _reset_series("payment_zeebe_intent_count")
     for bucket in by_intent:
         intent = str(bucket.get("key") or "unknown")

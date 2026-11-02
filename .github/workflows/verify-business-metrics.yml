@@ -1,0 +1,25 @@
+name: Verify business metrics
+on:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Wait reconcile and scrape metrics
+        run: |
+          set +e
+          kubectl -n monitoring rollout status deploy/business-exporter --timeout=180s
+          # force reload configmap mount by restarting if exporter too old
+          kubectl -n monitoring rollout restart deploy/business-exporter
+          kubectl -n monitoring rollout status deploy/business-exporter --timeout=180s
+          sleep 70
+          kubectl delete pod be-metrics -n monitoring --ignore-not-found --wait=false
+          sleep 2
+          kubectl run be-metrics --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- \
+            sh -c 'curl -sf http://business-exporter.monitoring.svc.cluster.local:9105/metrics' \
+            | tee /tmp/m.txt | rg -n 'payment_ops_|card_payment_|topup_|subscription_|product_ops_|perimeter_problems_|transfer_amount_|business_exporter_' | head -120
+          echo "---- counts ----"
+          rg -c 'payment_ops_count|card_payment_amount|topup_events|subscription_events' /tmp/m.txt || true
