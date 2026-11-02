@@ -300,8 +300,9 @@ def _terms_agg_first_working(
     size: int = 40,
     must_field_variants: list[dict[str, str]] | None = None,
 ) -> list[dict]:
-    """Try keyword/non-keyword field variants until one aggregation returns."""
+    """Try keyword/non-keyword field variants until one aggregation returns buckets."""
     last_err = None
+    last_empty: list[dict] = []
     variants = must_field_variants or [{}]
     for variant in variants:
         must = _rewrite_must_fields(query_must, variant) if variant else query_must
@@ -315,13 +316,18 @@ def _terms_agg_first_working(
                         "aggs": {"t": {"terms": {"field": field, "size": size}}},
                     },
                 )
-                return res.get("aggregations", {}).get("t", {}).get("buckets", [])
+                buckets = res.get("aggregations", {}).get("t", {}).get("buckets", []) or []
+                if buckets:
+                    return buckets
+                last_empty = buckets
             except Exception as exc:  # noqa: BLE001
                 last_err = exc
                 continue
-    if last_err:
+    if last_empty is not None and not last_err:
+        return last_empty
+    if last_err and not last_empty:
         raise last_err
-    return []
+    return last_empty
 
 
 def scrape_zeebe_transfers():

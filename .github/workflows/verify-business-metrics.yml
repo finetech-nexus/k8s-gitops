@@ -8,23 +8,34 @@ jobs:
       - uses: azure/k8s-set-context@v4
         with:
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - uses: actions/checkout@v4
       - name: Wait reconcile and scrape metrics
         run: |
           set +e
-          kubectl -n monitoring rollout status deploy/business-exporter --timeout=180s
-          # force reload configmap mount by restarting if exporter too old
+          # Apply exporter script immediately (don't wait for Flux) so verify hits the commit under test.
+          kubectl -n monitoring create configmap business-exporter \
+            --from-file=exporter.py=apps/monitoring/business-exporter/exporter.py \
+            --dry-run=client -o yaml | kubectl apply -f -
           kubectl -n monitoring rollout restart deploy/business-exporter
           kubectl -n monitoring rollout status deploy/business-exporter --timeout=180s
-          sleep 70
+          sleep 75
           kubectl delete pod be-metrics -n monitoring --ignore-not-found --wait=false
           sleep 2
           kubectl run be-metrics --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- \
             sh -c 'curl -sf http://business-exporter.monitoring.svc.cluster.local:9105/metrics' \
-            | tee /tmp/m.txt | grep -E 'payment_ops_|card_payment_|topup_|subscription_|product_ops_|perimeter_problems_|transfer_amount_|business_exporter_' | head -160
-          echo "---- counts ----"
-          grep -cE 'payment_ops_count\{|card_payment_amount\{|topup_events\{|subscription_events\{' /tmp/m.txt || true
-          echo "---- sample payment_ops ----"
-          grep 'payment_ops_count{' /tmp/m.txt | head -30 || true
-          echo "---- sample card ----"
-          grep 'card_payment_' /tmp/m.txt | head -30 || true
+            > /tmp/m.txt
+          echo "---- payment_ops ----"
+          grep 'payment_ops_count{' /tmp/m.txt | head -40 || true
+          echo "---- payment_problems ----"
+          grep -E 'payment_ops_problems\{|payment_job_problems\{' /tmp/m.txt | head -40 || true
+          echo "---- transfer amounts ----"
+          grep 'transfer_amount_' /tmp/m.txt | head -40 || true
+          echo "---- card ----"
+          grep 'card_payment_amount{' /tmp/m.txt | head -20 || true
+          echo "---- topup/subscription ----"
+          grep -E 'topup_events\{|subscription_events\{' /tmp/m.txt | head -20 || true
+          echo "---- exporter ----"
+          grep -E 'business_exporter_up|partial_errors|# error' /tmp/m.txt | head -20 || true
           test -s /tmp/m.txt
+          grep -q 'payment_ops_count{' /tmp/m.txt
+          grep -q 'card_payment_amount{' /tmp/m.txt

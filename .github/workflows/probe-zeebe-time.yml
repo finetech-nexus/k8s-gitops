@@ -1,0 +1,38 @@
+name: Probe Zeebe time filter
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Probe
+        run: |
+          set +e
+          kubectl delete pod zb-probe -n monitoring --ignore-not-found --wait=false
+          sleep 2
+          GTE=$(python3 -c 'import time; print(int(time.time()*1000) - 86400000)')
+          echo "GTE_MS=$GTE"
+          kubectl run zb-probe --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 --env="GTE=$GTE" -- sh -c '
+          ES="http://infra-elasticsearch.infra.svc.cluster.local:9200"
+          AUTH="-u elastic:elasticSearchPas42"
+          echo "=== mapping sample timestamp ==="
+          curl -sf $AUTH "$ES/zeebe-record_process-instance*/_mapping" | head -c 1500
+          echo
+          echo "=== sample doc ==="
+          curl -sf $AUTH "$ES/zeebe-*/_search" -H "Content-Type: application/json" -d "{\"size\":1,\"sort\":[{\"timestamp\":{\"order\":\"desc\"}}]}" | head -c 2000
+          echo
+          echo "=== agg bpmn keyword no time ==="
+          curl -sf $AUTH "$ES/zeebe-*/_search" -H "Content-Type: application/json" -d "{\"size\":0,\"aggs\":{\"t\":{\"terms\":{\"field\":\"value.bpmnProcessId.keyword\",\"size\":15}}}}" | head -c 2000
+          echo
+          echo "=== agg with epoch gte=$GTE ==="
+          curl -sf $AUTH "$ES/zeebe-*/_search" -H "Content-Type: application/json" -d "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"terms\":{\"intent.keyword\":[\"ELEMENT_COMPLETED\"]}},{\"range\":{\"timestamp\":{\"gte\":$GTE}}}]}},\"aggs\":{\"t\":{\"terms\":{\"field\":\"value.bpmnProcessId.keyword\",\"size\":15}}}}" | head -c 2500
+          echo
+          echo "=== agg intent without keyword + epoch ==="
+          curl -sf $AUTH "$ES/zeebe-record_process-instance*/_search" -H "Content-Type: application/json" -d "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"terms\":{\"intent\":[\"ELEMENT_COMPLETED\"]}},{\"term\":{\"value.bpmnElementType\":\"PROCESS\"}},{\"range\":{\"timestamp\":{\"gte\":$GTE}}}]}},\"aggs\":{\"t\":{\"terms\":{\"field\":\"value.bpmnProcessId\",\"size\":15}}}}" | head -c 2500
+          echo
+          echo "=== exporter metrics payment lines ==="
+          curl -sf http://business-exporter.monitoring.svc.cluster.local:9105/metrics | grep payment_ | head -40
+          '
