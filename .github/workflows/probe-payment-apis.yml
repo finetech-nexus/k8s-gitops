@@ -1,0 +1,42 @@
+name: Probe payment APIs
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/k8s-set-context@v4
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      - name: Probe services
+        run: |
+          set +e
+          echo "===== services ====="
+          kubectl get svc -n payment-hub | head -40
+          kubectl get svc -n api | grep -iE 'mt|card|subscr|swift|sibtel' | head -30
+          kubectl delete pod pay-probe -n monitoring --ignore-not-found --wait=false
+          sleep 2
+          kubectl run pay-probe --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- sh -c '
+            echo "=== zeebe indices ==="
+            curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch.infra.svc.cluster.local:9200/_cat/indices/zeebe*?v" | head -20
+            echo
+            echo "=== zeebe bpmnProcessId sample aggs ==="
+            curl -sf -u elastic:elasticSearchPas42 "http://infra-elasticsearch.infra.svc.cluster.local:9200/zeebe-*/_search" \
+              -H "Content-Type: application/json" -d "{\"size\":0,\"aggs\":{\"bpmn\":{\"terms\":{\"field\":\"value.bpmnProcessId.keyword\",\"size\":30}},\"intent\":{\"terms\":{\"field\":\"intent.keyword\",\"size\":20}}}}" | head -c 2500
+            echo
+            for u in \
+              "http://ph-ee-operations-app.payment-hub.svc.cluster.local/api/v1/transfers?size=5" \
+              "http://ph-ee-operations-app.payment-hub:80/api/v1/transfers?size=5" \
+              "http://operations-app.payment-hub.svc.cluster.local/api/v1/transfers?size=5" \
+              "http://core-api-mt-api.api.svc.cluster.local/api/transactions?size=5" \
+              "http://core-api-mt-api.api.svc.cluster.local:8080/api/transactions?size=5" \
+              "http://core-api-subscription-api.api.svc.cluster.local/api/subscriptions" \
+              "http://core-api-subscription-api.api.svc.cluster.local:8080/api/subscriptions" \
+              "http://core-api-card-management-api.api.svc.cluster.local/api/cards" \
+              "http://core-api-card-management-api.api.svc.cluster.local:8080/api/cards"
+            do
+              code=$(curl -s -o /tmp/b -w "%{http_code}" -m 5 "$u")
+              echo "HTTP $code $u"
+              head -c 300 /tmp/b; echo; echo "---"
+            done
+          '
