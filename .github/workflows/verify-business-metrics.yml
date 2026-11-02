@@ -16,9 +16,10 @@ jobs:
           kubectl -n monitoring create configmap business-exporter \
             --from-file=exporter.py=apps/monitoring/business-exporter/exporter.py \
             --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n monitoring set env deploy/business-exporter METRICS_WINDOW=7d
           kubectl -n monitoring rollout restart deploy/business-exporter
           kubectl -n monitoring rollout status deploy/business-exporter --timeout=180s
-          sleep 75
+          sleep 90
           kubectl delete pod be-metrics -n monitoring --ignore-not-found --wait=false
           sleep 2
           kubectl run be-metrics --rm -i --restart=Never -n monitoring --image=curlimages/curl:8.10.1 -- \
