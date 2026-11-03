@@ -651,7 +651,7 @@ card-management-api:
   replicaCount: 1
   image:
     repository: nexusbank/card-management-api
-    tag: "latest"
+    tag: "5ca5dc8"
     pullPolicy: Always
   env:
     PORT: "3000"
@@ -660,7 +660,7 @@ card-management-api:
     PRODUIT_API_URL: "http://core-api-produit-api"
     MT_API_URL: "http://core-api-mt-api"
     PROCESSOR: mock
-    DEPLOYED_AT: "2026-10-14T20:10:00Z"
+    DEPLOYED_AT: "2026-11-03T18:40:00Z"
   service:
     type: ClusterIP
     port: 80
