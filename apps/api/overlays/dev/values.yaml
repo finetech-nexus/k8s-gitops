@@ -651,7 +651,7 @@ card-management-api:
   replicaCount: 1
   image:
     repository: nexusbank/card-management-api
-    tag: "5ca5dc8"
+    tag: "e4ec5a2"
     pullPolicy: Always
   env:
     PORT: "3000"
@@ -660,7 +660,8 @@ card-management-api:
     PRODUIT_API_URL: "http://core-api-produit-api"
     MT_API_URL: "http://core-api-mt-api"
     PROCESSOR: mock
-    DEPLOYED_AT: "2026-11-03T18:40:00Z"
+    CARD_DATA_DIR: "/data"
+    DEPLOYED_AT: "2026-11-03T18:58:00Z"
   service:
     type: ClusterIP
     port: 80
@@ -680,6 +681,13 @@ card-management-api:
       - hosts:
           - card-management-api.api.dev.sandbox.internal.nbank.fr
         secretName: card-management-api-dev-tls
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClass: ""
+    mountPath: /data
   resources: {}
   livenessProbe:
     enabled: true
