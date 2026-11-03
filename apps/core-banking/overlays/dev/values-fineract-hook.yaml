@@ -6,7 +6,7 @@ replicaCount: 1
 #      - "iam.nexus-bank.io"
 image:
   repository: docker.io/nexusbank/fineract-hook-api
-  tag: "latest"
+  tag: "1f6c79a"
   pullPolicy: Always
 
 env:
