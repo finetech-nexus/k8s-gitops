@@ -369,7 +369,7 @@ notification-api:
   replicaCount: 1
   image:
     repository: nexusbank/notification-api
-    tag: "ae245f4"
+    tag: "3799f1d"
     pullPolicy: Always
   env:
     PORT: "8080"
