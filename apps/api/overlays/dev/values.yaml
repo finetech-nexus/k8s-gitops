@@ -320,7 +320,7 @@ notification-app:
   replicaCount: 1
   image:
     repository: nexusbank/notification-app
-    tag: "eea4ba9"
+    tag: "latest"
     pullPolicy: Always
   env:
     API_UPSTREAM: "http://core-api-notification-api"
@@ -369,7 +369,7 @@ notification-api:
   replicaCount: 1
   image:
     repository: nexusbank/notification-api
-    tag: "8557b3a"
+    tag: "latest"
     pullPolicy: Always
   env:
     PORT: "8080"

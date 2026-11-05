@@ -1,7 +1,7 @@
 #!/bin/sh
-# Reopen Zeebe indices and drop a non-object fineractResponseBody before indexing.
-# A closed index hides every process in Operate. A string in an object field
-# makes the exporter reject the whole bulk and retry forever.
+# Reopen Zeebe indices and normalize variable fields before indexing.
+# A closed index hides every process in Operate. A value whose type does not
+# match the existing mapping makes the exporter reject the whole bulk and retry forever.
 set -u
 es=http://infra-elasticsearch.infra.svc.cluster.local:9200
 fail=0
@@ -13,7 +13,12 @@ echo
 echo "===== pipeline"
 curl -sS -m 30 -X PUT "$es/_ingest/pipeline/zeebe-drop-scalar-fineract-body" \
   -H "Content-Type: application/json" \
-  -d '{"description":"Drop fineractResponseBody when Zeebe stored it as text","processors":[{"script":{"lang":"painless","source":"if (ctx.value instanceof java.util.Map && ctx.value.variables instanceof java.util.Map && ctx.value.variables.fineractResponseBody != null && !(ctx.value.variables.fineractResponseBody instanceof java.util.Map)) { ctx.value.variables.remove(\"fineractResponseBody\"); }"}}]}' \
+  -d '{"description":"Text amount indices: drop a scalar fineract body and store a map amount as its inner value","processors":[{"script":{"lang":"painless","source":"if (ctx.value instanceof java.util.Map && ctx.value.variables instanceof java.util.Map) { if (ctx.value.variables.fineractResponseBody != null && !(ctx.value.variables.fineractResponseBody instanceof java.util.Map)) { ctx.value.variables.remove(\"fineractResponseBody\"); } if (ctx.value.variables.amount instanceof java.util.Map) { def inner = ctx.value.variables.amount.amount; ctx.value.variables.amount = inner == null ? null : inner.toString(); if (ctx.value.variables.amount == null) { ctx.value.variables.remove(\"amount\"); } } }"}}]}' \
+  || fail=1
+echo
+curl -sS -m 30 -X PUT "$es/_ingest/pipeline/zeebe-keep-amount-object" \
+  -H "Content-Type: application/json" \
+  -d '{"description":"Object amount indices: drop a scalar fineract body and a scalar amount","processors":[{"script":{"lang":"painless","source":"if (ctx.value instanceof java.util.Map && ctx.value.variables instanceof java.util.Map) { if (ctx.value.variables.fineractResponseBody != null && !(ctx.value.variables.fineractResponseBody instanceof java.util.Map)) { ctx.value.variables.remove(\"fineractResponseBody\"); } if (ctx.value.variables.amount != null && !(ctx.value.variables.amount instanceof java.util.Map)) { ctx.value.variables.remove(\"amount\"); } }"}}]}' \
   || fail=1
 echo
 
@@ -44,6 +49,21 @@ curl -sS -m 30 "$es/_cat/indices?h=status,index&expand_wildcards=all" | grep -E 
         -H "Content-Type: application/json" \
         -d '{"index.default_pipeline":"zeebe-drop-scalar-fineract-body"}' \
         || echo "pipeline $idx" >> /tmp/repair-fail
+      echo
+      ;;
+  esac
+done
+echo "===== amount object indices"
+curl -sS -m 30 "$es/_cat/indices?h=index&expand_wildcards=open" | grep '^zeebe-record' | while read -r idx; do
+  [ -n "$idx" ] || continue
+  mapping=$(curl -sS -m 20 "$es/$idx/_mapping")
+  case "$mapping" in
+    *'"amount":{"properties":{"amount"'*)
+      echo "object pipeline $idx"
+      curl -sS -m 30 -X PUT "$es/$idx/_settings" \
+        -H "Content-Type: application/json" \
+        -d '{"index.default_pipeline":"zeebe-keep-amount-object"}' \
+        || echo "object pipeline $idx" >> /tmp/repair-fail
       echo
       ;;
   esac

@@ -49,7 +49,7 @@ extraEnv: |
   - name: APNS_KEY_ID
     value: "DR87HJDF7P"
   - name: APNS_BUNDLE_ID
-    value: "com.deepmind.fintech.nexusbank"
+    value: "com.finexus.nexusbank"
   - name: APNS_PRODUCTION
     value: "false"
   - name: APNS_PRIVATE_KEY
