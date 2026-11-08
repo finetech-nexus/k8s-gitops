@@ -16,7 +16,7 @@ EXTRA_ARGS=("$@")
 
 if [ -z "$APP" ] || [ "$APP" = "-h" ] || [ "$APP" = "--help" ]; then
   echo "Usage: $0 <app> [--force]"
-  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kong | payment-hub | docs | finexus-web | coredns-custom | infra-eu | core-banking-eu | payment-hub-eu | api-eu | kyc-eu | all"
+  echo "  app: flux-system | sources | cert-manager | ingress-nginx | platform | infra | iam | core-banking | api | app | kyc | kyc-aml | kong | payment-hub | docs | finexus-web | coredns-custom | infra-eu | core-banking-eu | payment-hub-eu | api-eu | kyc-eu | all"
   exit 0
 fi
 
@@ -111,6 +111,10 @@ case "$APP" in
     reconcile_kustomization kyc "${EXTRA_ARGS[@]}"
     reconcile_helmreleases kyc "${EXTRA_ARGS[@]}"
     ;;
+  kyc-aml)
+    echo "==> Reconcile - kyc-aml (Clarity)"
+    flux reconcile kustomization kyc-aml -n flux-system --timeout=3m "${EXTRA_ARGS[@]}" || true
+    ;;
   kong)
     echo "==> Reconcile - kong"
     reconcile_kustomization kong --timeout=5m "${EXTRA_ARGS[@]}"
@@ -163,7 +167,7 @@ case "$APP" in
     ;;
   all)
     echo "==> Reconcile all apps"
-    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kong payment-hub docs finexus-web coredns-custom infra-eu core-banking-eu payment-hub-eu api-eu kyc-eu; do
+    for a in flux-system sources cert-manager ingress-nginx platform infra iam core-banking api app kyc kyc-aml kong payment-hub docs finexus-web coredns-custom infra-eu core-banking-eu payment-hub-eu api-eu kyc-eu; do
       "$REPO_ROOT/scripts/reconcile.sh" "$a" "${EXTRA_ARGS[@]}" || true
     done
     echo "Done."
@@ -171,7 +175,7 @@ case "$APP" in
     ;;
   *)
     echo "Unknown app: $APP"
-    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kong, payment-hub, docs, finexus-web, coredns-custom, infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu, all"
+    echo "  Valid: flux-system, sources, cert-manager, ingress-nginx, platform, infra, iam, core-banking, api, app, kyc, kyc-aml, kong, payment-hub, docs, finexus-web, coredns-custom, infra-eu, core-banking-eu, payment-hub-eu, api-eu, kyc-eu, all"
     exit 1
     ;;
 esac
