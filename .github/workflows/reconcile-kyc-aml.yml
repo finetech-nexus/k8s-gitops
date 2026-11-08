@@ -34,8 +34,11 @@ jobs:
           api=$?
           kubectl -n kyc-aml rollout status deploy/clarity-web --timeout=180s
           web=$?
+          kubectl -n api rollout restart deploy/core-api-kyc-api
+          kubectl -n api rollout status deploy/core-api-kyc-api --timeout=180s
+          kyc=$?
           echo "===== resources ====="
           kubectl -n kyc-aml get pods,svc,ingress -o wide
           echo "===== api ====="
           kubectl -n kyc-aml logs deploy/clarity-api --tail=40
-          test "$api" = 0 -a "$web" = 0
+          test "$api" = 0 -a "$web" = 0 -a "$kyc" = 0
